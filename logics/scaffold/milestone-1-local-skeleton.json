@@ -1,0 +1,188 @@
+{
+  "title": "Milestone 1: Local Skeleton",
+  "references": [
+    "README.md",
+    "ROADMAP.md"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Foundation",
+    "needs": [
+      "Create the first executable foundation for ClaimLens.",
+      "Provide a local CLI that can initialize storage and expose the first planned pipeline commands.",
+      "Keep implementation lightweight and auditable so later YouTube, OpenAI, and source-check modules can build on it."
+    ],
+    "context": [
+      "ClaimLens is an MVP for turning selected YouTube videos into sourced, claim-aware briefs.",
+      "The initial stack is Python, SQLite, YouTube Data API, OpenAI API, source APIs, and Markdown output.",
+      "Milestone 1 is limited to local project skeleton, CLI, config loading, SQLite schema, and developer commands."
+    ],
+    "acceptance_criteria": [
+      "AC1: The repository contains a Python package skeleton with a runnable `claimlens` CLI entry point.",
+      "AC2: `claimlens init-db` creates or migrates a local SQLite database without requiring external API keys.",
+      "AC3: The initial SQLite schema includes tables for channels, videos, transcripts, summaries, claims, sources, claim-source links, and pipeline runs.",
+      "AC4: Local configuration can be loaded from files and environment variables, with a documented example.",
+      "AC5: Placeholder CLI commands exist for ingest, candidates, transcribe, analyze, source-check, brief, and run-daily, returning clear not-yet-implemented messages where needed.",
+      "AC6: Developer commands are documented and include install, format/lint, test, and database initialization.",
+      "AC7: Basic tests cover CLI startup, config loading, and database initialization."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Local Skeleton",
+    "overview": "A minimal local foundation for the ClaimLens video-to-sourced-brief pipeline.",
+    "goals": [
+      "Make the project installable and runnable from the command line.",
+      "Create the local database contract for future pipeline stages.",
+      "Document the minimum environment and developer workflow.",
+      "Keep all external API-dependent behavior outside the first implementation milestone."
+    ],
+    "non_goals": [
+      "Fetching real YouTube videos.",
+      "Calling OpenAI APIs.",
+      "Performing real source retrieval or evidence assessment.",
+      "Building a web interface.",
+      "Automating publishing."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Create Python package and CLI shell",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Foundation",
+      "request_acs": [
+        "AC1",
+        "AC5",
+        "AC6"
+      ],
+      "problem": [
+        "The repository currently contains only planning documents and no executable project structure.",
+        "Future pipeline modules need a stable CLI surface before implementation begins."
+      ],
+      "scope_in": [
+        "Python package layout.",
+        "Project metadata and dependencies.",
+        "`claimlens` command group.",
+        "Placeholder subcommands matching the MVP roadmap.",
+        "README developer command updates."
+      ],
+      "scope_out": [
+        "Real YouTube ingestion.",
+        "Real OpenAI calls.",
+        "Long-running scheduler implementation."
+      ],
+      "acceptance_criteria": [
+        "AC1: The project can be installed locally in editable mode.",
+        "AC2: Running `claimlens --help` lists the MVP command surface.",
+        "AC3: Placeholder commands exit successfully with clear status messages.",
+        "AC4: README documents the local development commands."
+      ]
+    },
+    {
+      "title": "Implement configuration loading",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Foundation",
+      "request_acs": [
+        "AC4",
+        "AC7"
+      ],
+      "problem": [
+        "The pipeline will depend on local paths, channel lists, and API keys, but these concerns need to remain explicit and testable."
+      ],
+      "scope_in": [
+        "Config file conventions.",
+        "Environment variable loading.",
+        "Safe defaults for local paths.",
+        "Example config files."
+      ],
+      "scope_out": [
+        "Secrets management beyond environment variables.",
+        "Remote configuration.",
+        "Full channel scoring configuration."
+      ],
+      "acceptance_criteria": [
+        "AC1: Config loading works with default local paths.",
+        "AC2: API keys are read from environment variables and are not required for `init-db`.",
+        "AC3: Tests cover default config and environment override behavior.",
+        "AC4: Example config files are committed without secrets."
+      ]
+    },
+    {
+      "title": "Create SQLite schema and init-db command",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Storage",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC7"
+      ],
+      "problem": [
+        "The pipeline needs durable local state to avoid duplicate work and to preserve evidence trails."
+      ],
+      "scope_in": [
+        "SQLite connection helper.",
+        "Initial schema creation.",
+        "Idempotent `claimlens init-db` command.",
+        "Basic database tests."
+      ],
+      "scope_out": [
+        "Database migrations beyond initial schema.",
+        "PostgreSQL support.",
+        "Production backup tooling."
+      ],
+      "acceptance_criteria": [
+        "AC1: `claimlens init-db` creates the configured SQLite database.",
+        "AC2: Re-running `claimlens init-db` is idempotent.",
+        "AC3: The initial schema contains all MVP entity tables and key indexes.",
+        "AC4: Tests verify schema creation in a temporary database."
+      ]
+    },
+    {
+      "title": "Add baseline test and quality tooling",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "Quality",
+      "request_acs": [
+        "AC6",
+        "AC7"
+      ],
+      "problem": [
+        "The project needs a repeatable development loop before behavior starts depending on external APIs."
+      ],
+      "scope_in": [
+        "Test runner configuration.",
+        "Lint or format configuration.",
+        "Initial tests for CLI, config, and database setup.",
+        "Documented commands."
+      ],
+      "scope_out": [
+        "Integration tests against YouTube or OpenAI.",
+        "CI setup unless it is trivial.",
+        "Coverage thresholds."
+      ],
+      "acceptance_criteria": [
+        "AC1: The test suite can run locally.",
+        "AC2: Formatting or linting can run locally.",
+        "AC3: The initial tests pass without network access.",
+        "AC4: Developer commands are documented in README."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Milestone 1 Local Skeleton",
+    "plan": [
+      "Create the package and CLI shell first so command names stabilize.",
+      "Add config loading with safe defaults and examples.",
+      "Implement SQLite schema and the idempotent init-db command.",
+      "Add baseline tests for CLI, config, and database behavior.",
+      "Update documentation and validate the Logics chain before implementation continues."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/milestone-1-local-skeleton.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

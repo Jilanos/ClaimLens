@@ -16,3 +16,5 @@ outputs/
 *.sqlite3
 
 .DS_Store
+AGENTS.md
+LOGICS.md

@@ -1,0 +1,312 @@
+{
+  "budgets": {
+    "max_docs": 24,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_000_milestone_1_local_skeleton item_001_create_python_package_and_cli_shell item_002_implement_configuration_loading item_003_create_sqlite_schema_and_init_db_command item_004_add_baseline_test_and_quality_tooling task_001_orchestrate_milestone_1_local_skeleton --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_001_create_python_package_and_cli_shell",
+          "item_002_implement_configuration_loading",
+          "item_003_create_sqlite_schema_and_init_db_command",
+          "item_004_add_baseline_test_and_quality_tooling"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/product/prod_001_claimlens_local_skeleton.md",
+      "ref": "prod_001_claimlens_local_skeleton",
+      "status": "Proposed",
+      "title": "ClaimLens Local Skeleton"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, milestone 1: local skeleton, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Milestone 1: Local Skeleton",
+        "use when": "You need to implement or review the scaffolded workflow for Milestone 1: Local Skeleton."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_001_create_python_package_and_cli_shell",
+          "item_002_implement_configuration_loading",
+          "item_003_create_sqlite_schema_and_init_db_command",
+          "item_004_add_baseline_test_and_quality_tooling"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/request/req_000_milestone_1_local_skeleton.md",
+      "ref": "req_000_milestone_1_local_skeleton",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Milestone 1: Local Skeleton"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, create python package and cli shell, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Create Python package and CLI shell",
+        "use when": "Implementing the scaffolded slice for Create Python package and CLI shell."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_001_create_python_package_and_cli_shell"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/backlog/item_001_create_python_package_and_cli_shell.md",
+      "ref": "item_001_create_python_package_and_cli_shell",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Create Python package and CLI shell"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement configuration loading, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement configuration loading",
+        "use when": "Implementing the scaffolded slice for Implement configuration loading."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_002_implement_configuration_loading"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/backlog/item_002_implement_configuration_loading.md",
+      "ref": "item_002_implement_configuration_loading",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement configuration loading"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, create sqlite schema and init-db command, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Create SQLite schema and init-db command",
+        "use when": "Implementing the scaffolded slice for Create SQLite schema and init-db command."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_003_create_sqlite_schema_and_init_db_command"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/backlog/item_003_create_sqlite_schema_and_init_db_command.md",
+      "ref": "item_003_create_sqlite_schema_and_init_db_command",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Create SQLite schema and init-db command"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Milestone 1 Local Skeleton",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_001_create_python_package_and_cli_shell",
+          "item_002_implement_configuration_loading",
+          "item_003_create_sqlite_schema_and_init_db_command",
+          "item_004_add_baseline_test_and_quality_tooling"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/tasks/task_001_orchestrate_milestone_1_local_skeleton.md",
+      "ref": "task_001_orchestrate_milestone_1_local_skeleton",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Milestone 1 Local Skeleton"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_001_create_python_package_and_cli_shell",
+          "item_002_implement_configuration_loading",
+          "item_003_create_sqlite_schema_and_init_db_command",
+          "item_004_add_baseline_test_and_quality_tooling"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/product/prod_001_claimlens_local_skeleton.md",
+      "ref": "prod_001_claimlens_local_skeleton",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Local Skeleton"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add baseline test and quality tooling, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add baseline test and quality tooling",
+        "use when": "Implementing the scaffolded slice for Add baseline test and quality tooling."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_004_add_baseline_test_and_quality_tooling"
+        ],
+        "prod": [
+          "prod_001_claimlens_local_skeleton"
+        ],
+        "req": [
+          "req_000_milestone_1_local_skeleton"
+        ],
+        "task": [
+          "task_001_orchestrate_milestone_1_local_skeleton"
+        ]
+      },
+      "path": "logics/backlog/item_004_add_baseline_test_and_quality_tooling.md",
+      "ref": "item_004_add_baseline_test_and_quality_tooling",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add baseline test and quality tooling"
+    }
+  ],
+  "estimates": {
+    "char_count": 6047,
+    "companion_doc_count": 1,
+    "doc_count": 7
+  },
+  "generated_at": "2026-07-21T20:48:07Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_000_milestone_1_local_skeleton",
+      "item_001_create_python_package_and_cli_shell",
+      "item_002_implement_configuration_loading",
+      "item_003_create_sqlite_schema_and_init_db_command",
+      "item_004_add_baseline_test_and_quality_tooling",
+      "task_001_orchestrate_milestone_1_local_skeleton"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_000_milestone_1_local_skeleton,item_001_create_python_package_and_cli_shell,item_002_implement_configuration_loading,item_003_create_sqlite_schema_and_init_db_command,item_004_add_baseline_test_and_quality_tooling,task_001_orchestrate_milestone_1_local_skeleton",
+  "refs": [
+    "req_000_milestone_1_local_skeleton",
+    "item_001_create_python_package_and_cli_shell",
+    "item_002_implement_configuration_loading",
+    "item_003_create_sqlite_schema_and_init_db_command",
+    "item_004_add_baseline_test_and_quality_tooling",
+    "task_001_orchestrate_milestone_1_local_skeleton"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_001_orchestrate_milestone_1_local_skeleton.md",
+      "ref": "task_001_orchestrate_milestone_1_local_skeleton"
+    }
+  ]
+}
