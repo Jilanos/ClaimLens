@@ -1,0 +1,230 @@
+{
+  "title": "Milestone 2: Metadata Ingestion",
+  "references": [
+    "README.md",
+    "ROADMAP.md",
+    "pyproject.toml",
+    "src/claimlens/cli.py",
+    "src/claimlens/config.py",
+    "src/claimlens/db.py",
+    "config/channels.example.toml",
+    "config/claimlens.example.toml"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Ingestion",
+    "needs": [
+      "Make `claimlens ingest` fetch recent YouTube video metadata for configured channels.",
+      "Persist channel and video metadata in the existing SQLite database without creating duplicates.",
+      "Make `claimlens candidates` list ingested videos that are ready for later transcript and analysis milestones.",
+      "Keep tests deterministic by mocking API calls and avoiding network dependencies in the automated suite."
+    ],
+    "context": [
+      "Milestone 1 created a Python package, CLI shell, configuration loading, SQLite schema, and baseline tests.",
+      "The current `ingest` and `candidates` commands are placeholders.",
+      "The MVP roadmap defines YouTube ingestion as the next implementation step before transcript creation.",
+      "Only `YOUTUBE_API_KEY` should be required for real ingestion; tests must run without external API keys."
+    ],
+    "acceptance_criteria": [
+      "AC1: Channel definitions can be loaded from a committed example format and from a local configurable channels file.",
+      "AC2: `claimlens ingest` validates that `YOUTUBE_API_KEY` is present before real YouTube API calls.",
+      "AC3: The YouTube ingestion module fetches recent videos for configured channels through a bounded, testable client abstraction.",
+      "AC4: Channel and video metadata are upserted into SQLite idempotently, preserving one record per channel and video ID.",
+      "AC5: Each ingest run records a `pipeline_runs` entry with command, status, timestamps, and useful details.",
+      "AC6: `claimlens candidates` lists ingested videos with enough metadata to manually choose a video for later processing.",
+      "AC7: Ingestion and candidate behavior are covered by tests using mocked YouTube responses and temporary SQLite databases.",
+      "AC8: README documents setup for `YOUTUBE_API_KEY`, channel config, `claimlens ingest`, and `claimlens candidates`."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Metadata Ingestion",
+    "overview": "The first real pipeline stage for importing recent YouTube video metadata into the local ClaimLens database.",
+    "goals": [
+      "Turn the ingestion CLI placeholder into a working command.",
+      "Keep channel configuration explicit and reviewable.",
+      "Persist YouTube metadata in a way that can be reused by transcription, analysis, and brief generation.",
+      "Provide a simple candidate listing workflow for manual selection."
+    ],
+    "non_goals": [
+      "Downloading audio or transcripts.",
+      "Calling OpenAI APIs.",
+      "Scoring videos with advanced ranking logic.",
+      "Building a scheduler.",
+      "Supporting every YouTube metadata field."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Load channel configuration for ingestion",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Ingestion",
+      "request_acs": [
+        "AC1",
+        "AC8"
+      ],
+      "problem": [
+        "Ingestion needs a stable way to know which YouTube channels are in scope.",
+        "The existing example channel config is not yet wired into runtime behavior."
+      ],
+      "scope_in": [
+        "Define the channel config contract.",
+        "Load channel IDs, names, priorities, and keywords from TOML.",
+        "Allow a configurable channels file path.",
+        "Document the expected file format."
+      ],
+      "scope_out": [
+        "Remote channel management.",
+        "A database-backed channel administration UI.",
+        "Advanced topic taxonomy configuration."
+      ],
+      "acceptance_criteria": [
+        "AC1: Channel config loading returns typed channel records.",
+        "AC2: The loader works with `config/channels.example.toml`.",
+        "AC3: Missing optional fields get safe defaults.",
+        "AC4: README documents how to provide a local channels file."
+      ]
+    },
+    {
+      "title": "Create bounded YouTube metadata client",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Ingestion",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC7"
+      ],
+      "problem": [
+        "The pipeline needs YouTube metadata, but external API access must be isolated for testing and later rate-limit handling."
+      ],
+      "scope_in": [
+        "YouTube Data API client abstraction.",
+        "API key validation for real calls.",
+        "Fetch recent videos per configured channel.",
+        "Normalize API responses into internal records.",
+        "Mockable tests for successful and empty responses."
+      ],
+      "scope_out": [
+        "OAuth flows.",
+        "Caption retrieval.",
+        "Video comments.",
+        "Quota dashboarding beyond clear error messages."
+      ],
+      "acceptance_criteria": [
+        "AC1: Real client construction requires `YOUTUBE_API_KEY`.",
+        "AC2: The ingestion module depends on a protocol or injectable client for tests.",
+        "AC3: Recent video responses are normalized into stable internal objects.",
+        "AC4: Tests cover the client boundary without network calls."
+      ]
+    },
+    {
+      "title": "Persist ingested channels and videos",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Storage",
+      "request_acs": [
+        "AC4",
+        "AC5",
+        "AC7"
+      ],
+      "problem": [
+        "Ingestion should be repeatable and should not create duplicate records when the same video appears in multiple runs."
+      ],
+      "scope_in": [
+        "Repository functions for channel upserts.",
+        "Repository functions for video upserts.",
+        "Pipeline run recording for ingest success and failure.",
+        "Tests for idempotent persistence."
+      ],
+      "scope_out": [
+        "Schema migrations beyond additive changes if avoidable.",
+        "Deleting stale videos.",
+        "Complex status transitions outside ingestion."
+      ],
+      "acceptance_criteria": [
+        "AC1: Inserting the same channel twice keeps one channel row.",
+        "AC2: Inserting the same video twice keeps one video row and updates mutable metadata.",
+        "AC3: Ingest success and failure paths write pipeline run records.",
+        "AC4: Persistence tests run against temporary SQLite databases."
+      ]
+    },
+    {
+      "title": "Implement ingest and candidates CLI commands",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "CLI",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC6",
+        "AC8"
+      ],
+      "problem": [
+        "`claimlens ingest` and `claimlens candidates` are currently placeholders and do not operate on project data."
+      ],
+      "scope_in": [
+        "`claimlens ingest` command implementation.",
+        "`claimlens candidates` command implementation.",
+        "Useful console output for imported and listed videos.",
+        "Command flags for config, channels file, database override, and basic limits where needed."
+      ],
+      "scope_out": [
+        "Interactive video approval workflow.",
+        "Advanced scoring.",
+        "Transcript or analysis command implementation."
+      ],
+      "acceptance_criteria": [
+        "AC1: `claimlens ingest` imports metadata for configured channels when API key and channel config are present.",
+        "AC2: `claimlens ingest` exits clearly when the API key or channel config is missing.",
+        "AC3: `claimlens candidates` lists videos from SQLite without requiring API keys.",
+        "AC4: CLI tests cover success and error paths without network calls."
+      ]
+    },
+    {
+      "title": "Add ingestion tests and documentation",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "Quality",
+      "request_acs": [
+        "AC7",
+        "AC8"
+      ],
+      "problem": [
+        "The first API-backed stage needs deterministic tests and clear operator instructions before real channel monitoring begins."
+      ],
+      "scope_in": [
+        "Unit tests for channel loading, ingestion orchestration, persistence, and candidate listing.",
+        "README updates for YouTube key setup and local workflow.",
+        "No-network test guarantee for default test suite.",
+        "Manual smoke-test instructions for real ingestion."
+      ],
+      "scope_out": [
+        "CI pipeline setup.",
+        "Live YouTube integration tests in the default suite.",
+        "Cost or quota reporting beyond basic guidance."
+      ],
+      "acceptance_criteria": [
+        "AC1: The test suite passes without `YOUTUBE_API_KEY`.",
+        "AC2: Tests cover mocked ingestion end to end.",
+        "AC3: README documents real ingestion prerequisites and commands.",
+        "AC4: Existing `ruff` and `pytest` commands remain the validation baseline."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Milestone 2 Metadata Ingestion",
+    "plan": [
+      "Start with channel config loading so ingestion has explicit inputs.",
+      "Introduce a mockable YouTube metadata client and response normalizer.",
+      "Add SQLite repository functions for idempotent channel, video, and pipeline run persistence.",
+      "Replace the `ingest` and `candidates` placeholders with working CLI behavior.",
+      "Add tests around mocked ingestion and candidate listing, then update README and close the Logics chain after validation."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/milestone-2-metadata-ingestion.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

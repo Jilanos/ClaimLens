@@ -1,0 +1,346 @@
+{
+  "budgets": {
+    "max_docs": 28,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_001_milestone_2_metadata_ingestion item_005_load_channel_configuration_for_ingestion item_006_create_bounded_youtube_metadata_client item_007_persist_ingested_channels_and_videos item_008_implement_ingest_and_candidates_cli_commands item_009_add_ingestion_tests_and_documentation task_002_orchestrate_milestone_2_metadata_ingestion --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_005_load_channel_configuration_for_ingestion",
+          "item_006_create_bounded_youtube_metadata_client",
+          "item_007_persist_ingested_channels_and_videos",
+          "item_008_implement_ingest_and_candidates_cli_commands",
+          "item_009_add_ingestion_tests_and_documentation"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/product/prod_002_claimlens_metadata_ingestion.md",
+      "ref": "prod_002_claimlens_metadata_ingestion",
+      "status": "Proposed",
+      "title": "ClaimLens Metadata Ingestion"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, milestone 2: metadata ingestion, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Milestone 2: Metadata Ingestion",
+        "use when": "You need to implement or review the scaffolded workflow for Milestone 2: Metadata Ingestion."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_005_load_channel_configuration_for_ingestion",
+          "item_006_create_bounded_youtube_metadata_client",
+          "item_007_persist_ingested_channels_and_videos",
+          "item_008_implement_ingest_and_candidates_cli_commands",
+          "item_009_add_ingestion_tests_and_documentation"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/request/req_001_milestone_2_metadata_ingestion.md",
+      "ref": "req_001_milestone_2_metadata_ingestion",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Milestone 2: Metadata Ingestion"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, load channel configuration for ingestion, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Load channel configuration for ingestion",
+        "use when": "Implementing the scaffolded slice for Load channel configuration for ingestion."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_005_load_channel_configuration_for_ingestion"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/backlog/item_005_load_channel_configuration_for_ingestion.md",
+      "ref": "item_005_load_channel_configuration_for_ingestion",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Load channel configuration for ingestion"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, create bounded youtube metadata client, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Create bounded YouTube metadata client",
+        "use when": "Implementing the scaffolded slice for Create bounded YouTube metadata client."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_006_create_bounded_youtube_metadata_client"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/backlog/item_006_create_bounded_youtube_metadata_client.md",
+      "ref": "item_006_create_bounded_youtube_metadata_client",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Create bounded YouTube metadata client"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, persist ingested channels and videos, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Persist ingested channels and videos",
+        "use when": "Implementing the scaffolded slice for Persist ingested channels and videos."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_007_persist_ingested_channels_and_videos"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/backlog/item_007_persist_ingested_channels_and_videos.md",
+      "ref": "item_007_persist_ingested_channels_and_videos",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Persist ingested channels and videos"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Milestone 2 Metadata Ingestion",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_005_load_channel_configuration_for_ingestion",
+          "item_006_create_bounded_youtube_metadata_client",
+          "item_007_persist_ingested_channels_and_videos",
+          "item_008_implement_ingest_and_candidates_cli_commands",
+          "item_009_add_ingestion_tests_and_documentation"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/tasks/task_002_orchestrate_milestone_2_metadata_ingestion.md",
+      "ref": "task_002_orchestrate_milestone_2_metadata_ingestion",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Milestone 2 Metadata Ingestion"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_005_load_channel_configuration_for_ingestion",
+          "item_006_create_bounded_youtube_metadata_client",
+          "item_007_persist_ingested_channels_and_videos",
+          "item_008_implement_ingest_and_candidates_cli_commands",
+          "item_009_add_ingestion_tests_and_documentation"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/product/prod_002_claimlens_metadata_ingestion.md",
+      "ref": "prod_002_claimlens_metadata_ingestion",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Metadata Ingestion"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement ingest and candidates cli commands, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement ingest and candidates CLI commands",
+        "use when": "Implementing the scaffolded slice for Implement ingest and candidates CLI commands."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_008_implement_ingest_and_candidates_cli_commands"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/backlog/item_008_implement_ingest_and_candidates_cli_commands.md",
+      "ref": "item_008_implement_ingest_and_candidates_cli_commands",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement ingest and candidates CLI commands"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add ingestion tests and documentation, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add ingestion tests and documentation",
+        "use when": "Implementing the scaffolded slice for Add ingestion tests and documentation."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_009_add_ingestion_tests_and_documentation"
+        ],
+        "prod": [
+          "prod_002_claimlens_metadata_ingestion"
+        ],
+        "req": [
+          "req_001_milestone_2_metadata_ingestion"
+        ],
+        "task": [
+          "task_002_orchestrate_milestone_2_metadata_ingestion"
+        ]
+      },
+      "path": "logics/backlog/item_009_add_ingestion_tests_and_documentation.md",
+      "ref": "item_009_add_ingestion_tests_and_documentation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add ingestion tests and documentation"
+    }
+  ],
+  "estimates": {
+    "char_count": 7374,
+    "companion_doc_count": 1,
+    "doc_count": 8
+  },
+  "generated_at": "2026-07-21T21:00:22Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_001_milestone_2_metadata_ingestion",
+      "item_005_load_channel_configuration_for_ingestion",
+      "item_006_create_bounded_youtube_metadata_client",
+      "item_007_persist_ingested_channels_and_videos",
+      "item_008_implement_ingest_and_candidates_cli_commands",
+      "item_009_add_ingestion_tests_and_documentation",
+      "task_002_orchestrate_milestone_2_metadata_ingestion"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_001_milestone_2_metadata_ingestion,item_005_load_channel_configuration_for_ingestion,item_006_create_bounded_youtube_metadata_client,item_007_persist_ingested_channels_and_videos,item_008_implement_ingest_and_candidates_cli_commands,item_009_add_ingestion_tests_and_documentation,task_002_orchestrate_milestone_2_metadata_ingestion",
+  "refs": [
+    "req_001_milestone_2_metadata_ingestion",
+    "item_005_load_channel_configuration_for_ingestion",
+    "item_006_create_bounded_youtube_metadata_client",
+    "item_007_persist_ingested_channels_and_videos",
+    "item_008_implement_ingest_and_candidates_cli_commands",
+    "item_009_add_ingestion_tests_and_documentation",
+    "task_002_orchestrate_milestone_2_metadata_ingestion"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_002_orchestrate_milestone_2_metadata_ingestion.md",
+      "ref": "task_002_orchestrate_milestone_2_metadata_ingestion"
+    }
+  ]
+}
