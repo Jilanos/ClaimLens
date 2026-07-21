@@ -35,4 +35,60 @@ Build a local pipeline that can:
 
 ## Status
 
-Project initialized. See [ROADMAP.md](ROADMAP.md) for the implementation plan.
+Milestone 1 is in progress. See [ROADMAP.md](ROADMAP.md) for the implementation plan.
+
+## Local Development
+
+Create a virtual environment and install the project:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+```
+
+Run the CLI:
+
+```bash
+claimlens --help
+claimlens init-db
+```
+
+Run quality checks:
+
+```bash
+ruff check .
+pytest
+```
+
+## Configuration
+
+ClaimLens reads local configuration from `config/claimlens.example.toml` by default.
+Copy or replace it later with a local config file when real API-backed modules are added.
+
+Relevant environment variables:
+
+```bash
+CLAIMLENS_DB=data/claimlens.sqlite3
+YOUTUBE_API_KEY=
+OPENAI_API_KEY=
+SEMANTIC_SCHOLAR_API_KEY=
+NCBI_API_KEY=
+```
+
+`claimlens init-db` does not require API keys.
+
+## MVP Command Surface
+
+```bash
+claimlens init-db
+claimlens ingest
+claimlens candidates
+claimlens transcribe <video_id>
+claimlens analyze <video_id>
+claimlens source-check <video_id>
+claimlens brief <video_id>
+claimlens run-daily
+```
+
+Only `init-db` is implemented in Milestone 1. The other commands are stable placeholders for upcoming milestones.

@@ -1,10 +1,10 @@
 ## item_003_create_sqlite_schema_and_init_db_command - Create SQLite schema and init-db command
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Medium
 > Theme: Storage
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -33,6 +33,9 @@
 - request-AC2 -> This backlog slice. Proof: AC1: `claimlens init-db` creates the configured SQLite database.
 - request-AC3 -> This backlog slice. Proof: AC2: Re-running `claimlens init-db` is idempotent.
 - request-AC7 -> This backlog slice. Proof: AC3: The initial schema contains all MVP entity tables and key indexes.
+- request-AC4 -> This backlog slice. Evidence needed: Local configuration can be loaded from files and environment variables, with a documented example.
+- request-AC5 -> This backlog slice. Evidence needed: Placeholder CLI commands exist for ingest, candidates, transcribe, analyze, source-check, brief, and run-daily, returning clear not-yet-implemented messages where needed.
+- request-AC6 -> This backlog slice. Evidence needed: Developer commands are documented and include install, format/lint, test, and database initialization.
 
 # Decision framing
 - Product framing: Not needed
@@ -53,3 +56,9 @@
 # Priority
 - Priority: High
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_001_orchestrate_milestone_1_local_skeleton`
+
+# Notes
+- Task `task_001_orchestrate_milestone_1_local_skeleton` was finished via `logics-manager flow finish task` on 2026-07-21.

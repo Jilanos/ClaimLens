@@ -1,8 +1,8 @@
 ## prod_001_claimlens_local_skeleton - ClaimLens Local Skeleton
 > Date: 2026-07-21
-> Status: Proposed
+> Status: Settled
 > Related request: `req_000_milestone_1_local_skeleton`
-> Related backlog: `item_001_create_python_package_and_cli_shell`, `item_002_implement_configuration_loading`, `item_003_create_sqlite_schema_and_init_db_command`, `item_004_add_baseline_test_and_quality_tooling`
+> Related backlog: `item_001_create_python_package_and_cli_shell`
 > Related task: `task_001_orchestrate_milestone_1_local_skeleton`
 > Related architecture: (none yet)
 > Reminder: Update status, linked refs, scope, decisions, success signals, and open questions when you edit this doc.
@@ -44,5 +44,5 @@ flowchart LR
 - Context-pack output can be handed to an implementation agent directly.
 
 # References
-- Product back-reference: `req_000_milestone_1_local_skeleton`
+- Product back-reference: `item_001_create_python_package_and_cli_shell`
 - Task back-reference: `task_001_orchestrate_milestone_1_local_skeleton`

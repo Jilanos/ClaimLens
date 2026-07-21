@@ -1,10 +1,10 @@
 ## item_004_add_baseline_test_and_quality_tooling - Add baseline test and quality tooling
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Low
 > Theme: Quality
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -32,6 +32,9 @@
 # AC Traceability
 - request-AC6 -> This backlog slice. Proof: AC1: The test suite can run locally.
 - request-AC7 -> This backlog slice. Proof: AC2: Formatting or linting can run locally.
+- request-AC3 -> This backlog slice. Evidence needed: The initial SQLite schema includes tables for channels, videos, transcripts, summaries, claims, sources, claim-source links, and pipeline runs.
+- request-AC4 -> This backlog slice. Evidence needed: Local configuration can be loaded from files and environment variables, with a documented example.
+- request-AC5 -> This backlog slice. Evidence needed: Placeholder CLI commands exist for ingest, candidates, transcribe, analyze, source-check, brief, and run-daily, returning clear not-yet-implemented messages where needed.
 
 # Decision framing
 - Product framing: Not needed
@@ -52,3 +55,9 @@
 # Priority
 - Priority: Medium
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_001_orchestrate_milestone_1_local_skeleton`
+
+# Notes
+- Task `task_001_orchestrate_milestone_1_local_skeleton` was finished via `logics-manager flow finish task` on 2026-07-21.

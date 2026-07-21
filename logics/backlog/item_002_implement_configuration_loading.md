@@ -1,10 +1,10 @@
 ## item_002_implement_configuration_loading - Implement configuration loading
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Low
 > Theme: Foundation
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -32,6 +32,9 @@
 # AC Traceability
 - request-AC4 -> This backlog slice. Proof: AC1: Config loading works with default local paths.
 - request-AC7 -> This backlog slice. Proof: AC2: API keys are read from environment variables and are not required for `init-db`.
+- request-AC3 -> This backlog slice. Evidence needed: The initial SQLite schema includes tables for channels, videos, transcripts, summaries, claims, sources, claim-source links, and pipeline runs.
+- request-AC5 -> This backlog slice. Evidence needed: Placeholder CLI commands exist for ingest, candidates, transcribe, analyze, source-check, brief, and run-daily, returning clear not-yet-implemented messages where needed.
+- request-AC6 -> This backlog slice. Evidence needed: Developer commands are documented and include install, format/lint, test, and database initialization.
 
 # Decision framing
 - Product framing: Not needed
@@ -52,3 +55,9 @@
 # Priority
 - Priority: High
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_001_orchestrate_milestone_1_local_skeleton`
+
+# Notes
+- Task `task_001_orchestrate_milestone_1_local_skeleton` was finished via `logics-manager flow finish task` on 2026-07-21.

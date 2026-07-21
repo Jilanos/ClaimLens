@@ -1,7 +1,7 @@
 ## req_000_milestone_1_local_skeleton - Milestone 1: Local Skeleton
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Draft
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
 > Complexity: Medium
