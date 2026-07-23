@@ -43,6 +43,8 @@ EXPECTED_TABLES = {
     "sources",
     "claim_sources",
     "brief_artifacts",
+    "verification_runs",
+    "evidence_snippets",
 }
 
 
@@ -66,7 +68,7 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "2"
+    assert schema_version == "3"
 
 
 def test_init_db_closes_connection(monkeypatch, tmp_path):

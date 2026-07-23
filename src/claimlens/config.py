@@ -21,6 +21,8 @@ class PathsConfig:
 class PipelineConfig:
     max_videos_per_channel: int
     candidate_min_duration_seconds: int
+    source_verification_max_results: int
+    source_verification_timeout_seconds: int
 
 
 @dataclass(frozen=True)
@@ -97,6 +99,16 @@ def load_config(
                 pipeline,
                 "candidate_min_duration_seconds",
                 480,
+            ),
+            source_verification_max_results=_int_setting(
+                pipeline,
+                "source_verification_max_results",
+                5,
+            ),
+            source_verification_timeout_seconds=_int_setting(
+                pipeline,
+                "source_verification_timeout_seconds",
+                20,
             ),
         ),
         sources=SourceConfig(

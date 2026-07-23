@@ -7,6 +7,8 @@ briefs = "outputs/briefs"
 [pipeline]
 max_videos_per_channel = 10
 candidate_min_duration_seconds = 480
+source_verification_max_results = 5
+source_verification_timeout_seconds = 20
 
 [sources]
 advanced_source_verification = false

@@ -1,0 +1,396 @@
+{
+  "title": "Advanced Source Verification Mode",
+  "references": [
+    "README.md",
+    "config/claimlens.example.toml",
+    "src/claimlens/analysis.py",
+    "src/claimlens/briefs.py",
+    "src/claimlens/cli.py",
+    "src/claimlens/db.py",
+    "src/claimlens/pipeline.py",
+    "src/claimlens/web.py",
+    "logics/architecture/adr_001_single_video_local_first_pipeline.md",
+    "logics/request/req_003_mvp_single_video_local_first_pipeline.md",
+    "logics/product/prod_004_claimlens_single_video_local_first_mvp.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Advanced source verification",
+    "needs": [
+      "Add an optional source verification mode after the existing OpenAI transcript analysis step.",
+      "Use PubMed and Semantic Scholar as the first supported source adapters for health and science claims.",
+      "Assess only notable claims extracted from the cleaned transcript analysis, not arbitrary new claims.",
+      "Produce non-binary verdicts for each checked claim: supported, contradicted, mixed, unclear, or not_checked.",
+      "Attach cited evidence snippets that indicate whether each source supports or contradicts the claim.",
+      "Expose the verification step through both the CLI and the local HTML process page.",
+      "Render verified Markdown briefs with citations, evidence snippets, and a clear human-review disclaimer."
+    ],
+    "context": [
+      "The current MVP generates Markdown briefs directly from OpenAI transcript analysis and labels them not advanced-source-verified.",
+      "The existing SQLite schema already has sources and claim_sources tables, but no concrete adapter, evidence, or verdict workflow.",
+      "The existing source configuration has advanced_source_verification disabled by default.",
+      "The target domain for this mode is health and science; PubMed and Semantic Scholar are a better initial fit than broad web search.",
+      "Verification must remain local-first and testable without live API calls by mocking adapter and LLM boundaries.",
+      "Verdicts must be review aids, not automated final medical, legal, financial, or scientific authority judgments."
+    ],
+    "acceptance_criteria": [
+      "AC1: A user can enable source verification for an existing single-video run from the CLI or local HTML process page without changing the base MVP default.",
+      "AC2: The verification step reads stored notable claims and queries PubMed and Semantic Scholar through mockable adapter interfaces.",
+      "AC3: Candidate sources are persisted with enough metadata to audit title, URL, publisher/source, publication date, snippet, retrieval time, adapter, and matched claim.",
+      "AC4: Each checked claim receives one non-binary verdict: supported, contradicted, mixed, unclear, or not_checked.",
+      "AC5: Each verdict stores cited evidence snippets separated into supporting and contradicting evidence where available.",
+      "AC6: Evidence assessment includes a concise rationale and a human-review disclaimer for health/science outputs.",
+      "AC7: The Markdown brief renderer can produce a source-verified variant with citations, evidence snippets, verdicts, and a visible source-verification status.",
+      "AC8: The local HTML process page shows the verification step status, failure causes, verdict summaries, source counts, and links to verified outputs.",
+      "AC9: The implementation remains local-first and VPS-ready: API keys are runtime/config inputs only, host/path settings remain configurable, and generated outputs do not persist secrets.",
+      "AC10: Tests cover adapter query construction, mocked PubMed/Semantic Scholar responses, source persistence, verdict assessment, verified brief rendering, and HTML process-state rendering without live network calls."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Advanced Source Verification Mode",
+    "overview": "An optional health/science verification workflow that enriches ClaimLens briefs with cited PubMed and Semantic Scholar evidence, non-binary verdicts, and reviewer-facing rationale.",
+    "goals": [
+      "Let a reviewer run source verification after the existing transcript analysis step.",
+      "Prioritize health and science sources through PubMed and Semantic Scholar.",
+      "Show evidence that supports and evidence that contradicts each notable claim when available.",
+      "Use non-binary verdicts that handle mixed, unclear, and unchecked evidence honestly.",
+      "Generate Markdown briefs that distinguish base analysis from source-verified review output.",
+      "Expose the verification workflow in both CLI and local HTML surfaces.",
+      "Keep verification disabled by default so the base single-video MVP remains fast and simple."
+    ],
+    "non_goals": [
+      "Broad web search in the first verification implementation.",
+      "Final medical advice, clinical recommendation, diagnosis, or regulatory determination.",
+      "Guaranteeing scientific truth or replacing human review.",
+      "Live-network tests in the deterministic test suite.",
+      "Batch verification across many videos.",
+      "Persisting PubMed, Semantic Scholar, OpenAI, or other API keys in SQLite, logs, or generated briefs."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Add optional verification mode controls",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Verification activation",
+      "request_acs": [
+        "AC1",
+        "AC8",
+        "AC9"
+      ],
+      "problem": [
+        "The existing MVP declares advanced source verification disabled by default but has no executable verification step.",
+        "Operators need an explicit way to run verification without changing base run behavior."
+      ],
+      "scope_in": [
+        "Add CLI command or subcommand for running source verification on an analyzed video/run.",
+        "Add process-page controls for launching the next eligible verification step.",
+        "Keep advanced_source_verification disabled by default in config.",
+        "Accept required runtime keys through environment, flags, or HTML form without persistence.",
+        "Persist verification step status and failure causes in the run state."
+      ],
+      "scope_out": [
+        "Making verification mandatory for base runs.",
+        "Batch verification.",
+        "User account or hosted authentication."
+      ],
+      "acceptance_criteria": [
+        "AC1: CLI can run verification for a video/run that already has stored analysis.",
+        "AC2: HTML process page exposes verification only when prerequisite analysis exists.",
+        "AC3: Base run behavior remains unchanged when verification is not requested.",
+        "AC4: Missing runtime credentials stop with a clear message and no secret persistence."
+      ]
+    },
+    {
+      "title": "Define source adapter interfaces",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Source adapters",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC10"
+      ],
+      "problem": [
+        "Verification needs external source retrieval while remaining mockable and deterministic in tests.",
+        "PubMed and Semantic Scholar have different APIs and metadata shapes."
+      ],
+      "scope_in": [
+        "Define SourceAdapter and SourceCandidate contracts.",
+        "Define query inputs derived from notable claims and health/science context.",
+        "Normalize source metadata fields across adapters.",
+        "Add tests for adapter contracts and query construction."
+      ],
+      "scope_out": [
+        "Live API calls in unit tests.",
+        "Broad web search adapter.",
+        "Ranking model beyond deterministic metadata and configured limits."
+      ],
+      "acceptance_criteria": [
+        "AC1: PubMed and Semantic Scholar adapters conform to one shared interface.",
+        "AC2: Source candidates include title, URL, source, publication date, abstract/snippet, and adapter name.",
+        "AC3: Query construction is deterministic and covered by tests.",
+        "AC4: Adapter failures are captured without failing unrelated completed pipeline steps."
+      ]
+    },
+    {
+      "title": "Implement PubMed source adapter",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "PubMed retrieval",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC10"
+      ],
+      "problem": [
+        "Health/science verification needs biomedical literature retrieval from PubMed.",
+        "The adapter must be testable without live NCBI calls."
+      ],
+      "scope_in": [
+        "Implement PubMed search/fetch boundary using configured NCBI key when present.",
+        "Map PubMed metadata into SourceCandidate.",
+        "Respect configured result limits and timeouts.",
+        "Add mocked tests for successful, empty, and failure responses."
+      ],
+      "scope_out": [
+        "Full MeSH expansion.",
+        "Clinical guideline ranking.",
+        "Live PubMed CI tests."
+      ],
+      "acceptance_criteria": [
+        "AC1: PubMed adapter returns normalized candidates for a claim query.",
+        "AC2: Empty PubMed responses produce no-source results without crashing verification.",
+        "AC3: Adapter tests run without network access.",
+        "AC4: NCBI keys are read from runtime/config inputs and not persisted."
+      ]
+    },
+    {
+      "title": "Implement Semantic Scholar source adapter",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Semantic Scholar retrieval",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC10"
+      ],
+      "problem": [
+        "Health/science verification also needs broader scientific paper retrieval beyond PubMed.",
+        "Semantic Scholar metadata must normalize into the same source candidate contract."
+      ],
+      "scope_in": [
+        "Implement Semantic Scholar search boundary using configured API key when present.",
+        "Map paper metadata, URL, authors/source, publication date, abstract, and external IDs into SourceCandidate.",
+        "Respect configured result limits and timeouts.",
+        "Add mocked tests for successful, empty, and failure responses."
+      ],
+      "scope_out": [
+        "Citation graph traversal.",
+        "Full paper PDF retrieval.",
+        "Live Semantic Scholar CI tests."
+      ],
+      "acceptance_criteria": [
+        "AC1: Semantic Scholar adapter returns normalized candidates for a claim query.",
+        "AC2: Empty Semantic Scholar responses produce no-source results without crashing verification.",
+        "AC3: Adapter tests run without network access.",
+        "AC4: Semantic Scholar keys are read from runtime/config inputs and not persisted."
+      ]
+    },
+    {
+      "title": "Persist verification evidence and verdict state",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Evidence data model",
+      "request_acs": [
+        "AC3",
+        "AC4",
+        "AC5",
+        "AC9"
+      ],
+      "problem": [
+        "The existing sources and claim_sources tables are not sufficient to store cited supporting and contradicting evidence snippets.",
+        "Verified briefs need auditable evidence records, not only final verdict strings."
+      ],
+      "scope_in": [
+        "Add minimal schema extensions or new tables for verification runs and evidence snippets.",
+        "Persist source adapter, matched claim, snippet text, evidence polarity, rationale, and retrieval metadata.",
+        "Update claim verdicts without losing not_checked history where evidence is insufficient.",
+        "Add migration/idempotency tests."
+      ],
+      "scope_out": [
+        "Large document storage.",
+        "Full-text paper archival.",
+        "Destructive migrations without tests."
+      ],
+      "acceptance_criteria": [
+        "AC1: Source candidates and evidence snippets are queryable by video, claim, and verification run.",
+        "AC2: Supporting and contradicting evidence snippets are represented separately.",
+        "AC3: Verdict state supports supported, contradicted, mixed, unclear, and not_checked.",
+        "AC4: Schema changes are idempotent and covered by tests."
+      ]
+    },
+    {
+      "title": "Assess evidence into non-binary verdicts",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Verdict assessment",
+      "request_acs": [
+        "AC4",
+        "AC5",
+        "AC6",
+        "AC10"
+      ],
+      "problem": [
+        "Retrieved sources need to be interpreted against the original claim without overstating certainty.",
+        "Health/science evidence can be mixed, indirect, or insufficient."
+      ],
+      "scope_in": [
+        "Add a mockable assessment boundary that compares claim text with candidate evidence.",
+        "Return verdict, supporting snippets, contradicting snippets, rationale, and human-review disclaimer.",
+        "Use conservative verdict rules for mixed or insufficient evidence.",
+        "Add tests for supported, contradicted, mixed, unclear, and no-source cases."
+      ],
+      "scope_out": [
+        "Authoritative medical advice.",
+        "Automated clinical recommendations.",
+        "Single binary true/false verdicts."
+      ],
+      "acceptance_criteria": [
+        "AC1: Assessment can classify mocked evidence into each supported verdict value.",
+        "AC2: Supporting and contradicting cited phrases are retained in persisted evidence.",
+        "AC3: Rationale explicitly mentions uncertainty when evidence is indirect or insufficient.",
+        "AC4: Generated outputs include a human-review disclaimer."
+      ]
+    },
+    {
+      "title": "Render source-verified Markdown briefs",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Verified brief generation",
+      "request_acs": [
+        "AC5",
+        "AC6",
+        "AC7",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "The current brief renderer only supports unverified analysis output.",
+        "Reviewers need a clear verified variant with citations and evidence snippets."
+      ],
+      "scope_in": [
+        "Render source-verified status in Markdown briefs.",
+        "Include each checked claim, verdict, rationale, supporting evidence snippets, contradicting evidence snippets, and citations.",
+        "Keep base not-advanced-source-verified brief rendering compatible.",
+        "Add snapshot-style rendering tests."
+      ],
+      "scope_out": [
+        "CMS publishing.",
+        "Full HTML report export.",
+        "Citation formatting beyond stable Markdown links and source metadata."
+      ],
+      "acceptance_criteria": [
+        "AC1: Verified brief output includes visible source-verification status.",
+        "AC2: Each checked claim section lists verdict, rationale, supporting snippets, contradicting snippets, and citations.",
+        "AC3: Brief rendering is idempotent.",
+        "AC4: Rendering tests run without network access."
+      ]
+    },
+    {
+      "title": "Expose verification state in local HTML page",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Verification UI",
+      "request_acs": [
+        "AC1",
+        "AC8",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "The current HTML process page stops at base Markdown brief generation.",
+        "Operators need to launch and inspect verification from the same local surface."
+      ],
+      "scope_in": [
+        "Add verification step status to the process page.",
+        "Show source counts, verdict summaries, failure causes, and verified brief links.",
+        "Add form inputs for runtime PubMed/Semantic Scholar/OpenAI keys only when needed.",
+        "Add tests for process-state rendering and next-step eligibility."
+      ],
+      "scope_out": [
+        "Multi-user hosted UI.",
+        "Authentication.",
+        "Background queue dashboard."
+      ],
+      "acceptance_criteria": [
+        "AC1: HTML page can launch verification when analysis exists.",
+        "AC2: HTML page prevents verification before analysis exists.",
+        "AC3: HTML page displays verdict summary and source counts after verification.",
+        "AC4: HTML tests run without network access."
+      ]
+    },
+    {
+      "title": "Add source verification validation and documentation",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Verification validation",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC4",
+        "AC5",
+        "AC6",
+        "AC7",
+        "AC8",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "Verification touches external APIs, LLM assessment, persistence, CLI, HTML, and brief rendering.",
+        "The project needs deterministic proof plus manual smoke guidance without live calls in CI."
+      ],
+      "scope_in": [
+        "Add deterministic tests for all verification boundaries using mocks.",
+        "Document CLI and HTML verification workflow.",
+        "Document required environment variables and no-secret-persistence guarantee.",
+        "Add a manual smoke-test recipe for one health/science video with claims and expected review steps.",
+        "Run lint, tests, Logics lint, and Logics audit before closeout."
+      ],
+      "scope_out": [
+        "Live CI tests against PubMed, Semantic Scholar, or OpenAI.",
+        "Performance tuning for bulk verification.",
+        "Production hosting runbook."
+      ],
+      "acceptance_criteria": [
+        "AC1: Unit tests cover verification without network access.",
+        "AC2: README documents CLI and HTML verification usage.",
+        "AC3: Manual smoke test describes a successful verified path and expected no-source/unclear path.",
+        "AC4: Lint, tests, Logics lint, and Logics audit pass before closeout."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Advanced Source Verification Mode",
+    "plan": [
+      "Confirm the optional verification mode remains disabled by default and add explicit activation controls.",
+      "Define adapter and evidence contracts before implementing concrete PubMed and Semantic Scholar retrieval.",
+      "Implement mocked, deterministic PubMed and Semantic Scholar boundaries.",
+      "Extend persistence for verification runs, source candidates, evidence snippets, and verdict state.",
+      "Implement conservative evidence assessment into non-binary verdicts with supporting and contradicting snippets.",
+      "Render source-verified Markdown briefs without regressing unverified brief output.",
+      "Expose verification status, controls, failures, source counts, and output links in the local HTML page.",
+      "Document usage, key handling, and manual smoke tests.",
+      "Validate with deterministic tests plus Logics lint and audit.",
+      "ADR 009 checkpoint: update affected Logics docs during each meaningful wave and leave the repo commit-ready.",
+      "Keep commit creation under operator control; do not force one commit per micro-step.",
+      "GATE: do not close until lint, audit, and verification tests pass."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/advanced-source-verification-mode.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

@@ -12,6 +12,8 @@ def test_load_config_uses_defaults_without_file(tmp_path, monkeypatch):
 
     assert config.paths.database == Path("data/claimlens.sqlite3")
     assert config.pipeline.max_videos_per_channel == 10
+    assert config.pipeline.source_verification_max_results == 5
+    assert config.pipeline.source_verification_timeout_seconds == 20
     assert config.sources.advanced_source_verification is False
     assert config.sources.enable_pubmed is True
     assert config.api_keys.openai is None
@@ -27,6 +29,8 @@ database = "custom/claimlens.sqlite3"
 [pipeline]
 max_videos_per_channel = 3
 candidate_min_duration_seconds = 120
+source_verification_max_results = 7
+source_verification_timeout_seconds = 15
 
 [sources]
 advanced_source_verification = true
@@ -50,6 +54,8 @@ enable_web_search = true
     assert config.paths.briefs == Path("env/briefs")
     assert config.pipeline.max_videos_per_channel == 3
     assert config.pipeline.candidate_min_duration_seconds == 120
+    assert config.pipeline.source_verification_max_results == 7
+    assert config.pipeline.source_verification_timeout_seconds == 15
     assert config.sources.advanced_source_verification is True
     assert config.sources.enable_pubmed is False
     assert config.sources.enable_web_search is True

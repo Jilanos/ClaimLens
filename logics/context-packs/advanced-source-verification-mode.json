@@ -1,0 +1,581 @@
+{
+  "budgets": {
+    "max_docs": 44,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_004_advanced_source_verification_mode item_021_add_optional_verification_mode_controls item_022_define_source_adapter_interfaces item_023_implement_pubmed_source_adapter item_024_implement_semantic_scholar_source_adapter item_025_persist_verification_evidence_and_verdict_state item_026_assess_evidence_into_non_binary_verdicts item_027_render_source_verified_markdown_briefs item_028_expose_verification_state_in_local_html_page item_029_add_source_verification_validation_and_documentation task_005_orchestrate_advanced_source_verification_mode --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ],
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/product/prod_004_claimlens_single_video_local_first_mvp.md",
+      "ref": "prod_004_claimlens_single_video_local_first_mvp",
+      "status": "Proposed",
+      "title": "ClaimLens Single Video Local First MVP"
+    },
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_021_add_optional_verification_mode_controls",
+          "item_022_define_source_adapter_interfaces",
+          "item_023_implement_pubmed_source_adapter",
+          "item_024_implement_semantic_scholar_source_adapter",
+          "item_025_persist_verification_evidence_and_verdict_state",
+          "item_026_assess_evidence_into_non_binary_verdicts",
+          "item_027_render_source_verified_markdown_briefs",
+          "item_028_expose_verification_state_in_local_html_page",
+          "item_029_add_source_verification_validation_and_documentation"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/product/prod_005_claimlens_advanced_source_verification_mode.md",
+      "ref": "prod_005_claimlens_advanced_source_verification_mode",
+      "status": "Proposed",
+      "title": "ClaimLens Advanced Source Verification Mode"
+    },
+    {
+      "kind": "architecture",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ],
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/architecture/adr_001_single_video_local_first_pipeline.md",
+      "ref": "adr_001_single_video_local_first_pipeline",
+      "status": "Proposed",
+      "title": "Single Video Local First Pipeline"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, advanced source verification mode, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Advanced Source Verification Mode",
+        "use when": "You need to implement or review the scaffolded workflow for Advanced Source Verification Mode."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ],
+        "item": [
+          "item_021_add_optional_verification_mode_controls",
+          "item_022_define_source_adapter_interfaces",
+          "item_023_implement_pubmed_source_adapter",
+          "item_024_implement_semantic_scholar_source_adapter",
+          "item_025_persist_verification_evidence_and_verdict_state",
+          "item_026_assess_evidence_into_non_binary_verdicts",
+          "item_027_render_source_verified_markdown_briefs",
+          "item_028_expose_verification_state_in_local_html_page",
+          "item_029_add_source_verification_validation_and_documentation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp",
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline",
+          "req_004_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/request/req_004_advanced_source_verification_mode.md",
+      "ref": "req_004_advanced_source_verification_mode",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Advanced Source Verification Mode"
+    },
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, mvp: single video local first pipeline, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "MVP: Single Video Local First Pipeline",
+        "use when": "You need to implement or review the scaffolded workflow for MVP: Single Video Local First Pipeline."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ],
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ]
+      },
+      "path": "logics/request/req_003_mvp_single_video_local_first_pipeline.md",
+      "ref": "req_003_mvp_single_video_local_first_pipeline",
+      "schema_version": "1.0",
+      "status": "Done",
+      "title": "MVP: Single Video Local First Pipeline"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add optional verification mode controls, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add optional verification mode controls",
+        "use when": "Implementing the scaffolded slice for Add optional verification mode controls."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_021_add_optional_verification_mode_controls"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_021_add_optional_verification_mode_controls.md",
+      "ref": "item_021_add_optional_verification_mode_controls",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add optional verification mode controls"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, define source adapter interfaces, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Define source adapter interfaces",
+        "use when": "Implementing the scaffolded slice for Define source adapter interfaces."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_022_define_source_adapter_interfaces"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_022_define_source_adapter_interfaces.md",
+      "ref": "item_022_define_source_adapter_interfaces",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Define source adapter interfaces"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Advanced Source Verification Mode",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_021_add_optional_verification_mode_controls",
+          "item_022_define_source_adapter_interfaces",
+          "item_023_implement_pubmed_source_adapter",
+          "item_024_implement_semantic_scholar_source_adapter",
+          "item_025_persist_verification_evidence_and_verdict_state",
+          "item_026_assess_evidence_into_non_binary_verdicts",
+          "item_027_render_source_verified_markdown_briefs",
+          "item_028_expose_verification_state_in_local_html_page",
+          "item_029_add_source_verification_validation_and_documentation"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/tasks/task_005_orchestrate_advanced_source_verification_mode.md",
+      "ref": "task_005_orchestrate_advanced_source_verification_mode",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Advanced Source Verification Mode"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_021_add_optional_verification_mode_controls",
+          "item_022_define_source_adapter_interfaces",
+          "item_023_implement_pubmed_source_adapter",
+          "item_024_implement_semantic_scholar_source_adapter",
+          "item_025_persist_verification_evidence_and_verdict_state",
+          "item_026_assess_evidence_into_non_binary_verdicts",
+          "item_027_render_source_verified_markdown_briefs",
+          "item_028_expose_verification_state_in_local_html_page",
+          "item_029_add_source_verification_validation_and_documentation"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/product/prod_005_claimlens_advanced_source_verification_mode.md",
+      "ref": "prod_005_claimlens_advanced_source_verification_mode",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Advanced Source Verification Mode"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement pubmed source adapter, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement PubMed source adapter",
+        "use when": "Implementing the scaffolded slice for Implement PubMed source adapter."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_023_implement_pubmed_source_adapter"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_023_implement_pubmed_source_adapter.md",
+      "ref": "item_023_implement_pubmed_source_adapter",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement PubMed source adapter"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement semantic scholar source adapter, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement Semantic Scholar source adapter",
+        "use when": "Implementing the scaffolded slice for Implement Semantic Scholar source adapter."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_024_implement_semantic_scholar_source_adapter"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_024_implement_semantic_scholar_source_adapter.md",
+      "ref": "item_024_implement_semantic_scholar_source_adapter",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement Semantic Scholar source adapter"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, persist verification evidence and verdict state, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Persist verification evidence and verdict state",
+        "use when": "Implementing the scaffolded slice for Persist verification evidence and verdict state."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_025_persist_verification_evidence_and_verdict_state"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_025_persist_verification_evidence_and_verdict_state.md",
+      "ref": "item_025_persist_verification_evidence_and_verdict_state",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Persist verification evidence and verdict state"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, assess evidence into non-binary verdicts, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Assess evidence into non-binary verdicts",
+        "use when": "Implementing the scaffolded slice for Assess evidence into non-binary verdicts."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_026_assess_evidence_into_non_binary_verdicts"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_026_assess_evidence_into_non_binary_verdicts.md",
+      "ref": "item_026_assess_evidence_into_non_binary_verdicts",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Assess evidence into non-binary verdicts"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, render source-verified markdown briefs, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Render source-verified Markdown briefs",
+        "use when": "Implementing the scaffolded slice for Render source-verified Markdown briefs."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_027_render_source_verified_markdown_briefs"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_027_render_source_verified_markdown_briefs.md",
+      "ref": "item_027_render_source_verified_markdown_briefs",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Render source-verified Markdown briefs"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, expose verification state in local html page, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Expose verification state in local HTML page",
+        "use when": "Implementing the scaffolded slice for Expose verification state in local HTML page."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_028_expose_verification_state_in_local_html_page"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_028_expose_verification_state_in_local_html_page.md",
+      "ref": "item_028_expose_verification_state_in_local_html_page",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Expose verification state in local HTML page"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add source verification validation and documentation, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add source verification validation and documentation",
+        "use when": "Implementing the scaffolded slice for Add source verification validation and documentation."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_029_add_source_verification_validation_and_documentation"
+        ],
+        "prod": [
+          "prod_005_claimlens_advanced_source_verification_mode"
+        ],
+        "req": [
+          "req_004_advanced_source_verification_mode"
+        ],
+        "task": [
+          "task_005_orchestrate_advanced_source_verification_mode"
+        ]
+      },
+      "path": "logics/backlog/item_029_add_source_verification_validation_and_documentation.md",
+      "ref": "item_029_add_source_verification_validation_and_documentation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add source verification validation and documentation"
+    }
+  ],
+  "estimates": {
+    "char_count": 15159,
+    "companion_doc_count": 3,
+    "doc_count": 13
+  },
+  "generated_at": "2026-07-23T17:30:06Z",
+  "handoff": {
+    "companion_doc_count": 3,
+    "enabled": true,
+    "source_refs": [
+      "req_004_advanced_source_verification_mode",
+      "item_021_add_optional_verification_mode_controls",
+      "item_022_define_source_adapter_interfaces",
+      "item_023_implement_pubmed_source_adapter",
+      "item_024_implement_semantic_scholar_source_adapter",
+      "item_025_persist_verification_evidence_and_verdict_state",
+      "item_026_assess_evidence_into_non_binary_verdicts",
+      "item_027_render_source_verified_markdown_briefs",
+      "item_028_expose_verification_state_in_local_html_page",
+      "item_029_add_source_verification_validation_and_documentation",
+      "task_005_orchestrate_advanced_source_verification_mode"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_004_advanced_source_verification_mode,item_021_add_optional_verification_mode_controls,item_022_define_source_adapter_interfaces,item_023_implement_pubmed_source_adapter,item_024_implement_semantic_scholar_source_adapter,item_025_persist_verification_evidence_and_verdict_state,item_026_assess_evidence_into_non_binary_verdicts,item_027_render_source_verified_markdown_briefs,item_028_expose_verification_state_in_local_html_page,item_029_add_source_verification_validation_and_documentation,task_005_orchestrate_advanced_source_verification_mode",
+  "refs": [
+    "req_004_advanced_source_verification_mode",
+    "item_021_add_optional_verification_mode_controls",
+    "item_022_define_source_adapter_interfaces",
+    "item_023_implement_pubmed_source_adapter",
+    "item_024_implement_semantic_scholar_source_adapter",
+    "item_025_persist_verification_evidence_and_verdict_state",
+    "item_026_assess_evidence_into_non_binary_verdicts",
+    "item_027_render_source_verified_markdown_briefs",
+    "item_028_expose_verification_state_in_local_html_page",
+    "item_029_add_source_verification_validation_and_documentation",
+    "task_005_orchestrate_advanced_source_verification_mode"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_005_orchestrate_advanced_source_verification_mode.md",
+      "ref": "task_005_orchestrate_advanced_source_verification_mode"
+    }
+  ]
+}

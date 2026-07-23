@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -137,6 +137,9 @@ CREATE TABLE IF NOT EXISTS sources (
     publisher TEXT,
     published_at TEXT,
     abstract_or_snippet TEXT,
+    adapter TEXT,
+    external_id TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}',
     retrieved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -151,6 +154,42 @@ CREATE TABLE IF NOT EXISTS claim_sources (
     PRIMARY KEY (claim_id, source_id)
 );
 
+CREATE TABLE IF NOT EXISTS verification_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    summary_id INTEGER NOT NULL REFERENCES summaries(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    source_adapters_json TEXT NOT NULL DEFAULT '[]',
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at TEXT,
+    failure_message TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_verification_runs_video_id
+ON verification_runs(video_id);
+CREATE INDEX IF NOT EXISTS idx_verification_runs_summary_id
+ON verification_runs(summary_id);
+CREATE INDEX IF NOT EXISTS idx_verification_runs_status
+ON verification_runs(status);
+
+CREATE TABLE IF NOT EXISTS evidence_snippets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    verification_run_id INTEGER NOT NULL REFERENCES verification_runs(id) ON DELETE CASCADE,
+    claim_id INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    source_id INTEGER NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
+    polarity TEXT NOT NULL CHECK (polarity IN ('supports', 'contradicts', 'context')),
+    snippet TEXT NOT NULL,
+    rationale TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_snippets_verification_run_id
+ON evidence_snippets(verification_run_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_snippets_claim_id
+ON evidence_snippets(claim_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_snippets_source_id
+ON evidence_snippets(source_id);
+
 CREATE TABLE IF NOT EXISTS brief_artifacts (
     video_id TEXT PRIMARY KEY REFERENCES videos(id) ON DELETE CASCADE,
     summary_id INTEGER NOT NULL REFERENCES summaries(id) ON DELETE CASCADE,
@@ -160,7 +199,7 @@ CREATE TABLE IF NOT EXISTS brief_artifacts (
 );
 
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '2')
+VALUES ('schema_version', '3')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -205,6 +244,14 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _add_column_if_missing(connection, "pipeline_runs", "source_url", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "current_step", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "failure_message", "TEXT")
+    _add_column_if_missing(connection, "sources", "adapter", "TEXT")
+    _add_column_if_missing(connection, "sources", "external_id", "TEXT")
+    _add_column_if_missing(
+        connection,
+        "sources",
+        "metadata_json",
+        "TEXT NOT NULL DEFAULT '{}'",
+    )
 
 
 def _add_column_if_missing(
@@ -321,7 +368,7 @@ def create_pipeline_run(
     source_url: str,
     command: str = "run-video",
 ) -> int:
-    steps = ["captions", "clean_transcript", "analysis", "brief"]
+    steps = ["captions", "clean_transcript", "analysis", "brief", "source_verification"]
     with closing(connect(database_path)) as connection:
         with connection:
             cursor = connection.execute(
@@ -438,6 +485,7 @@ def list_run_steps(database_path: Path | str, run_id: int) -> list[sqlite3.Row]:
                 WHEN 'clean_transcript' THEN 2
                 WHEN 'analysis' THEN 3
                 WHEN 'brief' THEN 4
+                WHEN 'source_verification' THEN 5
                 ELSE 99
             END
             """,
@@ -595,3 +643,228 @@ def latest_brief_artifact(database_path: Path | str, video_id: str) -> sqlite3.R
             "SELECT * FROM brief_artifacts WHERE video_id = ?",
             (video_id,),
         ).fetchone()
+
+
+def create_verification_run(
+    database_path: Path | str,
+    *,
+    video_id: str,
+    summary_id: int,
+    adapters: list[str],
+) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO verification_runs
+                    (video_id, summary_id, status, source_adapters_json)
+                VALUES (?, ?, 'running', ?)
+                """,
+                (video_id, summary_id, json.dumps(adapters)),
+            )
+    return int(cursor.lastrowid)
+
+
+def finish_verification_run(
+    database_path: Path | str,
+    *,
+    verification_run_id: int,
+    status: str,
+    failure_message: str | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE verification_runs
+                SET status = ?,
+                    failure_message = ?,
+                    finished_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (status, failure_message, verification_run_id),
+            )
+
+
+def latest_verification_run(database_path: Path | str, video_id: str) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT * FROM verification_runs
+            WHERE video_id = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (video_id,),
+        ).fetchone()
+
+
+def upsert_source(
+    database_path: Path | str,
+    *,
+    title: str,
+    url: str,
+    publisher: str | None,
+    published_at: str | None,
+    abstract_or_snippet: str | None,
+    adapter: str,
+    external_id: str | None = None,
+    metadata: dict | None = None,
+) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO sources
+                    (title, url, publisher, published_at, abstract_or_snippet,
+                     adapter, external_id, metadata_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(url) DO UPDATE SET
+                    title = excluded.title,
+                    publisher = excluded.publisher,
+                    published_at = excluded.published_at,
+                    abstract_or_snippet = excluded.abstract_or_snippet,
+                    adapter = excluded.adapter,
+                    external_id = excluded.external_id,
+                    metadata_json = excluded.metadata_json,
+                    retrieved_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    title,
+                    url,
+                    publisher,
+                    published_at,
+                    abstract_or_snippet,
+                    adapter,
+                    external_id,
+                    json.dumps(metadata or {}),
+                ),
+            )
+            row = connection.execute(
+                "SELECT id FROM sources WHERE url = ?",
+                (url,),
+            ).fetchone()
+    return int(row["id"])
+
+
+def link_claim_source(
+    database_path: Path | str,
+    *,
+    claim_id: int,
+    source_id: int,
+    relevance: str = "candidate",
+    notes: str | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO claim_sources (claim_id, source_id, relevance, notes)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(claim_id, source_id) DO UPDATE SET
+                    relevance = excluded.relevance,
+                    notes = excluded.notes
+                """,
+                (claim_id, source_id, relevance, notes),
+            )
+
+
+def insert_evidence_snippet(
+    database_path: Path | str,
+    *,
+    verification_run_id: int,
+    claim_id: int,
+    source_id: int,
+    polarity: str,
+    snippet: str,
+    rationale: str | None = None,
+) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO evidence_snippets
+                    (verification_run_id, claim_id, source_id, polarity, snippet, rationale)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (verification_run_id, claim_id, source_id, polarity, snippet, rationale),
+            )
+    return int(cursor.lastrowid)
+
+
+def update_claim_verdict(
+    database_path: Path | str,
+    *,
+    claim_id: int,
+    verdict: str,
+    rationale: str,
+    confidence: float | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE claims
+                SET verdict = ?,
+                    rationale = ?,
+                    confidence = ?
+                WHERE id = ?
+                """,
+                (verdict, rationale, confidence, claim_id),
+            )
+
+
+def sources_for_claim(database_path: Path | str, claim_id: int) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT sources.*, claim_sources.relevance, claim_sources.notes
+            FROM sources
+            INNER JOIN claim_sources ON claim_sources.source_id = sources.id
+            WHERE claim_sources.claim_id = ?
+            ORDER BY sources.id
+            """,
+            (claim_id,),
+        ).fetchall()
+
+
+def evidence_for_verification(
+    database_path: Path | str,
+    verification_run_id: int,
+) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT
+                evidence_snippets.*,
+                claims.claim,
+                claims.verdict,
+                sources.title AS source_title,
+                sources.url AS source_url,
+                sources.publisher AS source_publisher,
+                sources.published_at AS source_published_at,
+                sources.adapter AS source_adapter
+            FROM evidence_snippets
+            INNER JOIN claims ON claims.id = evidence_snippets.claim_id
+            INNER JOIN sources ON sources.id = evidence_snippets.source_id
+            WHERE evidence_snippets.verification_run_id = ?
+            ORDER BY claims.id, evidence_snippets.id
+            """,
+            (verification_run_id,),
+        ).fetchall()
+
+
+def verified_claims_for_summary(
+    database_path: Path | str,
+    summary_id: int,
+) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM claims
+            WHERE summary_id = ?
+            ORDER BY id
+            """,
+            (summary_id,),
+        ).fetchall()

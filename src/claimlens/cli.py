@@ -9,7 +9,7 @@ from pathlib import Path
 
 from claimlens import __version__
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
-from claimlens.briefs import generate_brief
+from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import load_config
 from claimlens.db import (
     get_pipeline_run,
@@ -26,13 +26,18 @@ from claimlens.pipeline import (
     create_run,
     extract_required_subtitles,
 )
+from claimlens.verification import VerificationError, default_adapters, verify_sources
 from claimlens.web import serve_process_page
-from claimlens.youtube import YouTubeError, YouTubeVideo, fetch_transcript, latest_channel_videos
+from claimlens.youtube import (
+    YouTubeError,
+    YouTubeVideo,
+    fetch_transcript,
+    latest_channel_videos,
+)
 
 PLACEHOLDER_MESSAGES = {
     "ingest": "YouTube ingestion is planned for Milestone 2.",
     "candidates": "Candidate scoring is planned for Milestone 2.",
-    "source-check": "Evidence source retrieval is planned for Milestone 4.",
     "run-daily": "Daily automation is planned after the repeatable MVP is validated.",
 }
 
@@ -122,7 +127,29 @@ def build_parser() -> argparse.ArgumentParser:
     brief_parser.add_argument("video_id", help="YouTube video ID to process.")
     brief_parser.add_argument("--database", type=Path, help="Override SQLite database path.")
     brief_parser.add_argument("--briefs-dir", type=Path, help="Override brief output directory.")
+    brief_parser.add_argument(
+        "--verified",
+        action="store_true",
+        help="Generate the source-verified brief variant.",
+    )
     brief_parser.set_defaults(func=_brief)
+
+    verify_parser = subparsers.add_parser(
+        "verify-sources",
+        aliases=["source-check"],
+        help="Run optional PubMed/Semantic Scholar source verification.",
+    )
+    verify_parser.add_argument("video_id", help="YouTube video ID to verify.")
+    verify_parser.add_argument("--database", type=Path, help="Override SQLite database path.")
+    verify_parser.add_argument("--briefs-dir", type=Path, help="Override brief output directory.")
+    verify_parser.add_argument("--semantic-scholar-api-key", help="Semantic Scholar API key.")
+    verify_parser.add_argument("--ncbi-api-key", help="NCBI/PubMed API key.")
+    verify_parser.add_argument(
+        "--max-results",
+        type=int,
+        help="Maximum candidates per adapter and claim.",
+    )
+    verify_parser.set_defaults(func=_verify_sources)
 
     serve_parser = subparsers.add_parser("serve", help="Serve the local HTML process page.")
     serve_parser.add_argument("--host", help="Host/interface to bind.")
@@ -131,8 +158,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     for command, message in PLACEHOLDER_MESSAGES.items():
         command_parser = subparsers.add_parser(command, help=message)
-        if command in {"source-check"}:
-            command_parser.add_argument("video_id", help="YouTube video ID to process.")
         command_parser.set_defaults(func=_placeholder(command, message))
 
     return parser
@@ -281,8 +306,45 @@ def _brief(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     database_path = args.database or config.paths.database
     briefs_dir = args.briefs_dir or config.paths.briefs
-    path = generate_brief(database_path, video_id=args.video_id, briefs_path=briefs_dir)
+    if args.verified:
+        path = generate_verified_brief(
+            database_path,
+            video_id=args.video_id,
+            briefs_path=briefs_dir,
+        )
+    else:
+        path = generate_brief(database_path, video_id=args.video_id, briefs_path=briefs_dir)
     print(f"Generated Markdown brief: {path}")
+    return 0
+
+
+def _verify_sources(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    database_path = args.database or config.paths.database
+    init_db(database_path)
+    adapters = default_adapters(
+        semantic_scholar_key=args.semantic_scholar_api_key or config.api_keys.semantic_scholar,
+        ncbi_key=args.ncbi_api_key or config.api_keys.ncbi,
+    )
+    try:
+        verification_run_id = verify_sources(
+            database_path,
+            video_id=args.video_id,
+            adapters=adapters,
+            max_results=args.max_results or config.pipeline.source_verification_max_results,
+            timeout_seconds=config.pipeline.source_verification_timeout_seconds,
+        )
+        briefs_dir = args.briefs_dir or config.paths.briefs
+        path = generate_verified_brief(
+            database_path,
+            video_id=args.video_id,
+            briefs_path=briefs_dir,
+        )
+    except VerificationError as exc:
+        print(str(exc))
+        return 1
+    print(f"Verified sources for {args.video_id}: verification run {verification_run_id}")
+    print(f"Generated source-verified Markdown brief: {path}")
     return 0
 
 

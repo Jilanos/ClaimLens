@@ -19,6 +19,7 @@ def test_cli_help_lists_mvp_commands(capsys):
         "analyze",
         "source-check",
         "brief",
+        "verify-sources",
         "serve",
         "run-daily",
     ]:
@@ -39,7 +40,6 @@ def test_placeholder_commands_exit_successfully(capsys):
     commands = [
         ["ingest"],
         ["candidates"],
-        ["source-check", "video123"],
         ["run-daily"],
     ]
 
@@ -48,7 +48,6 @@ def test_placeholder_commands_exit_successfully(capsys):
 
     output = capsys.readouterr().out
     assert "planned for Milestone" in output
-    assert "video123" in output
 
 
 def test_run_video_rejects_non_video_url(capsys):
@@ -65,6 +64,15 @@ def test_analyze_requires_openai_key(tmp_path, capsys):
 
     assert exit_code == 1
     assert "OPENAI_API_KEY is required" in capsys.readouterr().out
+
+
+def test_source_check_requires_analysis(tmp_path, capsys):
+    database = tmp_path / "claimlens.sqlite3"
+
+    exit_code = main(["source-check", "video123", "--database", str(database)])
+
+    assert exit_code == 1
+    assert "Cannot verify sources before analysis exists" in capsys.readouterr().out
 
 
 def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path, capsys):

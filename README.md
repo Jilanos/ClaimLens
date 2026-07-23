@@ -10,11 +10,12 @@ The refined MVP is local-first:
 4. Clean the transcript for LLM input.
 5. Use OpenAI to generate a structured analysis.
 6. Generate a Markdown brief.
-7. Inspect and launch steps from a local HTML process page.
+7. Optionally verify notable claims against PubMed and Semantic Scholar.
+8. Inspect and launch steps from a local HTML process page.
 
-Channel monitoring, candidate scoring, source retrieval, and evidence verdicts are no longer base
-MVP requirements. Advanced source verification is planned as an optional mode after the base one-
-video workflow is reliable.
+Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
+verification is optional and disabled by default; when launched, it checks stored notable claims
+against PubMed and Semantic Scholar candidates and renders a source-verified brief.
 
 ## Local Development
 
@@ -57,25 +58,28 @@ CLAIMLENS_BRIEFS=outputs/briefs
 CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
 OPENAI_API_KEY=
+SEMANTIC_SCHOLAR_API_KEY=
+NCBI_API_KEY=
 ```
 
 `OPENAI_API_KEY` is required for the LLM analysis step. It can be supplied through the environment,
 `--openai-api-key`, or the local HTML UI and is not persisted in SQLite, generated transcripts, or
 generated briefs.
 
-Optional future source verification keys:
-
-```bash
-SEMANTIC_SCHOLAR_API_KEY=
-NCBI_API_KEY=
-```
-
 Advanced source verification is disabled by default:
 
 ```toml
+[pipeline]
+source_verification_max_results = 5
+source_verification_timeout_seconds = 20
+
 [sources]
 advanced_source_verification = false
 ```
+
+The source verification keys are optional for local tests and some API usage, but should be supplied
+for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not
+persisted in SQLite, generated transcripts, generated briefs, or the local HTML output.
 
 ## Current Implementation
 
@@ -91,6 +95,9 @@ Implemented:
 - Cleaned transcript artifacts.
 - Mockable OpenAI analysis boundary and structured analysis storage.
 - Direct Markdown brief generation labeled as not advanced-source-verified.
+- Optional PubMed/Semantic Scholar source verification for stored notable claims.
+- Non-binary claim verdicts: supported, contradicted, mixed, unclear, and not_checked.
+- Source-verified Markdown brief generation with supporting/contradicting evidence snippets.
 - Local HTML process page with step statuses, failure details, outputs, and next-step controls.
 
 Manual smoke test:
@@ -112,6 +119,28 @@ claimlens run-video "https://www.youtube.com/watch?v=<no-caption-video-id>" --da
 The second path should stop at the captions step with a persisted message explaining that subtitles
 are unavailable and the base MVP does not use audio fallback.
 
+3. Optional source verification after a successful analysis:
+
+```bash
+export SEMANTIC_SCHOLAR_API_KEY=...
+export NCBI_API_KEY=...
+claimlens verify-sources "W7DVR9TlpOs" --database data/claimlens.sqlite3
+claimlens brief "W7DVR9TlpOs" --verified --database data/claimlens.sqlite3
+```
+
+This writes `outputs/briefs/<video_id>.verified.md`. The verified brief includes a human-review
+disclaimer because PubMed/Semantic Scholar snippets are review aids, not final medical advice or
+scientific authority.
+
+4. HTML workflow:
+
+```bash
+claimlens serve
+```
+
+Open `http://127.0.0.1:8765`, load a run, and launch `source verification` after analysis exists.
+The page shows verification status, failure details, source counts, and output paths.
+
 ## SQLite Schema
 
 Schema version 1 creates the base tables for pipeline state and later analysis:
@@ -127,9 +156,11 @@ Schema version 1 creates the base tables for pipeline state and later analysis:
 - `claims`
 - `sources`
 - `claim_sources`
+- `verification_runs`
+- `evidence_snippets`
 - `brief_artifacts`
 
-Before introducing schema version 3, any additive or destructive production schema change must
+Before introducing schema version 4, any additive or destructive production schema change must
 include a tested migration path.
 
 ## Refined Command Surface
@@ -142,6 +173,8 @@ claimlens run-video <youtube_video_url>
 claimlens transcribe <youtube_video_url>
 claimlens analyze <video_id>
 claimlens brief <video_id>
+claimlens verify-sources <video_id>
+claimlens brief <video_id> --verified
 claimlens serve
 ```
 

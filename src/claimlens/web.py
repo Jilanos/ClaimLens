@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
-from claimlens.briefs import generate_brief
+from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import AppConfig
 from claimlens.pipeline import (
     clean_run_transcript,
@@ -17,6 +17,7 @@ from claimlens.pipeline import (
     extract_required_subtitles,
     next_eligible_step,
 )
+from claimlens.verification import default_adapters, verify_sources
 
 
 def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
@@ -201,6 +202,45 @@ def _run_action(
             output_path=str(path),
         )
         db.set_run_status(database_path, run_id=run_id, status="succeeded", current_step="brief")
+    elif action == "source_verification":
+        semantic_key = (
+            form.get("semantic_scholar_api_key", [""])[0]
+            or config.api_keys.semantic_scholar
+        )
+        ncbi_key = form.get("ncbi_api_key", [""])[0] or config.api_keys.ncbi
+        adapters = default_adapters(semantic_scholar_key=semantic_key, ncbi_key=ncbi_key)
+        db.set_step_status(
+            database_path,
+            run_id=run_id,
+            step="source_verification",
+            status="running",
+        )
+        verification_run_id = verify_sources(
+            database_path,
+            video_id=run["video_id"],
+            adapters=adapters,
+            max_results=config.pipeline.source_verification_max_results,
+            timeout_seconds=config.pipeline.source_verification_timeout_seconds,
+        )
+        path = generate_verified_brief(
+            database_path,
+            video_id=run["video_id"],
+            briefs_path=config.paths.briefs,
+        )
+        db.set_step_status(
+            database_path,
+            run_id=run_id,
+            step="source_verification",
+            status="succeeded",
+            output_path=str(path),
+        )
+        db.set_run_status(
+            database_path,
+            run_id=run_id,
+            status="succeeded",
+            current_step="source_verification",
+        )
+        _ = verification_run_id
     else:
         raise ValueError(f"Unsupported action: {action}")
 
@@ -211,6 +251,12 @@ def _controls(run_id: int, next_step: str | None) -> str:
     secret = ""
     if next_step == "analysis":
         secret = '<input name="openai_api_key" type="password" placeholder="OpenAI API key">'
+    elif next_step == "source_verification":
+        secret = (
+            '<input name="semantic_scholar_api_key" type="password" '
+            'placeholder="Semantic Scholar API key">'
+            '<input name="ncbi_api_key" type="password" placeholder="NCBI API key">'
+        )
     return f"""
     <form method="post">
       <input type="hidden" name="run_id" value="{run_id}">
@@ -224,14 +270,29 @@ def _controls(run_id: int, next_step: str | None) -> str:
 def _outputs(database_path: Path | str, video_id: str) -> str:
     cleaned = db.get_cleaned_transcript(database_path, video_id)
     brief = db.latest_brief_artifact(database_path, video_id)
+    verification = db.latest_verification_run(database_path, video_id)
     links = []
     if cleaned is not None and cleaned["output_path"]:
         links.append(f"<li>Cleaned transcript: {html.escape(cleaned['output_path'])}</li>")
     if brief is not None:
         links.append(f"<li>Markdown brief: {html.escape(brief['path'])}</li>")
+    if verification is not None:
+        links.append(
+            "<li>"
+            f"Source verification: {html.escape(verification['status'])} "
+            f"({_verification_counts(database_path, verification['id'])})"
+            "</li>"
+        )
     if not links:
         return ""
     return f"<section><h2>Outputs</h2><ul>{''.join(links)}</ul></section>"
+
+
+def _verification_counts(database_path: Path | str, verification_run_id: int) -> str:
+    evidence = db.evidence_for_verification(database_path, verification_run_id)
+    supports = sum(1 for row in evidence if row["polarity"] == "supports")
+    contradicts = sum(1 for row in evidence if row["polarity"] == "contradicts")
+    return f"{supports} supporting snippets, {contradicts} contradicting snippets"
 
 
 def _step_row(row) -> str:

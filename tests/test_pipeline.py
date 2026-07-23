@@ -43,6 +43,7 @@ def test_create_run_records_video_and_steps(tmp_path):
         "clean_transcript",
         "analysis",
         "brief",
+        "source_verification",
     ]
 
 

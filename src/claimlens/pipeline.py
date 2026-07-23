@@ -200,6 +200,8 @@ def next_eligible_step(database_path: Path | str, run_id: int) -> str | None:
         return "analysis"
     if steps.get("analysis") == "succeeded" and steps.get("brief") == "pending":
         return "brief"
+    if steps.get("analysis") == "succeeded" and steps.get("source_verification") == "pending":
+        return "source_verification"
     return None
 
 
