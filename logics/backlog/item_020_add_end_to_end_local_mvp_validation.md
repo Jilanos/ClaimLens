@@ -1,10 +1,10 @@
 ## item_020_add_end_to_end_local_mvp_validation - Add end-to-end local MVP validation
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Medium
 > Theme: Validation
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -39,6 +39,7 @@
 - request-AC8 -> This backlog slice. Proof: AC4: Lint and tests pass before closeout.
 - request-AC9 -> This backlog slice. Proof: AC4: Lint and tests pass before closeout.
 - request-AC10 -> This backlog slice. Proof: AC4: Lint and tests pass before closeout.
+- request-AC7 -> This backlog slice. Evidence needed: The architecture defines an optional advanced source verification mode that can later add source retrieval and claim assessment without blocking the base MVP.
 
 # Decision framing
 - Product framing: Not needed
@@ -59,3 +60,6 @@
 # Priority
 - Priority: High
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Notes
+- Task `task_004_orchestrate_single_video_local_first_mvp` was finished via `logics-manager flow finish task` on 2026-07-23.

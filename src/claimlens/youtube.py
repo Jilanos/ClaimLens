@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.request import Request, urlopen
 
-from youtube_transcript_api import YouTubeTranscriptApi
-
 USER_AGENT = "Mozilla/5.0 (compatible; ClaimLens/0.1)"
 
 
@@ -57,6 +55,8 @@ def latest_channel_videos(channel_url: str, *, limit: int) -> list[YouTubeVideo]
 
 def fetch_transcript(video_id: str, *, languages: list[str] | None = None) -> TranscriptResult:
     """Fetch the preferred transcript for a YouTube video."""
+
+    from youtube_transcript_api import YouTubeTranscriptApi
 
     transcript = YouTubeTranscriptApi().fetch(video_id, languages=languages or ["en"])
     segments = [

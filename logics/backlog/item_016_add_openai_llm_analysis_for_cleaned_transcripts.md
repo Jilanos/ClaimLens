@@ -1,10 +1,10 @@
 ## item_016_add_openai_llm_analysis_for_cleaned_transcripts - Add OpenAI LLM analysis for cleaned transcripts
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Medium
 > Theme: LLM analysis
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -35,6 +35,11 @@
 - request-AC1 -> This backlog slice. Proof: AC1: Missing OpenAI API key stops before API call with a clear message.
 - request-AC5 -> This backlog slice. Proof: AC2: Mocked OpenAI analysis stores a summary and notable claims for a video.
 - request-AC10 -> This backlog slice. Proof: AC3: The prompt contract is documented and covered by tests.
+- request-AC4 -> This backlog slice. Evidence needed: Transcript cleanup stores a timestamp-free, normalized text artifact suitable for LLM input while preserving the raw segmented transcript in SQLite.
+- request-AC6 -> This backlog slice. Evidence needed: The base MVP can generate a reviewable Markdown brief directly after LLM analysis without requiring source retrieval or verdict assessment.
+- request-AC7 -> This backlog slice. Evidence needed: The architecture defines an optional advanced source verification mode that can later add source retrieval and claim assessment without blocking the base MVP.
+- request-AC8 -> This backlog slice. Evidence needed: A local HTML process page shows the current run, step statuses, failure causes, outputs, and action controls for launching the next eligible step.
+- request-AC9 -> This backlog slice. Evidence needed: The implementation remains local-first and VPS-ready: no hardcoded localhost-only assumptions, file paths are configurable, and secrets are not persisted in generated outputs.
 
 # Decision framing
 - Product framing: Not needed
@@ -55,3 +60,6 @@
 # Priority
 - Priority: High
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Notes
+- Task `task_004_orchestrate_single_video_local_first_mvp` was finished via `logics-manager flow finish task` on 2026-07-23.

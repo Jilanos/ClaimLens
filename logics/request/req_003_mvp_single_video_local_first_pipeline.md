@@ -1,7 +1,7 @@
 ## req_003_mvp_single_video_local_first_pipeline - MVP: Single Video Local First Pipeline
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Draft
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
 > Complexity: High

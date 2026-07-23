@@ -25,6 +25,7 @@ class PipelineConfig:
 
 @dataclass(frozen=True)
 class SourceConfig:
+    advanced_source_verification: bool
     enable_pubmed: bool
     enable_semantic_scholar: bool
     enable_web_search: bool
@@ -99,6 +100,7 @@ def load_config(
             ),
         ),
         sources=SourceConfig(
+            advanced_source_verification=bool(sources.get("advanced_source_verification", False)),
             enable_pubmed=bool(sources.get("enable_pubmed", True)),
             enable_semantic_scholar=bool(sources.get("enable_semantic_scholar", True)),
             enable_web_search=bool(sources.get("enable_web_search", False)),

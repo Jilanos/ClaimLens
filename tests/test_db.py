@@ -34,12 +34,15 @@ EXPECTED_TABLES = {
     "channels",
     "videos",
     "pipeline_runs",
+    "run_steps",
     "transcripts",
     "transcript_segments",
+    "cleaned_transcripts",
     "summaries",
     "claims",
     "sources",
     "claim_sources",
+    "brief_artifacts",
 }
 
 
@@ -63,7 +66,7 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "1"
+    assert schema_version == "2"
 
 
 def test_init_db_closes_connection(monkeypatch, tmp_path):

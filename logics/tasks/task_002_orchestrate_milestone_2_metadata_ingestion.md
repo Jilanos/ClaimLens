@@ -45,6 +45,8 @@
 - request-AC6 -> This obsolete task. Proof: superseded by `req_003_mvp_single_video_local_first_pipeline`; candidate listing is no longer base-MVP scope.
 - request-AC7 -> This obsolete task. Proof: superseded by `req_003_mvp_single_video_local_first_pipeline`; deterministic tests move to the new single-video MVP validation slice.
 - request-AC8 -> This obsolete task. Proof: superseded by `req_003_mvp_single_video_local_first_pipeline`; README now documents the single-video MVP path.
+- request-AC9 -> This task. Evidence needed: The implementation remains local-first and VPS-ready: no hardcoded localhost-only assumptions, file paths are configurable, and secrets are not persisted in generated outputs.
+- request-AC10 -> This task. Evidence needed: Tests cover URL parsing, subtitle-unavailable failure, transcript cleanup, OpenAI client boundaries, brief rendering, and HTML process-state rendering without live network calls.
 
 # Validation
 - Run `python3 -m logics_manager lint --require-status`.

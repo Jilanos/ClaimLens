@@ -14,10 +14,12 @@ def test_cli_help_lists_mvp_commands(capsys):
         "init-db",
         "ingest",
         "candidates",
+        "run-video",
         "transcribe",
         "analyze",
         "source-check",
         "brief",
+        "serve",
         "run-daily",
     ]:
         assert command in output
@@ -37,9 +39,7 @@ def test_placeholder_commands_exit_successfully(capsys):
     commands = [
         ["ingest"],
         ["candidates"],
-        ["analyze", "video123"],
         ["source-check", "video123"],
-        ["brief", "video123"],
         ["run-daily"],
     ]
 
@@ -49,6 +49,22 @@ def test_placeholder_commands_exit_successfully(capsys):
     output = capsys.readouterr().out
     assert "planned for Milestone" in output
     assert "video123" in output
+
+
+def test_run_video_rejects_non_video_url(capsys):
+    exit_code = main(["run-video", "https://www.youtube.com/@example/videos"])
+
+    assert exit_code == 1
+    assert "exactly one YouTube video ID" in capsys.readouterr().out
+
+
+def test_analyze_requires_openai_key(tmp_path, capsys):
+    database = tmp_path / "claimlens.sqlite3"
+
+    exit_code = main(["analyze", "video123", "--database", str(database)])
+
+    assert exit_code == 1
+    assert "OPENAI_API_KEY is required" in capsys.readouterr().out
 
 
 def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path, capsys):
