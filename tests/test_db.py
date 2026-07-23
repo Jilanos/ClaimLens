@@ -1,5 +1,7 @@
 import sqlite3
+from unittest.mock import MagicMock
 
+from claimlens import db
 from claimlens.db import init_db, table_names
 
 EXPECTED_TABLES = {
@@ -37,3 +39,23 @@ def test_init_db_is_idempotent(tmp_path):
         ).fetchone()[0]
 
     assert schema_version == "1"
+
+
+def test_init_db_closes_connection(monkeypatch, tmp_path):
+    connection = MagicMock()
+    monkeypatch.setattr(db, "connect", MagicMock(return_value=connection))
+
+    init_db(tmp_path / "claimlens.sqlite3")
+
+    connection.executescript.assert_called_once_with(db.SCHEMA_SQL)
+    connection.close.assert_called_once_with()
+
+
+def test_table_names_closes_connection(monkeypatch, tmp_path):
+    connection = MagicMock()
+    connection.execute.return_value.fetchall.return_value = [{"name": "videos"}]
+    monkeypatch.setattr(db, "connect", MagicMock(return_value=connection))
+
+    assert table_names(tmp_path / "claimlens.sqlite3") == {"videos"}
+
+    connection.close.assert_called_once_with()

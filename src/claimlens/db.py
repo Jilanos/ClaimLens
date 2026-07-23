@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 SCHEMA_VERSION = 1
@@ -147,13 +148,14 @@ def connect(database_path: Path | str) -> sqlite3.Connection:
 
 def init_db(database_path: Path | str) -> Path:
     path = Path(database_path)
-    with connect(path) as connection:
-        connection.executescript(SCHEMA_SQL)
+    with closing(connect(path)) as connection:
+        with connection:
+            connection.executescript(SCHEMA_SQL)
     return path
 
 
 def table_names(database_path: Path | str) -> set[str]:
-    with connect(database_path) as connection:
+    with closing(connect(database_path)) as connection:
         rows = connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()

@@ -1,0 +1,312 @@
+{
+  "budgets": {
+    "max_docs": 24,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_002_audit_remediation_and_hardening item_010_close_sqlite_connections_deterministically item_011_harden_configuration_loading_contract item_012_add_minimal_ci_quality_gate item_013_document_schema_migration_policy task_003_orchestrate_audit_remediation_and_hardening --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_010_close_sqlite_connections_deterministically",
+          "item_011_harden_configuration_loading_contract",
+          "item_012_add_minimal_ci_quality_gate",
+          "item_013_document_schema_migration_policy"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/product/prod_003_claimlens_audit_remediation_and_hardening.md",
+      "ref": "prod_003_claimlens_audit_remediation_and_hardening",
+      "status": "Proposed",
+      "title": "ClaimLens Audit Remediation and Hardening"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, audit remediation and hardening, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Audit Remediation and Hardening",
+        "use when": "You need to implement or review the scaffolded workflow for Audit Remediation and Hardening."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_010_close_sqlite_connections_deterministically",
+          "item_011_harden_configuration_loading_contract",
+          "item_012_add_minimal_ci_quality_gate",
+          "item_013_document_schema_migration_policy"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/request/req_002_audit_remediation_and_hardening.md",
+      "ref": "req_002_audit_remediation_and_hardening",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Audit Remediation and Hardening"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, close sqlite connections deterministically, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Close SQLite connections deterministically",
+        "use when": "Implementing the scaffolded slice for Close SQLite connections deterministically."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_010_close_sqlite_connections_deterministically"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_010_close_sqlite_connections_deterministically.md",
+      "ref": "item_010_close_sqlite_connections_deterministically",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Close SQLite connections deterministically"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, harden configuration loading contract, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Harden configuration loading contract",
+        "use when": "Implementing the scaffolded slice for Harden configuration loading contract."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_011_harden_configuration_loading_contract"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_011_harden_configuration_loading_contract.md",
+      "ref": "item_011_harden_configuration_loading_contract",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Harden configuration loading contract"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add minimal ci quality gate, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add minimal CI quality gate",
+        "use when": "Implementing the scaffolded slice for Add minimal CI quality gate."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_012_add_minimal_ci_quality_gate"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_012_add_minimal_ci_quality_gate.md",
+      "ref": "item_012_add_minimal_ci_quality_gate",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add minimal CI quality gate"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Audit Remediation and Hardening",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_010_close_sqlite_connections_deterministically",
+          "item_011_harden_configuration_loading_contract",
+          "item_012_add_minimal_ci_quality_gate",
+          "item_013_document_schema_migration_policy"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/tasks/task_003_orchestrate_audit_remediation_and_hardening.md",
+      "ref": "task_003_orchestrate_audit_remediation_and_hardening",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Audit Remediation and Hardening"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_010_close_sqlite_connections_deterministically",
+          "item_011_harden_configuration_loading_contract",
+          "item_012_add_minimal_ci_quality_gate",
+          "item_013_document_schema_migration_policy"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/product/prod_003_claimlens_audit_remediation_and_hardening.md",
+      "ref": "prod_003_claimlens_audit_remediation_and_hardening",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Audit Remediation and Hardening"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, document schema migration policy, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Document schema migration policy",
+        "use when": "Implementing the scaffolded slice for Document schema migration policy."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_013_document_schema_migration_policy"
+        ],
+        "prod": [
+          "prod_003_claimlens_audit_remediation_and_hardening"
+        ],
+        "req": [
+          "req_002_audit_remediation_and_hardening"
+        ],
+        "task": [
+          "task_003_orchestrate_audit_remediation_and_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_013_document_schema_migration_policy.md",
+      "ref": "item_013_document_schema_migration_policy",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Document schema migration policy"
+    }
+  ],
+  "estimates": {
+    "char_count": 6351,
+    "companion_doc_count": 1,
+    "doc_count": 7
+  },
+  "generated_at": "2026-07-23T07:54:41Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_002_audit_remediation_and_hardening",
+      "item_010_close_sqlite_connections_deterministically",
+      "item_011_harden_configuration_loading_contract",
+      "item_012_add_minimal_ci_quality_gate",
+      "item_013_document_schema_migration_policy",
+      "task_003_orchestrate_audit_remediation_and_hardening"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_002_audit_remediation_and_hardening,item_010_close_sqlite_connections_deterministically,item_011_harden_configuration_loading_contract,item_012_add_minimal_ci_quality_gate,item_013_document_schema_migration_policy,task_003_orchestrate_audit_remediation_and_hardening",
+  "refs": [
+    "req_002_audit_remediation_and_hardening",
+    "item_010_close_sqlite_connections_deterministically",
+    "item_011_harden_configuration_loading_contract",
+    "item_012_add_minimal_ci_quality_gate",
+    "item_013_document_schema_migration_policy",
+    "task_003_orchestrate_audit_remediation_and_hardening"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_003_orchestrate_audit_remediation_and_hardening.md",
+      "ref": "task_003_orchestrate_audit_remediation_and_hardening"
+    }
+  ]
+}

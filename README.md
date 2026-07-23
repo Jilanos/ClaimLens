@@ -35,7 +35,7 @@ Build a local pipeline that can:
 
 ## Status
 
-Milestone 1 is in progress. See [ROADMAP.md](ROADMAP.md) for the implementation plan.
+Milestone 1 is complete and Milestone 2 is planned. See [ROADMAP.md](ROADMAP.md) for the implementation plan.
 
 ## Local Development
 
@@ -63,13 +63,17 @@ pytest
 
 ## Configuration
 
-ClaimLens reads local configuration from `config/claimlens.example.toml` by default.
-Copy or replace it later with a local config file when real API-backed modules are added.
+ClaimLens reads local configuration from `config/claimlens.example.toml` by default, resolved from the current working directory. Run the CLI from the repository root for the default local workflow, or pass an explicit config path in code when embedding the package.
+
+Malformed numeric settings fail with a ClaimLens configuration error that identifies the invalid key.
 
 Relevant environment variables:
 
 ```bash
 CLAIMLENS_DB=data/claimlens.sqlite3
+CLAIMLENS_OUTPUTS=outputs
+CLAIMLENS_TRANSCRIPTS=outputs/transcripts
+CLAIMLENS_BRIEFS=outputs/briefs
 YOUTUBE_API_KEY=
 OPENAI_API_KEY=
 SEMANTIC_SCHOLAR_API_KEY=
@@ -77,6 +81,10 @@ NCBI_API_KEY=
 ```
 
 `claimlens init-db` does not require API keys.
+
+## SQLite Schema
+
+Schema version 1 is initialization-only: `claimlens init-db` creates missing tables and records `schema_version = 1`. Before introducing schema version 2, any additive or destructive production schema change must include a tested migration path. Migration tests should use temporary SQLite databases that represent the prior version and verify the upgraded schema and preserved data.
 
 ## MVP Command Surface
 

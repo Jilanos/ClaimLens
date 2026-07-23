@@ -1,0 +1,211 @@
+{
+  "title": "Audit Remediation and Hardening",
+  "references": [
+    "AUDIT.md",
+    "README.md",
+    "ROADMAP.md",
+    "pyproject.toml",
+    "src/claimlens/config.py",
+    "src/claimlens/db.py",
+    "tests/test_config.py",
+    "tests/test_db.py"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Quality",
+    "needs": [
+      "Respond to the 2026-07-23 audit by turning the non-blocking findings into tracked implementation work.",
+      "Remove the most immediate reliability risk by ensuring SQLite connections are closed deterministically.",
+      "Make configuration behavior explicit and robust enough for installed CLI usage and malformed local files.",
+      "Add a minimal automated quality gate so future changes run lint and tests consistently.",
+      "Capture the schema migration policy before any production schema change requires versioned migrations."
+    ],
+    "context": [
+      "AUDIT.md gives the repository a commit-and-push green light, with minor and future hardening findings to plan through Logics.",
+      "Milestone 1 is complete and Milestone 2 metadata ingestion is already scaffolded as a separate active chain.",
+      "This chain should harden the local skeleton without expanding the product scope into ingestion, transcript creation, or analysis.",
+      "The audit recommends priority order: close SQLite connections, add minimal CI, then define migrations before schema changes."
+    ],
+    "acceptance_criteria": [
+      "AC1: SQLite helper paths close every opened connection deterministically while preserving current transaction behavior.",
+      "AC2: Configuration default path behavior is either made install-safe or documented as repository-root execution behavior with tests covering the selected contract.",
+      "AC3: Environment override behavior for output-related paths is made consistent or explicitly documented as intentionally limited for the MVP.",
+      "AC4: Malformed numeric configuration values fail with a clear ClaimLens-level error message instead of an opaque conversion exception.",
+      "AC5: A minimal CI workflow runs the established `ruff check .` and `pytest` validation commands on push and pull request events.",
+      "AC6: Schema versioning expectations are documented before any schema version 2 change, including when migrations are required and how they should be validated.",
+      "AC7: README, ROADMAP, or another appropriate project doc reflects any operator-facing changes introduced by the audit response.",
+      "AC8: The audit response closes only after `ruff check .`, `pytest`, and `logics-manager lint --require-status` pass locally."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Audit Remediation and Hardening",
+    "overview": "A focused hardening pass that converts audit findings into verified reliability, configuration, CI, and schema-governance improvements.",
+    "goals": [
+      "Address the actionable audit findings without disrupting the Milestone 2 ingestion chain.",
+      "Reduce local runtime reliability risk in database helpers.",
+      "Clarify configuration contracts for installed and repository-local usage.",
+      "Make routine quality validation automatic in CI.",
+      "Record migration expectations before schema evolution becomes risky."
+    ],
+    "non_goals": [
+      "Implementing YouTube metadata ingestion.",
+      "Adding transcript, analysis, or brief-generation behavior.",
+      "Introducing a full migration framework before a schema change needs it.",
+      "Adding live API integration tests.",
+      "Changing repository release or deployment strategy."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Close SQLite connections deterministically",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Storage",
+      "request_acs": [
+        "AC1",
+        "AC8"
+      ],
+      "problem": [
+        "The audit found that `with sqlite3.connect(...) as connection:` commits or rolls back transactions but does not close the connection.",
+        "Repeated CLI usage in later milestones could leak file descriptors if helper functions keep relying on transaction context managers alone."
+      ],
+      "scope_in": [
+        "Update SQLite helper functions that open connections to close them deterministically.",
+        "Preserve existing commit, rollback, schema initialization, and query behavior.",
+        "Keep the change small and covered by the existing database tests, adding targeted assertions only where they provide real signal.",
+        "Run the local validation baseline after the change."
+      ],
+      "scope_out": [
+        "Changing the schema.",
+        "Adding a database connection pool.",
+        "Implementing schema migrations.",
+        "Refactoring unrelated persistence behavior."
+      ],
+      "acceptance_criteria": [
+        "AC1: Every connection opened by the current database helpers is closed after use.",
+        "AC2: Existing schema initialization and metadata behavior remains unchanged.",
+        "AC3: Existing database tests pass against temporary SQLite databases.",
+        "AC4: `ruff check .` and `pytest` pass locally."
+      ]
+    },
+    {
+      "title": "Harden configuration loading contract",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Configuration",
+      "request_acs": [
+        "AC2",
+        "AC3",
+        "AC4",
+        "AC7",
+        "AC8"
+      ],
+      "problem": [
+        "The audit found that default config resolution depends on the current working directory.",
+        "Only the database path has an environment override, while output, transcript, and brief paths do not.",
+        "Malformed numeric TOML values currently surface as low-level conversion errors."
+      ],
+      "scope_in": [
+        "Choose and implement or document the intended default config path contract.",
+        "Make output-related path override behavior consistent or explicitly document why only `CLAIMLENS_DB` is supported for the MVP.",
+        "Wrap malformed numeric configuration values in a clear project-level error.",
+        "Add focused tests for the chosen config contract and error messages.",
+        "Update README or config examples when operator behavior changes."
+      ],
+      "scope_out": [
+        "A full configuration discovery system.",
+        "Secrets management beyond existing environment variable usage.",
+        "Runtime channel configuration for ingestion unless required by the existing Milestone 2 chain.",
+        "A breaking config file format change."
+      ],
+      "acceptance_criteria": [
+        "AC1: Running from outside the repository either works by documented package-relative defaults or fails with clear documented expectations.",
+        "AC2: Path override behavior is internally consistent and covered by tests or documented as intentionally limited.",
+        "AC3: Invalid integer config values raise a clear ClaimLens configuration error.",
+        "AC4: README or example configuration reflects the final operator contract.",
+        "AC5: `ruff check .` and `pytest` pass locally."
+      ]
+    },
+    {
+      "title": "Add minimal CI quality gate",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Quality",
+      "request_acs": [
+        "AC5",
+        "AC8"
+      ],
+      "problem": [
+        "The audit found no CI workflow running the repository's established lint and test commands.",
+        "Manual validation is currently easy to skip as implementation work expands."
+      ],
+      "scope_in": [
+        "Add a minimal GitHub Actions workflow for supported Python setup.",
+        "Install project test dependencies using the repository's declared package metadata.",
+        "Run `ruff check .` and `pytest` on pull request and push events.",
+        "Keep the workflow deterministic and free of required external secrets."
+      ],
+      "scope_out": [
+        "Deployment automation.",
+        "Release publishing.",
+        "Live YouTube API tests.",
+        "A full multi-platform CI matrix unless the project metadata already requires it."
+      ],
+      "acceptance_criteria": [
+        "AC1: `.github/workflows/ci.yml` exists and runs on push and pull request events.",
+        "AC2: The workflow installs dependencies without requiring local-only files or secrets.",
+        "AC3: The workflow runs `ruff check .`.",
+        "AC4: The workflow runs `pytest`.",
+        "AC5: Local `ruff check .` and `pytest` still pass."
+      ]
+    },
+    {
+      "title": "Document schema migration policy",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "Storage",
+      "request_acs": [
+        "AC6",
+        "AC7",
+        "AC8"
+      ],
+      "problem": [
+        "The audit found that `SCHEMA_VERSION` exists but there is no real migration path.",
+        "Before schema version 2, the project needs an explicit rule for when and how migrations are introduced."
+      ],
+      "scope_in": [
+        "Document the current schema version behavior.",
+        "Define the threshold for adding a migration path instead of relying on `CREATE TABLE IF NOT EXISTS`.",
+        "Specify validation expectations for future schema changes.",
+        "Add a Logics or roadmap note if future migration work should be scheduled before production data compatibility matters."
+      ],
+      "scope_out": [
+        "Implementing a migration runner now.",
+        "Changing `SCHEMA_VERSION`.",
+        "Changing existing tables.",
+        "Supporting downgrade migrations."
+      ],
+      "acceptance_criteria": [
+        "AC1: Project documentation states that schema version 1 is initialization-only.",
+        "AC2: Documentation states that schema version 2 or any destructive/additive production schema change must include a tested migration path.",
+        "AC3: The documented validation baseline includes temporary-database tests for migrations once migrations exist.",
+        "AC4: `logics-manager lint --require-status` passes after the documentation update."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Audit Remediation and Hardening",
+    "plan": [
+      "Start with deterministic SQLite connection closure because it is the most direct runtime reliability finding.",
+      "Add the minimal CI quality gate so future remediation work is automatically checked.",
+      "Harden or document the configuration loading contract, including path overrides and malformed numeric values.",
+      "Document the schema migration policy before any schema version 2 work begins.",
+      "Run local validation, update affected Logics docs at each meaningful wave, and close the chain only after lint, tests, and Logics validation pass."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/audit-remediation-hardening.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

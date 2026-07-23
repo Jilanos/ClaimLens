@@ -237,6 +237,7 @@ Only `OPENAI_API_KEY` is expected to be paid for the MVP. The other APIs can sta
 - Automated fact-checking is probabilistic and requires human review.
 - Scientific claims often need nuanced interpretation.
 - API rate limits need explicit backoff and caching.
+- SQLite schema version 2 must not ship without a tested migration path from schema version 1.
 
 ## MVP Principle
 

@@ -50,6 +50,10 @@ class AppConfig:
 DEFAULT_CONFIG_PATH = Path("config/claimlens.example.toml")
 
 
+class ConfigError(ValueError):
+    """Raised when local ClaimLens configuration is invalid."""
+
+
 def load_config(
     config_path: Path | str | None = None,
     *,
@@ -66,9 +70,13 @@ def load_config(
     sources = raw.get("sources", {})
 
     database = _env_path(environ, "CLAIMLENS_DB", paths.get("database", "data/claimlens.sqlite3"))
-    outputs = _path(paths.get("outputs", "outputs"))
-    transcripts = _path(paths.get("transcripts", "outputs/transcripts"))
-    briefs = _path(paths.get("briefs", "outputs/briefs"))
+    outputs = _env_path(environ, "CLAIMLENS_OUTPUTS", paths.get("outputs", "outputs"))
+    transcripts = _env_path(
+        environ,
+        "CLAIMLENS_TRANSCRIPTS",
+        paths.get("transcripts", "outputs/transcripts"),
+    )
+    briefs = _env_path(environ, "CLAIMLENS_BRIEFS", paths.get("briefs", "outputs/briefs"))
 
     return AppConfig(
         repo_root=repo_root,
@@ -79,8 +87,16 @@ def load_config(
             briefs=briefs,
         ),
         pipeline=PipelineConfig(
-            max_videos_per_channel=int(pipeline.get("max_videos_per_channel", 10)),
-            candidate_min_duration_seconds=int(pipeline.get("candidate_min_duration_seconds", 480)),
+            max_videos_per_channel=_int_setting(
+                pipeline,
+                "max_videos_per_channel",
+                10,
+            ),
+            candidate_min_duration_seconds=_int_setting(
+                pipeline,
+                "candidate_min_duration_seconds",
+                480,
+            ),
         ),
         sources=SourceConfig(
             enable_pubmed=bool(sources.get("enable_pubmed", True)),
@@ -109,3 +125,11 @@ def _env_path(env: dict[str, str], key: str, fallback: str | Path) -> Path:
 
 def _path(value: str | Path) -> Path:
     return Path(value).expanduser()
+
+
+def _int_setting(values: dict[str, Any], key: str, default: int) -> int:
+    value = values.get(key, default)
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"Invalid integer config value for pipeline.{key}: {value!r}") from exc
