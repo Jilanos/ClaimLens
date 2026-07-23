@@ -1,11 +1,12 @@
 ## req_001_milestone_2_metadata_ingestion - Milestone 2: Metadata Ingestion
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Draft
+> Status: Obsolete
 > Understanding: 90%
 > Confidence: 85%
 > Complexity: Medium
 > Theme: Ingestion
+> Non-semantic edit: withdrawn by logics-manager; superseded by the single-video MVP chain.
 > Reminder: Update status/understanding/confidence and linked backlog/task references when you edit this doc.
 
 # Needs
@@ -62,3 +63,6 @@
 - `item_007_persist_ingested_channels_and_videos`
 - `item_008_implement_ingest_and_candidates_cli_commands`
 - `item_009_add_ingestion_tests_and_documentation`
+
+# Links
+- Superseded by: `req_003_mvp_single_video_local_first_pipeline`

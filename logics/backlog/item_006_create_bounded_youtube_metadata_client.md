@@ -1,12 +1,13 @@
 ## item_006_create_bounded_youtube_metadata_client - Create bounded YouTube metadata client
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Obsolete
 > Understanding: 90%
 > Confidence: 85%
 > Progress: 0%
 > Complexity: Medium
 > Theme: Ingestion
+> Non-semantic edit: withdrawn by logics-manager; superseded by the single-video MVP chain.
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
 
 # Problem
@@ -35,6 +36,10 @@
 - request-AC2 -> This backlog slice. Proof: AC1: Real client construction requires `YOUTUBE_API_KEY`.
 - request-AC3 -> This backlog slice. Proof: AC2: The ingestion module depends on a protocol or injectable client for tests.
 - request-AC7 -> This backlog slice. Proof: AC3: Recent video responses are normalized into stable internal objects.
+- request-AC4 -> This backlog slice. Evidence needed: Channel and video metadata are upserted into SQLite idempotently, preserving one record per channel and video ID.
+- request-AC5 -> This backlog slice. Evidence needed: Each ingest run records a `pipeline_runs` entry with command, status, timestamps, and useful details.
+- request-AC6 -> This backlog slice. Evidence needed: `claimlens candidates` lists ingested videos with enough metadata to manually choose a video for later processing.
+- request-AC8 -> This backlog slice. Evidence needed: README documents setup for `YOUTUBE_API_KEY`, channel config, `claimlens ingest`, and `claimlens candidates`.
 
 # Decision framing
 - Product framing: Not needed
@@ -45,6 +50,7 @@
 - Architecture decision(s): (none yet)
 - Request: `req_001_milestone_2_metadata_ingestion`
 - Primary task(s): `task_002_orchestrate_milestone_2_metadata_ingestion`
+- Superseded by: `item_014_implement_single_video_run_model_and_url_input`
 
 # AI Context
 - Summary: Create bounded YouTube metadata client

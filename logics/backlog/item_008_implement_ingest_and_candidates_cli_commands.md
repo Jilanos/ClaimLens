@@ -1,12 +1,13 @@
 ## item_008_implement_ingest_and_candidates_cli_commands - Implement ingest and candidates CLI commands
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Obsolete
 > Understanding: 90%
 > Confidence: 85%
 > Progress: 0%
 > Complexity: Medium
 > Theme: CLI
+> Non-semantic edit: withdrawn by logics-manager; superseded by the single-video MVP chain.
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
 
 # Problem
@@ -34,6 +35,8 @@
 - request-AC3 -> This backlog slice. Proof: AC2: `claimlens ingest` exits clearly when the API key or channel config is missing.
 - request-AC6 -> This backlog slice. Proof: AC3: `claimlens candidates` lists videos from SQLite without requiring API keys.
 - request-AC8 -> This backlog slice. Proof: AC4: CLI tests cover success and error paths without network calls.
+- request-AC5 -> This backlog slice. Evidence needed: Each ingest run records a `pipeline_runs` entry with command, status, timestamps, and useful details.
+- request-AC7 -> This backlog slice. Evidence needed: Ingestion and candidate behavior are covered by tests using mocked YouTube responses and temporary SQLite databases.
 
 # Decision framing
 - Product framing: Not needed
@@ -44,6 +47,7 @@
 - Architecture decision(s): (none yet)
 - Request: `req_001_milestone_2_metadata_ingestion`
 - Primary task(s): `task_002_orchestrate_milestone_2_metadata_ingestion`
+- Superseded by: `item_014_implement_single_video_run_model_and_url_input`
 
 # AI Context
 - Summary: Implement ingest and candidates CLI commands

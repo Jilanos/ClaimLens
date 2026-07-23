@@ -1,12 +1,13 @@
 ## item_009_add_ingestion_tests_and_documentation - Add ingestion tests and documentation
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Obsolete
 > Understanding: 90%
 > Confidence: 85%
 > Progress: 0%
 > Complexity: Low
 > Theme: Quality
+> Non-semantic edit: withdrawn by logics-manager; superseded by the single-video MVP chain.
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
 
 # Problem
@@ -32,6 +33,10 @@
 # AC Traceability
 - request-AC7 -> This backlog slice. Proof: AC1: The test suite passes without `YOUTUBE_API_KEY`.
 - request-AC8 -> This backlog slice. Proof: AC2: Tests cover mocked ingestion end to end.
+- request-AC3 -> This backlog slice. Evidence needed: The YouTube ingestion module fetches recent videos for configured channels through a bounded, testable client abstraction.
+- request-AC4 -> This backlog slice. Evidence needed: Channel and video metadata are upserted into SQLite idempotently, preserving one record per channel and video ID.
+- request-AC5 -> This backlog slice. Evidence needed: Each ingest run records a `pipeline_runs` entry with command, status, timestamps, and useful details.
+- request-AC6 -> This backlog slice. Evidence needed: `claimlens candidates` lists ingested videos with enough metadata to manually choose a video for later processing.
 
 # Decision framing
 - Product framing: Not needed
@@ -42,6 +47,7 @@
 - Architecture decision(s): (none yet)
 - Request: `req_001_milestone_2_metadata_ingestion`
 - Primary task(s): `task_002_orchestrate_milestone_2_metadata_ingestion`
+- Superseded by: `item_020_add_end_to_end_local_mvp_validation`
 
 # AI Context
 - Summary: Add ingestion tests and documentation

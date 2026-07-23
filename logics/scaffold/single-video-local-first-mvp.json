@@ -1,0 +1,311 @@
+{
+  "title": "MVP: Single Video Local First Pipeline",
+  "references": [
+    "ROADMAP.md",
+    "README.md",
+    "src/claimlens/cli.py",
+    "src/claimlens/db.py",
+    "src/claimlens/youtube.py",
+    "logics/architecture/adr_001_single_video_local_first_pipeline.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Local-first MVP",
+    "needs": [
+      "Accept a single YouTube video URL as the MVP input instead of monitoring channels.",
+      "Require existing YouTube subtitles; if subtitles are unavailable, stop the pipeline and explain the failure cause.",
+      "Clean subtitle text by removing timestamps and obvious transcript noise before LLM analysis.",
+      "Use an OpenAI API key entered at the start of the run for summary and brief generation.",
+      "Skip advanced source retrieval and claim verdicts in the base MVP, while designing an optional advanced source verification mode for later.",
+      "Provide a local HTML process page that documents each step, failures, and lets the user launch the next eligible step."
+    ],
+    "context": [
+      "The previous roadmap centered on channel ingestion and candidate selection; the refined MVP removes those stages.",
+      "The repository already has SQLite schema, CLI scaffolding, and a working subtitle extraction path for YouTube videos with captions.",
+      "The target deployment model is local-first, with a future VPS-hosted local web UI or service.",
+      "The MVP should be review-first and should fail clearly instead of fabricating missing transcript or source-check data."
+    ],
+    "acceptance_criteria": [
+      "AC1: A user can start a run with exactly one YouTube video URL and an OpenAI API key provided interactively or through environment/config.",
+      "AC2: The pipeline validates that the URL resolves to a single video ID and records a pipeline run state in SQLite.",
+      "AC3: Subtitle extraction succeeds only when YouTube captions are available; otherwise the run stops with a persisted, user-readable failure cause.",
+      "AC4: Transcript cleanup stores a timestamp-free, normalized text artifact suitable for LLM input while preserving the raw segmented transcript in SQLite.",
+      "AC5: The LLM step uses OpenAI to produce a concise summary, key points, notable claims, caveats, and editorial notes from the cleaned transcript.",
+      "AC6: The base MVP can generate a reviewable Markdown brief directly after LLM analysis without requiring source retrieval or verdict assessment.",
+      "AC7: The architecture defines an optional advanced source verification mode that can later add source retrieval and claim assessment without blocking the base MVP.",
+      "AC8: A local HTML process page shows the current run, step statuses, failure causes, outputs, and action controls for launching the next eligible step.",
+      "AC9: The implementation remains local-first and VPS-ready: no hardcoded localhost-only assumptions, file paths are configurable, and secrets are not persisted in generated outputs.",
+      "AC10: Tests cover URL parsing, subtitle-unavailable failure, transcript cleanup, OpenAI client boundaries, brief rendering, and HTML process-state rendering without live network calls."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Single Video Local First MVP",
+    "overview": "A local-first workflow that turns one YouTube video URL with available subtitles into a reviewable LLM-generated brief, with clear step-by-step status and failure handling.",
+    "goals": [
+      "Reduce MVP input to a single YouTube video URL.",
+      "Make subtitles mandatory and fail clearly when they are missing.",
+      "Clean transcript text before analysis while retaining raw transcript data for auditability.",
+      "Use an OpenAI API key entered at run start for the LLM analysis path.",
+      "Generate a Markdown brief directly from LLM analysis before advanced source verification exists.",
+      "Expose a local HTML process page for running and inspecting each pipeline step.",
+      "Keep the design local-first and ready for later VPS hosting."
+    ],
+    "non_goals": [
+      "Monitoring channels or ingesting batches of videos.",
+      "Candidate scoring and ranking.",
+      "Audio download or OpenAI audio transcription fallback when captions are unavailable.",
+      "Automatic publication to a CMS.",
+      "Mandatory advanced source retrieval or evidence verdicts in the base MVP.",
+      "Persisting OpenAI API keys in SQLite, generated briefs, or logs."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Implement single video run model and URL input",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Pipeline foundation",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC9"
+      ],
+      "problem": [
+        "The current command surface still implies channel ingestion and video candidate selection.",
+        "The MVP needs a single run entity centered on one YouTube video URL."
+      ],
+      "scope_in": [
+        "Add a run-oriented CLI command or adapt existing commands to accept one video URL.",
+        "Normalize and validate supported YouTube video URL formats.",
+        "Record run state and step status in SQLite using existing or minimally extended schema.",
+        "Ensure the OpenAI key is accepted through environment or prompted input without being stored."
+      ],
+      "scope_out": [
+        "Channel config loading.",
+        "Candidate scoring.",
+        "Batch orchestration."
+      ],
+      "acceptance_criteria": [
+        "AC1: A run can be created from one YouTube video URL.",
+        "AC2: Unsupported or ambiguous URLs fail with a clear message.",
+        "AC3: The run state records the video ID, source URL, current step, and failure details when applicable.",
+        "AC4: The OpenAI key can be supplied at startup without being written to SQLite or outputs."
+      ]
+    },
+    {
+      "title": "Make subtitle extraction mandatory and add transcript cleanup",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Transcript pipeline",
+      "request_acs": [
+        "AC3",
+        "AC4",
+        "AC10"
+      ],
+      "problem": [
+        "The MVP should not attempt audio transcription fallback.",
+        "LLM input should use cleaned transcript text, not timestamped subtitle segments."
+      ],
+      "scope_in": [
+        "Fail the transcript step when no captions are available.",
+        "Persist user-readable failure causes.",
+        "Keep raw transcript segments in SQLite for traceability.",
+        "Generate cleaned transcript text with timestamps removed and obvious ASR noise reduced.",
+        "Add tests for successful captions and unavailable captions."
+      ],
+      "scope_out": [
+        "Audio download.",
+        "Whisper/OpenAI transcription fallback.",
+        "Heavy grammar correction that changes meaning."
+      ],
+      "acceptance_criteria": [
+        "AC1: Videos without subtitles stop the pipeline before LLM analysis.",
+        "AC2: The failure page/CLI explains that subtitles are unavailable.",
+        "AC3: Cleaned transcript text contains no timestamp labels.",
+        "AC4: Raw segments remain queryable for audit/debug purposes."
+      ]
+    },
+    {
+      "title": "Add OpenAI LLM analysis for cleaned transcripts",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "LLM analysis",
+      "request_acs": [
+        "AC1",
+        "AC5",
+        "AC10"
+      ],
+      "problem": [
+        "The current analyze command is a placeholder.",
+        "The MVP needs a structured analysis output from the cleaned transcript."
+      ],
+      "scope_in": [
+        "Add a mockable OpenAI client boundary.",
+        "Prompt for or read an OpenAI API key at run start.",
+        "Generate structured summary, key points, notable claims, caveats, and editorial notes.",
+        "Store analysis output in existing summaries/claims tables or a minimal compatible schema extension.",
+        "Add tests with mocked OpenAI responses."
+      ],
+      "scope_out": [
+        "Source retrieval.",
+        "Evidence verdict labels.",
+        "Multi-model routing."
+      ],
+      "acceptance_criteria": [
+        "AC1: Missing OpenAI API key stops before API call with a clear message.",
+        "AC2: Mocked OpenAI analysis stores a summary and notable claims for a video.",
+        "AC3: The prompt contract is documented and covered by tests.",
+        "AC4: Generated analysis does not include the API key in logs or outputs."
+      ]
+    },
+    {
+      "title": "Generate direct Markdown brief from LLM analysis",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Brief generation",
+      "request_acs": [
+        "AC6",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "The refined MVP skips source retrieval and verdict assessment initially.",
+        "Users still need a reviewable output artifact after analysis."
+      ],
+      "scope_in": [
+        "Implement brief rendering from video metadata, cleaned transcript status, summary, claims, caveats, and editorial notes.",
+        "Write outputs to configurable brief paths.",
+        "Clearly label briefs as not advanced-source-verified unless the optional mode is enabled later.",
+        "Add snapshot-style tests for brief structure."
+      ],
+      "scope_out": [
+        "Citation-backed verdicts.",
+        "CMS publishing.",
+        "Full HTML report export beyond the process page."
+      ],
+      "acceptance_criteria": [
+        "AC1: `claimlens brief <video_id>` or the run flow produces `outputs/briefs/<video_id>.md`.",
+        "AC2: The brief includes a visible source-verification status.",
+        "AC3: The brief can be regenerated idempotently.",
+        "AC4: Brief rendering tests run without network access."
+      ]
+    },
+    {
+      "title": "Design optional advanced source verification mode",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Advanced verification",
+      "request_acs": [
+        "AC7"
+      ],
+      "problem": [
+        "Source retrieval and claim assessment remain valuable but should not block the base MVP.",
+        "The architecture needs extension points now to avoid a rewrite later."
+      ],
+      "scope_in": [
+        "Document the optional `advanced_source_verification` mode.",
+        "Define source adapters for PubMed, Semantic Scholar, and curated web search as future interfaces.",
+        "Define how claims move from not-checked to verdict-assessed.",
+        "Keep base brief generation compatible with later citations and verdicts."
+      ],
+      "scope_out": [
+        "Implementing live PubMed/Semantic Scholar calls in the base MVP.",
+        "Automated medical/legal/financial authority claims without human review."
+      ],
+      "acceptance_criteria": [
+        "AC1: Architecture docs describe how advanced verification plugs into the run after LLM analysis.",
+        "AC2: The base data model can represent source-unverified and source-verified briefs.",
+        "AC3: The option is disabled by default and does not affect base MVP execution."
+      ]
+    },
+    {
+      "title": "Build local HTML process page",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Local-first UI",
+      "request_acs": [
+        "AC8",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "The user needs to see each pipeline step, understand failures, and trigger the next eligible action.",
+        "The UI should be local-first now and deployable on a VPS later."
+      ],
+      "scope_in": [
+        "Serve a local HTML page that lists run status, step status, failure causes, and output links.",
+        "Provide controls for launching the next eligible step.",
+        "Support entry of one video URL and OpenAI key at the start without persisting the secret.",
+        "Use configurable host/port and avoid hardcoded local-only assumptions.",
+        "Add tests for process-state rendering."
+      ],
+      "scope_out": [
+        "Multi-user auth.",
+        "Hosted SaaS deployment.",
+        "Background scheduler."
+      ],
+      "acceptance_criteria": [
+        "AC1: A local process page can create or load a single video run.",
+        "AC2: Each step shows pending/running/succeeded/failed/skipped status.",
+        "AC3: Failed steps show a clear cause and prevent ineligible downstream execution.",
+        "AC4: The next eligible step can be launched from the page.",
+        "AC5: Host/port and output paths are configurable for later VPS deployment."
+      ]
+    },
+    {
+      "title": "Add end-to-end local MVP validation",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Validation",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC4",
+        "AC5",
+        "AC6",
+        "AC8",
+        "AC9",
+        "AC10"
+      ],
+      "problem": [
+        "The MVP needs a reliable proof that one URL can move through the implemented steps.",
+        "Network and paid API calls must be separated from deterministic tests."
+      ],
+      "scope_in": [
+        "Add deterministic tests with mocked YouTube and OpenAI boundaries.",
+        "Add a manual smoke-test recipe for one real YouTube URL with captions.",
+        "Validate clear failure behavior for missing subtitles and missing OpenAI key.",
+        "Update README with the new MVP workflow."
+      ],
+      "scope_out": [
+        "Automated live YouTube/OpenAI tests in CI.",
+        "Performance tuning for batch workloads."
+      ],
+      "acceptance_criteria": [
+        "AC1: Unit tests cover all implemented local MVP steps without network access.",
+        "AC2: Manual smoke-test documentation includes one successful URL path and one expected-failure path.",
+        "AC3: README no longer presents channel ingestion as the base MVP path.",
+        "AC4: Lint and tests pass before closeout."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Single Video Local First MVP",
+    "plan": [
+      "Replace channel ingestion assumptions with the single-video run model.",
+      "Harden mandatory subtitle extraction and add cleaned transcript output.",
+      "Implement the OpenAI analysis boundary and structured analysis storage.",
+      "Render direct Markdown briefs labeled as not advanced-source-verified.",
+      "Document optional advanced source verification interfaces without enabling them by default.",
+      "Build the local HTML process page with step status, failure details, and next-step controls.",
+      "Validate with mocked unit tests plus a documented manual smoke test.",
+      "Update affected Logics docs during meaningful waves and leave the repo commit-ready."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/single-video-local-first-mvp.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

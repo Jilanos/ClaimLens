@@ -2,243 +2,229 @@
 
 ## Product Definition
 
-ClaimLens is a pipeline for turning selected YouTube videos into concise, sourced briefs. The MVP should prove that the workflow can reliably process a small number of high-potential channels and produce useful summaries with evidence checks.
+ClaimLens is a local-first pipeline for turning one YouTube video URL into a reviewable brief.
+The refined MVP deliberately starts with a single video URL, requires existing YouTube subtitles,
+uses OpenAI for analysis, and produces a Markdown brief plus a local HTML process page.
+
+The old channel-monitoring and candidate-selection flow is no longer part of the base MVP. Those
+capabilities can return later as batch inputs once the one-video workflow is reliable.
 
 ## MVP Success Criteria
 
-- A user can define a small list of YouTube channels to monitor.
-- The system can fetch recent videos and store their metadata.
-- The user can select a video for processing.
-- The system can create or retrieve a transcript.
-- The system can produce a structured summary.
-- The system can extract checkable claims.
-- The system can search reliable sources for each claim.
-- The final output is a Markdown brief with citations and confidence labels.
+- A user can enter one YouTube video URL.
+- A user can provide an OpenAI API key at the start of the run through environment/config or an
+  interactive prompt/UI field.
+- The system validates the URL and records a local run state.
+- The system extracts existing YouTube subtitles only.
+- If subtitles are unavailable, the pipeline stops and explains the cause.
+- The system cleans subtitle text by removing timestamps and obvious transcript noise while keeping
+  raw segments for audit/debug.
+- The system uses OpenAI to generate a structured analysis from the cleaned transcript.
+- The system generates a reviewable Markdown brief directly after LLM analysis.
+- The generated brief clearly states that advanced source verification has not been run.
+- A local HTML process page shows each step, output, failure cause, and next eligible action.
+- The implementation remains local-first and can later be hosted on a VPS without a rewrite.
 
-## Phase 0: Repository Foundation
+## Base MVP Pipeline
 
-- Create a minimal project structure.
-- Add configuration examples.
-- Add environment variable documentation.
-- Add basic developer commands.
-- Add a local SQLite storage plan.
+```mermaid
+flowchart LR
+    Url[One YouTube video URL] --> Run[Create local run]
+    Run --> Subtitles[Extract existing subtitles]
+    Subtitles -->|Missing captions| Stop[Stop with clear failure cause]
+    Subtitles -->|Captions found| Clean[Clean transcript]
+    Clean --> LLM[OpenAI analysis]
+    LLM --> Brief[Markdown brief]
+    Run --> Page[Local HTML process page]
+    Page --> Subtitles
+    Page --> Clean
+    Page --> LLM
+    Page --> Brief
+```
 
-Deliverable: a clean repository ready for implementation.
-
-## Phase 1: YouTube Ingestion
-
-Build the first ingestion module.
-
-Scope:
-
-- Read channel IDs from a config file.
-- Fetch recent videos via the YouTube Data API.
-- Store channel and video metadata in SQLite.
-- Avoid duplicate video records.
-- Track processing status per video.
-
-Suggested tables:
-
-- `channels`
-- `videos`
-- `pipeline_runs`
-
-Deliverable: `claimlens ingest` fetches videos for configured channels.
-
-## Phase 2: Video Selection
-
-Add simple scoring and filtering.
+## Stage 0: Local Run Setup
 
 Scope:
 
-- Score videos by age, title keywords, description keywords, duration, and channel priority.
-- Allow manual selection by video ID.
-- Persist selected videos as processing candidates.
+- Accept a single YouTube video URL.
+- Parse supported YouTube URL forms into one video ID.
+- Require an OpenAI API key at run start, from `OPENAI_API_KEY`, config, prompt, or the local UI.
+- Never persist the OpenAI API key in SQLite, Markdown, HTML outputs, or logs.
+- Persist run state, current step, step status, and failure details locally.
 
-Deliverable: `claimlens candidates` lists videos worth processing.
+Deliverable: a run can be created for exactly one video URL.
 
-## Phase 3: Transcript Pipeline
-
-Create the transcript module.
-
-Scope:
-
-- Try to use existing YouTube captions when available.
-- Fall back to audio download and OpenAI transcription.
-- Store transcript text and metadata.
-- Preserve timestamps when available.
-
-Suggested tables:
-
-- `transcripts`
-- `transcript_segments`
-
-Deliverable: `claimlens transcribe <video_id>` creates a reusable transcript.
-
-## Phase 4: Summary and Claim Extraction
-
-Use OpenAI to generate structured analysis.
+## Stage 1: Mandatory Subtitle Extraction
 
 Scope:
 
-- Produce a concise summary.
-- Extract key points.
-- Extract verifiable claims.
-- Classify claims by domain: science, health, finance, history, technology, general.
-- Assign an initial verifiability score.
+- Fetch YouTube captions/subtitles when available.
+- Do not download audio.
+- Do not fall back to OpenAI audio transcription.
+- Stop the pipeline if captions are unavailable.
+- Store raw transcript segments in SQLite for audit/debug.
+- Persist the failure cause when extraction cannot continue.
 
-Suggested tables:
+Deliverable: subtitle extraction either produces reusable raw segments or stops with a clear cause.
 
-- `summaries`
-- `claims`
-
-Deliverable: `claimlens analyze <video_id>` stores summary and claims.
-
-## Phase 5: Source Retrieval
-
-Search for evidence.
+## Stage 2: Transcript Cleanup
 
 Scope:
 
-- Use PubMed for biomedical or health claims.
-- Use Semantic Scholar for scientific claims.
-- Add a generic source adapter for reputable web sources.
-- Store source title, URL, publisher, publication date, abstract/snippet, and retrieval date.
+- Convert raw subtitle segments into cleaned plain text.
+- Remove timestamp labels from the LLM input.
+- Normalize whitespace and repeated line breaks.
+- Reduce obvious ASR artifacts conservatively without changing meaning.
+- Store or export cleaned transcript text as the canonical LLM input.
 
-Suggested tables:
+Deliverable: a timestamp-free cleaned transcript is available for analysis.
 
-- `sources`
-- `claim_sources`
-
-Deliverable: `claimlens source-check <video_id>` attaches candidate sources to claims.
-
-## Phase 6: Evidence Assessment
-
-Compare each claim against retrieved sources.
+## Stage 3: OpenAI Analysis
 
 Scope:
 
-- Label each claim as `supported`, `contradicted`, `mixed`, `unclear`, or `not_checked`.
-- Provide a short rationale.
-- Keep direct quotes short.
-- Include source links.
-- Preserve uncertainty instead of forcing binary verdicts.
+- Use OpenAI with a mockable client boundary.
+- Generate structured output:
+  - concise summary
+  - key points
+  - notable claims
+  - caveats
+  - editorial notes
+- Store the structured analysis in SQLite in a way compatible with later source verification.
+- Fail clearly when the API key is missing or the OpenAI request fails.
 
-Deliverable: each claim has a verdict, rationale, confidence, and sources.
+Deliverable: `claimlens analyze <video_id>` or the run flow stores structured analysis.
 
-## Phase 7: Markdown Brief Generation
-
-Generate a reviewable output file.
-
-Scope:
-
-- Produce one Markdown file per processed video.
-- Include video metadata.
-- Include transcript status.
-- Include summary.
-- Include key claims and evidence checks.
-- Include source links.
-- Include editorial notes for weak or risky claims.
-
-Deliverable: `outputs/briefs/<video_id>.md`.
-
-## Phase 8: Quality Gates
-
-Add reliability checks before scaling.
+## Stage 4: Direct Markdown Brief
 
 Scope:
 
-- Unit tests for scoring, persistence, and source routing.
-- Snapshot tests for Markdown generation.
-- Manual review checklist for fact-check outputs.
-- Cost logging for OpenAI calls.
-- Retry and rate-limit handling.
+- Generate one Markdown brief per processed video.
+- Include video URL and metadata available locally.
+- Include transcript status and analysis summary.
+- Include notable claims and caveats.
+- Clearly label source status as `not advanced-source-verified`.
+- Write to configurable output paths such as `outputs/briefs/<video_id>.md`.
 
-Deliverable: the MVP is predictable enough to run repeatedly.
+Deliverable: a reviewable Markdown brief exists after analysis without requiring source retrieval.
 
-## Phase 9: First Automation
-
-Schedule the pipeline.
+## Stage 5: Local HTML Process Page
 
 Scope:
 
-- Add a daily run command.
-- Ingest new videos.
-- Generate candidate list.
-- Process only manually approved or top-scored videos.
-- Produce local Markdown briefs.
+- Provide a local web page for entering one video URL and an OpenAI API key at run start.
+- Show pipeline steps with statuses: `pending`, `running`, `succeeded`, `failed`, `skipped`.
+- Show failure causes and block ineligible downstream steps.
+- Let the user launch the next eligible step.
+- Link to generated local outputs.
+- Keep host, port, database path, and output paths configurable for later VPS hosting.
 
-Deliverable: a daily local workflow that creates review-ready briefs.
+Deliverable: a local-first HTML process page can drive and inspect one run.
+
+## Optional Stage: Advanced Source Verification
+
+This is intentionally outside the base MVP but should be designed as an extension point.
+
+Scope:
+
+- Add a disabled-by-default option such as `advanced_source_verification`.
+- Retrieve candidate sources for extracted claims.
+- Support future adapters:
+  - PubMed for biomedical/health topics
+  - Semantic Scholar for scientific literature
+  - curated web search for reputable non-academic sources
+- Compare claims against sources.
+- Add verdicts: `supported`, `contradicted`, `mixed`, `unclear`, or `not_checked`.
+- Store source links, rationale, confidence, and short supporting notes.
+- Update brief rendering to include citations and verdicts when the option has run.
+
+Deliverable later: source-verified briefs remain compatible with the base brief format.
 
 ## Proposed CLI
 
 ```bash
 claimlens init-db
-claimlens ingest
-claimlens candidates
-claimlens transcribe <video_id>
+claimlens run-video <youtube_video_url>
+claimlens transcribe <youtube_video_url>
 claimlens analyze <video_id>
-claimlens source-check <video_id>
 claimlens brief <video_id>
-claimlens run-daily
+claimlens serve
 ```
+
+Compatibility commands may remain temporarily, but `ingest`, `candidates`, and `run-daily` are not
+base-MVP requirements.
 
 ## Environment Variables
 
 ```bash
-YOUTUBE_API_KEY=
+CLAIMLENS_DB=data/claimlens.sqlite3
+CLAIMLENS_OUTPUTS=outputs
+CLAIMLENS_TRANSCRIPTS=outputs/transcripts
+CLAIMLENS_BRIEFS=outputs/briefs
+CLAIMLENS_HOST=127.0.0.1
+CLAIMLENS_PORT=8765
 OPENAI_API_KEY=
+```
+
+Optional future source verification variables:
+
+```bash
 SEMANTIC_SCHOLAR_API_KEY=
 NCBI_API_KEY=
 ```
 
-Only `OPENAI_API_KEY` is expected to be paid for the MVP. The other APIs can start on free quotas, subject to rate limits and terms.
+`YOUTUBE_API_KEY` is not required for the refined base MVP because the input is one direct video URL
+and the first transcript implementation uses public caption availability.
 
-## Initial Milestone Plan
+## Implementation Milestones
 
-### Milestone 1: Local Skeleton
+### Milestone 1: Single Video Run Foundation
 
-- Python package skeleton.
-- CLI entry point.
-- SQLite schema.
-- Config loading.
+- Single video URL parser.
+- Local run state.
+- OpenAI key intake without persistence.
+- Pipeline step status model.
 
-### Milestone 2: Metadata Ingestion
+### Milestone 2: Mandatory Subtitles and Cleanup
 
-- YouTube channel config.
-- Recent video ingestion.
-- Candidate list.
+- Subtitle-only extraction.
+- Clear no-subtitles failure.
+- Raw segment persistence.
+- Cleaned transcript artifact.
 
-### Milestone 3: First End-to-End Video
+### Milestone 3: OpenAI Analysis and Brief
 
-- Transcript creation.
-- Summary generation.
-- Claim extraction.
-- Markdown export.
+- OpenAI client boundary.
+- Structured analysis storage.
+- Direct Markdown brief generation.
+- Source status label.
 
-### Milestone 4: Evidence Checks
+### Milestone 4: Local HTML Process Page
 
-- PubMed adapter.
-- Semantic Scholar adapter.
-- Evidence labels.
-- Source citations in output.
+- Local web server.
+- Run creation form.
+- Step status page.
+- Next eligible action controls.
+- Configurable host/port for VPS readiness.
 
-### Milestone 5: Repeatable MVP
+### Milestone 5: Validation and Optional Verification Design
 
-- Tests.
-- Cost tracking.
-- Error handling.
-- Daily run command.
+- Deterministic tests with mocked YouTube/OpenAI boundaries.
+- Manual smoke-test recipe for a real captioned video.
+- Expected-failure recipe for missing captions.
+- Architecture note for optional advanced source verification.
 
 ## Key Risks
 
-- YouTube transcript availability varies by video.
-- Local audio download can be brittle and must respect platform terms.
-- Automated fact-checking is probabilistic and requires human review.
-- Scientific claims often need nuanced interpretation.
-- API rate limits need explicit backoff and caching.
-- SQLite schema version 2 must not ship without a tested migration path from schema version 1.
+- YouTube subtitle availability varies by video.
+- YouTube page/caption surfaces can change; tests should mock boundaries and manual smoke tests
+  should catch live drift.
+- LLM analysis can overstate certainty; briefs must remain review-first and label source status.
+- API costs and failures need clear handling.
+- Local web UI must not leak API keys into persisted artifacts.
+- VPS hosting later will need explicit auth/reverse-proxy decisions before exposure beyond private use.
 
 ## MVP Principle
 
-Keep the workflow small, auditable, and review-first. The MVP should help decide which videos deserve an article, not automatically publish claims without human validation.
+Keep the workflow small, auditable, and review-first. The first useful product is not a channel
+monitor; it is a local process that turns one captioned video into a clear, inspectable draft brief.

@@ -1,0 +1,429 @@
+{
+  "budgets": {
+    "max_docs": 36,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_003_mvp_single_video_local_first_pipeline item_014_implement_single_video_run_model_and_url_input item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup item_016_add_openai_llm_analysis_for_cleaned_transcripts item_017_generate_direct_markdown_brief_from_llm_analysis item_018_design_optional_advanced_source_verification_mode item_019_build_local_html_process_page item_020_add_end_to_end_local_mvp_validation task_004_orchestrate_single_video_local_first_mvp --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/product/prod_004_claimlens_single_video_local_first_mvp.md",
+      "ref": "prod_004_claimlens_single_video_local_first_mvp",
+      "status": "Proposed",
+      "title": "ClaimLens Single Video Local First MVP"
+    },
+    {
+      "kind": "architecture",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ]
+      },
+      "path": "logics/architecture/adr_001_single_video_local_first_pipeline.md",
+      "ref": "adr_001_single_video_local_first_pipeline",
+      "status": "Proposed",
+      "title": "Single Video Local First Pipeline"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, mvp: single video local first pipeline, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "MVP: Single Video Local First Pipeline",
+        "use when": "You need to implement or review the scaffolded workflow for MVP: Single Video Local First Pipeline."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "adr": [
+          "adr_001_single_video_local_first_pipeline"
+        ],
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ]
+      },
+      "path": "logics/request/req_003_mvp_single_video_local_first_pipeline.md",
+      "ref": "req_003_mvp_single_video_local_first_pipeline",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "MVP: Single Video Local First Pipeline"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement single video run model and url input, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement single video run model and URL input",
+        "use when": "Implementing the scaffolded slice for Implement single video run model and URL input."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_014_implement_single_video_run_model_and_url_input.md",
+      "ref": "item_014_implement_single_video_run_model_and_url_input",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement single video run model and URL input"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make subtitle extraction mandatory and add transcript cleanup, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make subtitle extraction mandatory and add transcript cleanup",
+        "use when": "Implementing the scaffolded slice for Make subtitle extraction mandatory and add transcript cleanup."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup.md",
+      "ref": "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Make subtitle extraction mandatory and add transcript cleanup"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add openai llm analysis for cleaned transcripts, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add OpenAI LLM analysis for cleaned transcripts",
+        "use when": "Implementing the scaffolded slice for Add OpenAI LLM analysis for cleaned transcripts."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_016_add_openai_llm_analysis_for_cleaned_transcripts.md",
+      "ref": "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add OpenAI LLM analysis for cleaned transcripts"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Single Video Local First MVP",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/tasks/task_004_orchestrate_single_video_local_first_mvp.md",
+      "ref": "task_004_orchestrate_single_video_local_first_mvp",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Single Video Local First MVP"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_014_implement_single_video_run_model_and_url_input",
+          "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+          "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+          "item_017_generate_direct_markdown_brief_from_llm_analysis",
+          "item_018_design_optional_advanced_source_verification_mode",
+          "item_019_build_local_html_process_page",
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/product/prod_004_claimlens_single_video_local_first_mvp.md",
+      "ref": "prod_004_claimlens_single_video_local_first_mvp",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Single Video Local First MVP"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, generate direct markdown brief from llm analysis, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Generate direct Markdown brief from LLM analysis",
+        "use when": "Implementing the scaffolded slice for Generate direct Markdown brief from LLM analysis."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_017_generate_direct_markdown_brief_from_llm_analysis"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_017_generate_direct_markdown_brief_from_llm_analysis.md",
+      "ref": "item_017_generate_direct_markdown_brief_from_llm_analysis",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Generate direct Markdown brief from LLM analysis"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, design optional advanced source verification mode, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Design optional advanced source verification mode",
+        "use when": "Implementing the scaffolded slice for Design optional advanced source verification mode."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_018_design_optional_advanced_source_verification_mode"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_018_design_optional_advanced_source_verification_mode.md",
+      "ref": "item_018_design_optional_advanced_source_verification_mode",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Design optional advanced source verification mode"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, build local html process page, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Build local HTML process page",
+        "use when": "Implementing the scaffolded slice for Build local HTML process page."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_019_build_local_html_process_page"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_019_build_local_html_process_page.md",
+      "ref": "item_019_build_local_html_process_page",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Build local HTML process page"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add end-to-end local mvp validation, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add end-to-end local MVP validation",
+        "use when": "Implementing the scaffolded slice for Add end-to-end local MVP validation."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_020_add_end_to_end_local_mvp_validation"
+        ],
+        "prod": [
+          "prod_004_claimlens_single_video_local_first_mvp"
+        ],
+        "req": [
+          "req_003_mvp_single_video_local_first_pipeline"
+        ],
+        "task": [
+          "task_004_orchestrate_single_video_local_first_mvp"
+        ]
+      },
+      "path": "logics/backlog/item_020_add_end_to_end_local_mvp_validation.md",
+      "ref": "item_020_add_end_to_end_local_mvp_validation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add end-to-end local MVP validation"
+    }
+  ],
+  "estimates": {
+    "char_count": 10498,
+    "companion_doc_count": 2,
+    "doc_count": 10
+  },
+  "generated_at": "2026-07-23T15:35:19Z",
+  "handoff": {
+    "companion_doc_count": 2,
+    "enabled": true,
+    "source_refs": [
+      "req_003_mvp_single_video_local_first_pipeline",
+      "item_014_implement_single_video_run_model_and_url_input",
+      "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+      "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+      "item_017_generate_direct_markdown_brief_from_llm_analysis",
+      "item_018_design_optional_advanced_source_verification_mode",
+      "item_019_build_local_html_process_page",
+      "item_020_add_end_to_end_local_mvp_validation",
+      "task_004_orchestrate_single_video_local_first_mvp"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_003_mvp_single_video_local_first_pipeline,item_014_implement_single_video_run_model_and_url_input,item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup,item_016_add_openai_llm_analysis_for_cleaned_transcripts,item_017_generate_direct_markdown_brief_from_llm_analysis,item_018_design_optional_advanced_source_verification_mode,item_019_build_local_html_process_page,item_020_add_end_to_end_local_mvp_validation,task_004_orchestrate_single_video_local_first_mvp",
+  "refs": [
+    "req_003_mvp_single_video_local_first_pipeline",
+    "item_014_implement_single_video_run_model_and_url_input",
+    "item_015_make_subtitle_extraction_mandatory_and_add_transcript_cleanup",
+    "item_016_add_openai_llm_analysis_for_cleaned_transcripts",
+    "item_017_generate_direct_markdown_brief_from_llm_analysis",
+    "item_018_design_optional_advanced_source_verification_mode",
+    "item_019_build_local_html_process_page",
+    "item_020_add_end_to_end_local_mvp_validation",
+    "task_004_orchestrate_single_video_local_first_mvp"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_004_orchestrate_single_video_local_first_mvp.md",
+      "ref": "task_004_orchestrate_single_video_local_first_mvp"
+    }
+  ]
+}

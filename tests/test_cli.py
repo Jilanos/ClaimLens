@@ -1,4 +1,5 @@
 from claimlens.cli import main
+from claimlens.youtube import TranscriptResult, TranscriptSegment, YouTubeVideo
 
 
 def test_cli_help_lists_mvp_commands(capsys):
@@ -36,7 +37,6 @@ def test_placeholder_commands_exit_successfully(capsys):
     commands = [
         ["ingest"],
         ["candidates"],
-        ["transcribe", "video123"],
         ["analyze", "video123"],
         ["source-check", "video123"],
         ["brief", "video123"],
@@ -49,3 +49,45 @@ def test_placeholder_commands_exit_successfully(capsys):
     output = capsys.readouterr().out
     assert "planned for Milestone" in output
     assert "video123" in output
+
+
+def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path, capsys):
+    database = tmp_path / "claimlens.sqlite3"
+
+    monkeypatch.setattr(
+        "claimlens.cli.latest_channel_videos",
+        lambda channel_url, *, limit: [
+            YouTubeVideo(
+                id="video123",
+                title="Test Video",
+                url="https://www.youtube.com/watch?v=video123",
+                published_text="1 day ago",
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        "claimlens.cli.fetch_transcript",
+        lambda video_id: TranscriptResult(
+            video_id=video_id,
+            source="youtube-auto",
+            language="en",
+            text="hello world",
+            segments=[TranscriptSegment(start_seconds=0.0, end_seconds=1.0, text="hello world")],
+        ),
+    )
+
+    exit_code = main(
+        [
+            "transcribe",
+            "https://www.youtube.com/@example/videos",
+            "--limit",
+            "1",
+            "--database",
+            str(database),
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Extracted subtitles: video123 | Test Video | 1 segments" in output
+    assert f"Stored 1 transcript(s) in {database}" in output

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from typing import Protocol
 
 SCHEMA_VERSION = 1
 
@@ -137,6 +138,21 @@ ON CONFLICT(key) DO UPDATE SET
 """
 
 
+class VideoLike(Protocol):
+    id: str
+    title: str
+    url: str
+    published_text: str | None
+
+
+class TranscriptLike(Protocol):
+    video_id: str
+    source: str
+    language: str
+    text: str
+    segments: list
+
+
 def connect(database_path: Path | str) -> sqlite3.Connection:
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -160,3 +176,88 @@ def table_names(database_path: Path | str) -> set[str]:
             "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
         ).fetchall()
     return {row["name"] for row in rows}
+
+
+def upsert_channel(
+    database_path: Path | str,
+    *,
+    channel_id: str,
+    title: str | None = None,
+    url: str | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO channels (id, title, url)
+                VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = COALESCE(excluded.title, channels.title),
+                    url = COALESCE(excluded.url, channels.url),
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (channel_id, title, url),
+            )
+
+
+def upsert_video(database_path: Path | str, *, channel_id: str, video: VideoLike) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO videos (id, channel_id, title, url, published_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    channel_id = excluded.channel_id,
+                    title = excluded.title,
+                    url = excluded.url,
+                    published_at = COALESCE(excluded.published_at, videos.published_at),
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (video.id, channel_id, video.title, video.url, video.published_text),
+            )
+
+
+def upsert_transcript(database_path: Path | str, transcript: TranscriptLike) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO transcripts (video_id, source, language, text)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(video_id, source) DO UPDATE SET
+                    language = excluded.language,
+                    text = excluded.text,
+                    created_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    transcript.video_id,
+                    transcript.source,
+                    transcript.language,
+                    transcript.text,
+                ),
+            )
+            transcript_id = connection.execute(
+                "SELECT id FROM transcripts WHERE video_id = ? AND source = ?",
+                (transcript.video_id, transcript.source),
+            ).fetchone()["id"]
+            connection.execute(
+                "DELETE FROM transcript_segments WHERE transcript_id = ?",
+                (transcript_id,),
+            )
+            connection.executemany(
+                """
+                INSERT INTO transcript_segments (transcript_id, start_seconds, end_seconds, text)
+                VALUES (?, ?, ?, ?)
+                """,
+                [
+                    (
+                        transcript_id,
+                        segment.start_seconds,
+                        segment.end_seconds,
+                        segment.text,
+                    )
+                    for segment in transcript.segments
+                ],
+            )
+    return int(transcript_id)

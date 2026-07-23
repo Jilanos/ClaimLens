@@ -1,11 +1,16 @@
 ## prod_002_claimlens_metadata_ingestion - ClaimLens Metadata Ingestion
 > Date: 2026-07-21
-> Status: Proposed
+> Status: Superseded
 > Related request: `req_001_milestone_2_metadata_ingestion`
 > Related backlog: `item_005_load_channel_configuration_for_ingestion`, `item_006_create_bounded_youtube_metadata_client`, `item_007_persist_ingested_channels_and_videos`, `item_008_implement_ingest_and_candidates_cli_commands`, `item_009_add_ingestion_tests_and_documentation`
 > Related task: `task_002_orchestrate_milestone_2_metadata_ingestion`
 > Related architecture: (none yet)
 > Reminder: Update status, linked refs, scope, decisions, success signals, and open questions when you edit this doc.
+
+Superseded by: `prod_004_claimlens_single_video_local_first_mvp`.
+
+This brief is retained for historical context only. The refined MVP no longer starts from channel
+metadata ingestion or candidate selection.
 
 # Overview
 The first real pipeline stage for importing recent YouTube video metadata into the local ClaimLens database.
