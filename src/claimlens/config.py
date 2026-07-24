@@ -32,6 +32,7 @@ class TranscriptConfig:
     provider_order: tuple[str, ...]
     supadata_monthly_request_cap: int
     supadata_language: str | None
+    supadata_timeout_seconds: int
 
 
 @dataclass(frozen=True)
@@ -168,6 +169,13 @@ def load_config(
                 environ.get("CLAIMLENS_SUPADATA_LANGUAGE")
                 or transcripts_config.get("supadata_language")
             ),
+            supadata_timeout_seconds=_int_env_setting(
+                environ,
+                transcripts_config,
+                env_key="CLAIMLENS_SUPADATA_TIMEOUT_SECONDS",
+                config_key="supadata_timeout_seconds",
+                default=10,
+            ),
         ),
         web=WebConfig(
             max_request_bytes=_int_setting(web, "max_request_bytes", 16_384),
@@ -239,6 +247,24 @@ def _int_setting(values: dict[str, Any], key: str, default: int) -> int:
         return int(value)
     except (TypeError, ValueError) as exc:
         raise ConfigError(f"Invalid integer config value for pipeline.{key}: {value!r}") from exc
+
+
+def _int_env_setting(
+    environ: dict[str, str],
+    values: dict[str, Any],
+    *,
+    env_key: str,
+    config_key: str,
+    default: int,
+) -> int:
+    value = environ.get(env_key, values.get(config_key, default))
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"Invalid integer config value for {config_key}: {value!r}") from exc
+    if parsed <= 0:
+        raise ConfigError(f"Invalid integer config value for {config_key}: {value!r}")
+    return parsed
 
 
 def _optional_string(value: object) -> str | None:

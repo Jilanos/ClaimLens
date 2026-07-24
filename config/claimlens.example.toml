@@ -18,6 +18,9 @@ report_language = "en"
 provider_order = ["youtube"]
 supadata_monthly_request_cap = 100
 supadata_language = "en"
+# Deployed Compose sets CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=supadata,youtube.
+# Supadata requests time out after 10 seconds by default.
+supadata_timeout_seconds = 10
 
 [web]
 max_request_bytes = 16384

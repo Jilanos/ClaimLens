@@ -14,6 +14,8 @@ CLAIMLENS_SECURE_COOKIES=true
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=false
 CLAIMLENS_KAPSULE_DB=/kapsule-data/kapsule.sqlite
+CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=supadata,youtube
+CLAIMLENS_SUPADATA_TIMEOUT_SECONDS=10
 ```
 
 Add to `docker-compose.yml`:
@@ -37,6 +39,8 @@ Add to `docker-compose.yml`:
       CLAIMLENS_REGISTRATION_ENABLED: ${CLAIMLENS_REGISTRATION_ENABLED:-false}
       CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK: ${CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK:-false}
       CLAIMLENS_KAPSULE_DB: /kapsule-data/kapsule.sqlite
+      CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER: ${CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER:-supadata,youtube}
+      CLAIMLENS_SUPADATA_TIMEOUT_SECONDS: ${CLAIMLENS_SUPADATA_TIMEOUT_SECONDS:-10}
     volumes:
       - claimlens-data:/data
       - kapsule-data:/kapsule-data:ro
@@ -97,3 +101,8 @@ DEPLOY_APP_REPOS="ClaimLens:../ClaimLens:ClaimLens" \
 If YouTube blocks the VPS IP, users can paste transcript text in the process page. The pasted text
 is stored as `user_paste` and then follows the normal cleanup, analysis, brief, and verification
 pipeline.
+
+The deployed provider order is Supadata native captions first, then the classic YouTube path as an
+explicit fallback. The local example configuration intentionally defaults to `youtube`; leaving the
+deployment variable unset routes deployed runs through that slower VPS-blocked path. Supadata
+requests are bounded by `CLAIMLENS_SUPADATA_TIMEOUT_SECONDS` (10 seconds by default).

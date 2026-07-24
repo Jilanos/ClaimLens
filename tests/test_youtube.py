@@ -88,6 +88,7 @@ def test_supadata_native_transcript_request_and_parse(monkeypatch):
     def fake_urlopen(request, timeout):
         seen["url"] = request.full_url
         seen["key"] = request.headers["X-api-key"]
+        seen["timeout"] = timeout
         return Response(
             b"""
             {
@@ -103,7 +104,7 @@ def test_supadata_native_transcript_request_and_parse(monkeypatch):
 
     monkeypatch.setattr("claimlens.youtube.urlopen", fake_urlopen)
 
-    transcript = SupadataClient(api_key="supadata-secret").fetch_native_transcript(
+    transcript = SupadataClient(api_key="supadata-secret", timeout=7).fetch_native_transcript(
         video_url="https://www.youtube.com/watch?v=abc123XYZ_",
         video_id="abc123XYZ_",
         language="en",
@@ -114,6 +115,7 @@ def test_supadata_native_transcript_request_and_parse(monkeypatch):
     assert "mode=generate" not in seen["url"]
     assert "text=false" in seen["url"]
     assert seen["key"] == "supadata-secret"
+    assert seen["timeout"] == 7
     assert transcript.source == "supadata-native"
     assert transcript.text == "hello\nworld"
     assert transcript.segments[0].start_seconds == 1.2

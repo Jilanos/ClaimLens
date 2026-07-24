@@ -233,31 +233,11 @@ def _fetch_supadata_native_transcript(
     billing_period = current_billing_period()
     final_error = "Supadata native captions were unavailable."
     for candidate in candidates:
-        client = SupadataClient(api_key=candidate.api_key)
+        client = SupadataClient(
+            api_key=candidate.api_key,
+            timeout=config.transcripts.supadata_timeout_seconds,
+        )
         try:
-            try:
-                account = client.account_info()
-            except (SupadataAuthError, SupadataQuotaError):
-                raise
-            except SupadataError:
-                account = None
-            if (
-                account is not None
-                and account.max_credits is not None
-                and account.used_credits is not None
-                and account.used_credits >= account.max_credits
-            ):
-                final_error = "A Supadata key reached its account credit limit."
-                db.mark_supadata_api_key_exhausted(
-                    database_path,
-                    user_id=user_id,
-                    key_id=candidate.id,
-                    exhausted_until=next_billing_period_start(),
-                    last_error=final_error,
-                    max_credits=account.max_credits,
-                    used_credits=account.used_credits,
-                )
-                continue
             db.mark_supadata_api_key_used(
                 database_path,
                 user_id=user_id,
@@ -289,6 +269,9 @@ def _fetch_supadata_native_transcript(
             )
         except SupadataTranscriptUnavailable as exc:
             final_error = str(exc)
+            continue
+        except SupadataError as exc:
+            final_error = f"Supadata request failed: {exc}"
             continue
     raise PipelineError(
         f"{final_error} No configured Supadata key could fetch native captions; "

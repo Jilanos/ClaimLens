@@ -16,6 +16,7 @@ def test_load_config_uses_defaults_without_file(tmp_path, monkeypatch):
     assert config.pipeline.source_verification_timeout_seconds == 20
     assert config.transcripts.provider_order == ("youtube",)
     assert config.transcripts.supadata_monthly_request_cap == 100
+    assert config.transcripts.supadata_timeout_seconds == 10
     assert config.sources.advanced_source_verification is False
     assert config.sources.enable_pubmed is True
     assert config.api_keys.openai is None
@@ -147,3 +148,20 @@ report_language = "fr"
     config = load_config(env={"CLAIMLENS_CONFIG": str(config_file)})
 
     assert config.pipeline.report_language == "fr"
+
+
+def test_load_config_reads_deployed_provider_order_and_supadata_timeout():
+    config = load_config(
+        env={
+            "CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER": "supadata,youtube",
+            "CLAIMLENS_SUPADATA_TIMEOUT_SECONDS": "7",
+        }
+    )
+
+    assert config.transcripts.provider_order == ("supadata", "youtube")
+    assert config.transcripts.supadata_timeout_seconds == 7
+
+
+def test_load_config_rejects_non_positive_supadata_timeout():
+    with pytest.raises(ConfigError, match="supadata_timeout_seconds"):
+        load_config(env={"CLAIMLENS_SUPADATA_TIMEOUT_SECONDS": "0"})

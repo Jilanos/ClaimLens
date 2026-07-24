@@ -68,6 +68,7 @@ CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
 CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=youtube
 CLAIMLENS_SUPADATA_LANGUAGE=en
+CLAIMLENS_SUPADATA_TIMEOUT_SECONDS=10
 OPENAI_API_KEY=
 SEMANTIC_SCHOLAR_API_KEY=
 NCBI_API_KEY=
@@ -83,13 +84,16 @@ outside Git and back it up separately. Guest users can still enter keys per proc
 are used only for the submitted job/action.
 
 Authenticated users can also save multiple Supadata keys from Options. Supadata transcript fetching
-is opt-in through configuration:
+is opt-in through configuration. Local runs keep the classic YouTube path by default; the deployed
+Compose service sets `CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=supadata,youtube` so native Supadata
+captions are tried first and YouTube is used only as an explicit fallback:
 
 ```toml
 [transcripts]
 provider_order = ["supadata", "youtube"]
 supadata_monthly_request_cap = 100
 supadata_language = "en"
+supadata_timeout_seconds = 10
 ```
 
 ClaimLens always calls Supadata in native subtitle mode:
@@ -101,10 +105,12 @@ curl --request GET \
 ```
 
 The application does not expose or call Supadata `auto`, `generate`, translation, extract, or file
-transcription modes. Saved Supadata keys are tried by priority; keys that return quota responses or
-whose `/me` usage has `usedCredits >= maxCredits` are marked exhausted until the next billing month.
-When all native Supadata keys are exhausted, invalid, or missing, the captions step stops and the
-pasted transcript fallback remains the continuation path.
+transcription modes. Saved Supadata keys are tried by priority; keys already exhausted in local
+bookkeeping are skipped, and transcript quota responses mark a key exhausted until the next billing
+month. The transcript request does not call `/me` first, so successful native captions avoid the
+account preflight latency. `CLAIMLENS_SUPADATA_TIMEOUT_SECONDS` overrides the 10-second request
+timeout. When all native Supadata keys are exhausted, invalid, or missing, the configured YouTube
+fallback is attempted; if no provider succeeds, the pasted transcript fallback remains available.
 
 When `CLAIMLENS_KAPSULE_DB` points to a readable Kapsule SQLite database, ClaimLens also accepts
 existing Kapsule email/password credentials. The Kapsule database is read-only from ClaimLens; the

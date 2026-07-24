@@ -19,6 +19,10 @@
 | [prod_006_claimlens_online_readiness_audit_implementation](product/prod_006_claimlens_online_readiness_audit_implementation.md) | ClaimLens Online Readiness Audit Implementation | Settled |  |  | product/prod_006_claimlens_online_readiness_audit_implementation.md |
 | [prod_007_claimlens_deployable_web_auth_and_api_key_management](product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md) | ClaimLens Deployable Web Auth And API Key Management | Settled |  |  | product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md |
 | [prod_008_claimlens_supadata_native_transcript_key_rotation](product/prod_008_claimlens_supadata_native_transcript_key_rotation.md) | ClaimLens Supadata Native Transcript Key Rotation | Settled |  |  | product/prod_008_claimlens_supadata_native_transcript_key_rotation.md |
+| [prod_009_configure_supadata_first_deployment](product/prod_009_configure_supadata_first_deployment.md) | Configure Supadata-first deployment | Proposed |  |  | product/prod_009_configure_supadata_first_deployment.md |
+| [prod_010_remove_supadata_fetch_preflight_latency](product/prod_010_remove_supadata_fetch_preflight_latency.md) | Remove Supadata fetch preflight latency | Proposed |  |  | product/prod_010_remove_supadata_fetch_preflight_latency.md |
+| [prod_011_validate_supadata_first_fallback_delivery](product/prod_011_validate_supadata_first_fallback_delivery.md) | Validate Supadata-first fallback delivery | Proposed |  |  | product/prod_011_validate_supadata_first_fallback_delivery.md |
+| [prod_012_claimlens_supadata_first_transcript_deployment](product/prod_012_claimlens_supadata_first_transcript_deployment.md) | ClaimLens Supadata-first transcript deployment | Superseded |  |  | product/prod_012_claimlens_supadata_first_transcript_deployment.md |
 
 ## Roadmaps
 
@@ -36,6 +40,7 @@ _None_
 | [req_005_online_readiness_audit_implementation](request/req_005_online_readiness_audit_implementation.md) | Online Readiness Audit Implementation | Done |  |  | request/req_005_online_readiness_audit_implementation.md |
 | [req_006_deployable_web_auth_and_api_key_management](request/req_006_deployable_web_auth_and_api_key_management.md) | Deployable Web Auth And API Key Management | Done |  |  | request/req_006_deployable_web_auth_and_api_key_management.md |
 | [req_007_supadata_native_transcript_key_rotation](request/req_007_supadata_native_transcript_key_rotation.md) | Supadata Native Transcript Key Rotation | Done |  |  | request/req_007_supadata_native_transcript_key_rotation.md |
+| [req_008_supadata_first_provider_order_fix](request/req_008_supadata_first_provider_order_fix.md) | Enable Supadata-first transcript provider order in deployment | Done |  |  | request/req_008_supadata_first_provider_order_fix.md |
 
 ## Backlog
 
@@ -94,6 +99,9 @@ _None_
 | [item_051_rotate_supadata_keys_on_quota_exhaustion](backlog/item_051_rotate_supadata_keys_on_quota_exhaustion.md) | Rotate Supadata keys on quota exhaustion | Done |  | 100% | backlog/item_051_rotate_supadata_keys_on_quota_exhaustion.md |
 | [item_052_expose_supadata_profile_key_management_ui](backlog/item_052_expose_supadata_profile_key_management_ui.md) | Expose Supadata profile key management UI | Done |  | 100% | backlog/item_052_expose_supadata_profile_key_management_ui.md |
 | [item_053_validate_supadata_native_transcript_delivery](backlog/item_053_validate_supadata_native_transcript_delivery.md) | Validate Supadata native transcript delivery | Done |  | 100% | backlog/item_053_validate_supadata_native_transcript_delivery.md |
+| [item_054_configure_supadata_first_deployment](backlog/item_054_configure_supadata_first_deployment.md) | Configure Supadata-first deployment | Done |  | 100% | backlog/item_054_configure_supadata_first_deployment.md |
+| [item_055_remove_supadata_fetch_preflight_latency](backlog/item_055_remove_supadata_fetch_preflight_latency.md) | Remove Supadata fetch preflight latency | Done |  | 100% | backlog/item_055_remove_supadata_fetch_preflight_latency.md |
+| [item_056_validate_supadata_first_fallback_delivery](backlog/item_056_validate_supadata_first_fallback_delivery.md) | Validate Supadata-first fallback delivery | Done |  | 100% | backlog/item_056_validate_supadata_first_fallback_delivery.md |
 
 ## Tasks
 
@@ -107,3 +115,4 @@ _None_
 | [task_006_orchestrate_online_readiness_audit_implementation](tasks/task_006_orchestrate_online_readiness_audit_implementation.md) | Orchestrate Online Readiness Audit Implementation | Done | codex | 100% | tasks/task_006_orchestrate_online_readiness_audit_implementation.md |
 | [task_007_orchestrate_deployable_web_auth_and_api_key_management](tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md) | Orchestrate Deployable Web Auth And API Key Management | Done | codex | 100% | tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md |
 | [task_008_orchestrate_supadata_native_transcript_key_rotation](tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md) | Orchestrate Supadata Native Transcript Key Rotation | Done | codex | 100% | tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md |
+| [task_009_orchestrate_supadata_first_deployment_provider_fix](tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md) | Orchestrate Supadata-first deployment provider fix | Done | codex | 100% | tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md |

@@ -15,7 +15,6 @@ from claimlens.pipeline import (
     parse_youtube_video_url,
 )
 from claimlens.youtube import (
-    SupadataAccountInfo,
     SupadataQuotaError,
     TranscriptResult,
     TranscriptSegment,
@@ -185,11 +184,9 @@ def test_supadata_rotation_retries_next_key(monkeypatch, tmp_path):
     calls = []
 
     class Client:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, timeout):
             self.api_key = api_key
-
-        def account_info(self):
-            return SupadataAccountInfo(max_credits=100, used_credits=10)
+            calls.append(("init", api_key, timeout))
 
         def fetch_native_transcript(self, *, video_url, video_id, language):
             calls.append((self.api_key, video_url, language))
@@ -215,12 +212,13 @@ def test_supadata_rotation_retries_next_key(monkeypatch, tmp_path):
     rows = db.list_supadata_api_keys(database, user_id=user_id)
 
     assert transcript.source == "supadata-native"
-    assert [call[0] for call in calls] == ["first-key", "second-key"]
+    assert [call[0] for call in calls] == ["init", "first-key", "init", "second-key"]
+    assert [call[2] for call in calls if call[0] == "init"] == [10, 10]
     assert rows[0]["status"] == "exhausted"
     assert rows[1]["last_used_at"] is not None
 
 
-def test_supadata_account_exhaustion_skips_transcript_call(monkeypatch, tmp_path):
+def test_supadata_locally_exhausted_key_is_skipped(monkeypatch, tmp_path):
     database = tmp_path / "claimlens.sqlite3"
     db.init_db(database)
     user_id = db.create_user(database, email="user@example.test", password_hash="hash")
@@ -234,15 +232,18 @@ def test_supadata_account_exhaustion_skips_transcript_call(monkeypatch, tmp_path
     )
     run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_", user_id=user_id)
 
+    row = db.list_supadata_api_keys(database, user_id=user_id)[0]
+    db.mark_supadata_api_key_exhausted(
+        database,
+        user_id=user_id,
+        key_id=row["id"],
+        exhausted_until="2099-01-01 00:00:00",
+        last_error="already exhausted",
+    )
+
     class Client:
-        def __init__(self, *, api_key):
-            self.api_key = api_key
-
-        def account_info(self):
-            return SupadataAccountInfo(max_credits=100, used_credits=100)
-
-        def fetch_native_transcript(self, **kwargs):
-            raise AssertionError("transcript should not be requested for exhausted account")
+        def __init__(self, **kwargs):
+            raise AssertionError("locally exhausted key should not create a client")
 
     monkeypatch.setattr("claimlens.pipeline.SupadataClient", Client)
     config = load_config(
@@ -257,3 +258,48 @@ def test_supadata_account_exhaustion_skips_transcript_call(monkeypatch, tmp_path
 
     rows = db.list_supadata_api_keys(database, user_id=user_id)
     assert rows[0]["status"] == "exhausted"
+
+
+def test_supadata_failure_falls_back_to_youtube(monkeypatch, tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(database, email="user@example.test", password_hash="hash")
+    save_supadata_api_key(
+        database,
+        user_id=user_id,
+        label="only-key",
+        value="only-key",
+        priority=10,
+        deployment_secret="deploy-secret",
+    )
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_", user_id=user_id)
+
+    class Client:
+        def __init__(self, *, api_key, timeout):
+            assert api_key == "only-key"
+            assert timeout == 10
+
+        def fetch_native_transcript(self, **kwargs):
+            raise SupadataQuotaError("limit", status_code=429)
+
+    monkeypatch.setattr("claimlens.pipeline.SupadataClient", Client)
+    monkeypatch.setattr(
+        "claimlens.pipeline.fetch_transcript",
+        lambda video_id: TranscriptResult(
+            video_id=video_id,
+            source="youtube",
+            language="en",
+            text="fallback transcript",
+            segments=[],
+        ),
+    )
+    config = load_config(
+        env={
+            "CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret",
+            "CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER": "supadata,youtube",
+        }
+    )
+
+    transcript = extract_required_subtitles(database, run_id, config=config, user_id=user_id)
+
+    assert transcript.source == "youtube"
