@@ -16,6 +16,10 @@ report_language = "en"
 max_request_bytes = 16384
 rate_limit_actions = 12
 rate_limit_window_seconds = 300
+public_base_url = ""
+secure_cookies = false
+registration_enabled = false
+allow_server_api_key_fallback = true
 
 [sources]
 advanced_source_verification = false

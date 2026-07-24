@@ -46,6 +46,9 @@ EXPECTED_TABLES = {
     "verification_runs",
     "evidence_snippets",
     "jobs",
+    "users",
+    "sessions",
+    "user_api_keys",
 }
 
 
@@ -69,7 +72,7 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "4"
+    assert schema_version == "5"
 
 
 def test_connect_applies_sqlite_concurrency_pragmas(tmp_path):

@@ -2,9 +2,11 @@ from dataclasses import dataclass
 
 from claimlens import db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, parse_analysis_json
+from claimlens.auth import hash_password
 from claimlens.briefs import generate_brief, render_markdown_brief
+from claimlens.config import load_config
 from claimlens.pipeline import create_run
-from claimlens.web import render_brief_page, render_process_page
+from claimlens.web import WebContext, render_brief_page, render_options_page, render_process_page
 
 
 @dataclass(frozen=True)
@@ -218,3 +220,104 @@ def test_render_process_page_shows_step_status_failure_and_controls(tmp_path):
     assert "captions" in html
     assert "failed" in html
     assert "Subtitles are unavailable." in html
+
+
+def test_render_process_page_shows_guest_navigation(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_", guest_token="guest")
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        csrf_token="csrf",
+        guest_token="guest",
+        context=WebContext(
+            user_id=None,
+            email=None,
+            csrf_token="csrf",
+            guest_token="guest",
+            session_token=None,
+        ),
+    )
+
+    assert 'href="/login"' in rendered
+    assert "Paste transcript fallback" in rendered
+
+
+def test_render_options_page_masks_saved_keys(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(
+        database,
+        email="user@example.test",
+        password_hash=hash_password("correct horse battery"),
+    )
+    db.upsert_user_api_key(
+        database,
+        user_id=user_id,
+        provider="openai",
+        encrypted_value="encrypted-value",
+        key_fingerprint="fingerprint",
+        masked_value="sk-u...cret",
+    )
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+
+    rendered = render_options_page(
+        database,
+        config,
+        context=WebContext(
+            user_id=user_id,
+            email="user@example.test",
+            csrf_token="csrf",
+            guest_token="guest",
+            session_token="session",
+        ),
+    )
+
+    assert "sk-u...cret" in rendered
+    assert "encrypted-value" not in rendered
+
+
+def test_report_access_is_scoped_by_owner(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(
+        database,
+        email="user@example.test",
+        password_hash=hash_password("correct horse battery"),
+    )
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        user_id=user_id,
+    )
+    run = db.get_pipeline_run(database, run_id)
+    store_cleaned_fixture(database, run["video_id"])
+    summary_id = analyze_cleaned_transcript(database, video_id=run["video_id"], client=Client())
+    brief = tmp_path / "briefs" / "abc123XYZ_.md"
+    brief.parent.mkdir()
+    brief.write_text("# Private", encoding="utf-8")
+    db.upsert_brief_artifact(
+        database,
+        video_id=run["video_id"],
+        summary_id=summary_id,
+        path=brief,
+    )
+
+    denied = render_brief_page(
+        database,
+        tmp_path / "briefs",
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+    )
+    allowed = render_brief_page(
+        database,
+        tmp_path / "briefs",
+        run_id=run_id,
+        user_id=user_id,
+        guest_token="guest",
+    )
+
+    assert "No report is available" in denied
+    assert "Private" in allowed

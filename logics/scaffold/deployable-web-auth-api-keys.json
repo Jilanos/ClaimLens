@@ -1,0 +1,375 @@
+{
+  "title": "Deployable Web Auth And API Key Management",
+  "references": [
+    "README.md",
+    "ROADMAP.md",
+    "config/claimlens.example.toml",
+    "src/claimlens/web.py",
+    "src/claimlens/config.py",
+    "src/claimlens/db.py",
+    "src/claimlens/analysis.py",
+    "src/claimlens/verification.py",
+    "src/claimlens/pipeline.py",
+    "src/claimlens/youtube.py",
+    "audit_before_online_deployement.md",
+    "/home/paul/dev/paulmondou-infra/README.md",
+    "/home/paul/dev/paulmondou-infra/docker-compose.yml",
+    "/home/paul/dev/paulmondou-infra/Caddyfile",
+    "/home/paul/dev/paulmondou-infra/.env.example",
+    "/home/paul/dev/paulmondou-infra/deploy.sh"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Deployable web application",
+    "needs": [
+      "Prepare ClaimLens to run as a deployable web application behind the existing paulmondou-infra Docker Compose and Caddy VPS stack.",
+      "Add first-party user login so authenticated users can save and reuse their API keys across runs.",
+      "Store authenticated users' API keys in the database in the most secure practical way for a small self-hosted SQLite app: encrypted at rest with a deployment secret kept outside the database, never plaintext, never logged, and never rendered back in full.",
+      "Keep guest mode available: non-logged users can still run processes, but must enter required API keys during each process and those guest keys must remain request/job-local only.",
+      "Allow PubMed and Semantic Scholar verification to run without user-provided API keys, while still allowing logged users to save optional NCBI and Semantic Scholar keys for higher quotas or reliability.",
+      "Add a top navigation bar with login/logout state, a login page, and an authenticated options page where users can add, update, mask, test, and delete supported API keys."
+    ],
+    "context": [
+      "The current ClaimLens web UI is a local process page with CSRF, local rate limiting, async jobs, report viewing, and Markdown download.",
+      "The current deployment infra lives in /home/paul/dev/paulmondou-infra and uses Docker Compose plus Caddy. Existing public traffic terminates at Caddy and reverse proxies app containers by internal service name.",
+      "paulmondou-infra currently has one dynamic app service named app for Kapsule, static sites, Caddy security headers, archive-mode deploy support, and environment-driven domains.",
+      "ClaimLens must be added as a separate deployable application, not folded into Kapsule.",
+      "B1/B2 from the previous audit remain product/deployment decisions, but this request moves them forward by adding user auth, HTTPS/reverse-proxy readiness, and key handling needed for safe deployment.",
+      "YouTube transcript fetching from a VPS can be blocked by IP. A deployable ClaimLens must not depend solely on VPS-side youtube-transcript-api success; it needs a user-facing transcript fallback such as upload/paste.",
+      "The implementation must remain testable without live OpenAI, PubMed, Semantic Scholar, YouTube, or VPS access in CI."
+    ],
+    "acceptance_criteria": [
+      "AC1: ClaimLens has a deployable runtime shape with a Dockerfile or equivalent container entrypoint, production config/env variables, healthcheck, persistent data paths, and documentation compatible with paulmondou-infra.",
+      "AC2: paulmondou-infra integration requirements are documented precisely, including a new ClaimLens service, CLAIMLENS_DOMAIN, CLAIMLENS_APP_DIR, internal port, Caddy reverse_proxy block, volumes, environment variables, deploy.sh DEPLOY_APP_REPOS usage, and backup expectations.",
+      "AC3: Web authentication exists with login, logout, password hashing, secure session cookies, CSRF-compatible session handling, registration/bootstrap policy, and tests for successful and failed login flows.",
+      "AC4: The top navigation bar shows application navigation and auth state, including login/logout and an authenticated Options link.",
+      "AC5: Authenticated users can create, update, mask-display, test, and delete saved API keys for OpenAI, Semantic Scholar, and NCBI/PubMed from an Options page.",
+      "AC6: Saved API keys are encrypted before database persistence using an authenticated encryption scheme and a deployment secret such as CLAIMLENS_KEY_ENCRYPTION_SECRET that is never stored in SQLite; plaintext keys are not logged, rendered, or written to reports/transcripts.",
+      "AC7: Guest users can still create and run processes, but guest-entered keys are used only for the submitted job/action and are not persisted in users, runs, jobs, logs, reports, or transcripts.",
+      "AC8: API key resolution order is explicit and tested: per-request guest key first, authenticated user's saved encrypted key second, server environment/config fallback only if enabled for that deployment, and no key where an adapter supports anonymous use.",
+      "AC9: PubMed and Semantic Scholar verification can run anonymously without stored API keys, while authenticated saved keys are used when present to improve quota/reliability.",
+      "AC10: User ownership and access control are enforced for runs, jobs, reports, transcripts, and options; guests cannot access authenticated users' resources and authenticated users cannot access each other's resources.",
+      "AC11: The web UI supports transcript upload or paste fallback so a deployed VPS remains usable when YouTube blocks transcript fetching from the server IP.",
+      "AC12: Database schema migrations add users, sessions, encrypted API keys, ownership fields, and transcript fallback records through versioned, tested migration steps from schema v4.",
+      "AC13: Deployment docs include production security guidance: HTTPS only through Caddy, app bound internally, secure cookies, secret generation, backup/restore for SQLite plus encrypted-key secret, and operational warnings about losing CLAIMLENS_KEY_ENCRYPTION_SECRET.",
+      "AC14: Tests cover auth, session security flags, API key encryption/decryption and redaction, guest key non-persistence, key resolution order, anonymous PubMed/Semantic behavior, access control, transcript upload fallback, and report access.",
+      "AC15: Validation passes with ruff, pytest, compileall where applicable, logics-manager lint --require-status, and logics-manager audit before closeout."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Deployable Web Auth And API Key Management",
+    "overview": "A deployment-readiness slice that turns ClaimLens from a guarded local process page into a self-hostable web app with login, secure per-user API key storage, guest operation, and VPS/Caddy integration guidance.",
+    "goals": [
+      "Make ClaimLens deployable as its own service in the existing paulmondou-infra VPS stack.",
+      "Allow authenticated users to save API keys securely and reuse them across runs.",
+      "Preserve guest usage without persistent secrets.",
+      "Keep PubMed and Semantic Scholar usable without keys while supporting optional saved keys.",
+      "Add the navigation and options UI needed for a real web workflow.",
+      "Avoid a VPS transcript dead end by adding a user-facing transcript fallback."
+    ],
+    "non_goals": [
+      "Do not deploy to the VPS automatically as part of this request; produce a deployable app and infra-ready instructions first.",
+      "Do not implement payments, billing, public self-service SaaS onboarding, or multi-tenant administration.",
+      "Do not store API keys in plaintext or in reversible form without an external deployment secret.",
+      "Do not require PubMed or Semantic Scholar API keys for baseline source verification.",
+      "Do not solve YouTube IP blocking with proxy rotation in this request."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Package ClaimLens for container deployment",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Deployment packaging",
+      "request_acs": [
+        "AC1",
+        "AC13",
+        "AC15"
+      ],
+      "problem": [
+        "ClaimLens currently runs as a local Python CLI/web process and does not yet define a production container runtime.",
+        "The existing VPS infra expects deployable app directories and Docker Compose services."
+      ],
+      "scope_in": [
+        "Add a Dockerfile or equivalent deployable runtime entrypoint for ClaimLens.",
+        "Define production environment variables, internal host/port, data volume paths, and healthcheck behavior.",
+        "Document secret generation and persistent path layout for SQLite, outputs, transcripts, briefs, and logs.",
+        "Keep the app listening only on an internal interface/container port behind Caddy."
+      ],
+      "scope_out": [
+        "Actually running the deployment on the VPS.",
+        "Changing Kapsule's runtime behavior."
+      ],
+      "acceptance_criteria": [
+        "AC1: A local container build can start ClaimLens web mode with persistent data paths.",
+        "AC2: A healthcheck or smoke endpoint exists for Compose/Caddy diagnostics.",
+        "AC3: Production env variables are documented and covered by config tests.",
+        "AC4: The runtime does not require secrets to be committed."
+      ]
+    },
+    {
+      "title": "Specify paulmondou-infra integration",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Infrastructure integration",
+      "request_acs": [
+        "AC2",
+        "AC13",
+        "AC15"
+      ],
+      "problem": [
+        "paulmondou-infra currently serves Kapsule plus static sites; ClaimLens needs a separate dynamic service and Caddy route.",
+        "Deployment must fit the existing archive/git deploy.sh model and Docker Compose conventions."
+      ],
+      "scope_in": [
+        "Write the exact intended infra changes for docker-compose.yml, Caddyfile, .env.example, backup.sh, and README.",
+        "Define CLAIMLENS_DOMAIN and CLAIMLENS_APP_DIR conventions.",
+        "Define DEPLOY_APP_REPOS example for ClaimLens.",
+        "Define volume and backup expectations for ClaimLens data.",
+        "Document Caddy HTTPS/security-header interaction with ClaimLens secure cookies."
+      ],
+      "scope_out": [
+        "Editing paulmondou-infra unless explicitly requested during implementation.",
+        "DNS provider automation."
+      ],
+      "acceptance_criteria": [
+        "AC1: The infra integration plan names every file and environment variable to add or modify.",
+        "AC2: The plan preserves existing Kapsule and static site routes.",
+        "AC3: The deploy command for local archive-mode deployment is documented.",
+        "AC4: Backup and restore implications for encrypted API keys are explicit."
+      ]
+    },
+    {
+      "title": "Implement web users and sessions",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Authentication",
+      "request_acs": [
+        "AC3",
+        "AC4",
+        "AC10",
+        "AC12",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "The current web app has no user identity, session model, or ownership boundary.",
+        "Saving API keys safely requires authenticated user records and access control."
+      ],
+      "scope_in": [
+        "Add users table with strong password hashing.",
+        "Add sessions table or signed/encrypted cookie session model with expiry and rotation.",
+        "Add login/logout pages and top navigation auth state.",
+        "Add bootstrap/admin registration policy appropriate for a private self-hosted app.",
+        "Attach user ownership to runs/jobs/reports where applicable.",
+        "Test login success/failure, logout, session expiry, secure cookie flags, and ownership checks."
+      ],
+      "scope_out": [
+        "OAuth/social login.",
+        "Password reset email.",
+        "Public registration without operator approval."
+      ],
+      "acceptance_criteria": [
+        "AC1: A configured operator can create or bootstrap an initial user.",
+        "AC2: Login creates a secure session and logout invalidates it.",
+        "AC3: Navigation reflects guest vs authenticated state.",
+        "AC4: Runs and reports are scoped to the owning user or guest session.",
+        "AC5: Tests cover auth and access-control behavior."
+      ]
+    },
+    {
+      "title": "Encrypt and manage user API keys",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Secret management",
+      "request_acs": [
+        "AC5",
+        "AC6",
+        "AC8",
+        "AC9",
+        "AC12",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "Authenticated users need reusable API keys, but API keys must not be stored or displayed in plaintext.",
+        "The application must also work without PubMed/Semantic Scholar keys."
+      ],
+      "scope_in": [
+        "Add encrypted_api_keys or equivalent table keyed by user and provider.",
+        "Use authenticated encryption with per-record nonce/salt and a deployment secret outside SQLite.",
+        "Support providers: OpenAI, Semantic Scholar, and NCBI/PubMed.",
+        "Add Options page controls to add, update, test, mask, and delete keys.",
+        "Implement redaction for logs, HTML, jobs, reports, and exceptions.",
+        "Implement and test API key resolution order."
+      ],
+      "scope_out": [
+        "Hardware security modules or external secret stores.",
+        "Sharing keys between users.",
+        "Persisting guest keys."
+      ],
+      "acceptance_criteria": [
+        "AC1: Stored key material is encrypted and cannot be read from SQLite without CLAIMLENS_KEY_ENCRYPTION_SECRET.",
+        "AC2: Key values are never rendered back except as masked metadata.",
+        "AC3: Guest keys are not persisted.",
+        "AC4: PubMed/Semantic Scholar run anonymously when no key is available.",
+        "AC5: Tests cover encryption, redaction, deletion, and resolution order."
+      ]
+    },
+    {
+      "title": "Add guest and authenticated process key resolution",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Process execution",
+      "request_acs": [
+        "AC7",
+        "AC8",
+        "AC9",
+        "AC10",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "Current process forms accept per-action keys but do not distinguish guest, authenticated saved key, or server fallback semantics.",
+        "Jobs must not persist transient guest secrets."
+      ],
+      "scope_in": [
+        "Create a key-provider boundary that resolves keys from request, authenticated user storage, optional server config, or anonymous adapter support.",
+        "Pass transient keys into queued jobs without storing plaintext in job rows.",
+        "Ensure source verification adapters are instantiated without keys when keys are unavailable.",
+        "Return controlled prompts when OpenAI analysis cannot run because no key exists."
+      ],
+      "scope_out": [
+        "Server-wide billing/quota accounting.",
+        "Full SaaS tenant administration."
+      ],
+      "acceptance_criteria": [
+        "AC1: Guest process keys work for one action and are not persisted.",
+        "AC2: Authenticated saved keys are used when no per-request key is supplied.",
+        "AC3: OpenAI analysis fails clearly when no OpenAI key is available.",
+        "AC4: PubMed/Semantic Scholar verification still runs without keys.",
+        "AC5: Tests cover all key resolution branches."
+      ]
+    },
+    {
+      "title": "Build login navigation and options UI",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Web UI",
+      "request_acs": [
+        "AC4",
+        "AC5",
+        "AC7",
+        "AC10",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "The current process page has no global navigation, login page, or user settings area.",
+        "Users need a safe place to manage provider keys without exposing the values."
+      ],
+      "scope_in": [
+        "Add a top bar shared by process, report, login, and options pages.",
+        "Add login/logout affordances.",
+        "Add Options page with provider key status, masked values, updated timestamps, test/delete actions, and explanatory empty states.",
+        "Keep guest process forms available for per-action keys.",
+        "Maintain accessible labels and responsive behavior."
+      ],
+      "scope_out": [
+        "Full visual redesign beyond the needed navigation/settings surfaces.",
+        "User profile fields unrelated to auth/key management."
+      ],
+      "acceptance_criteria": [
+        "AC1: Guest users see Login and per-process key fields.",
+        "AC2: Authenticated users see Options and Logout.",
+        "AC3: Options page can update and delete keys without displaying plaintext.",
+        "AC4: Tests cover rendered guest/authenticated navigation and Options states."
+      ]
+    },
+    {
+      "title": "Add transcript fallback for VPS-blocked YouTube",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Transcript acquisition",
+      "request_acs": [
+        "AC11",
+        "AC12",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "YouTube can block transcript fetching from VPS or datacenter IPs, making a deployed app unusable if server-side fetching is the only transcript path.",
+        "The current failure path is clear but still stops the user."
+      ],
+      "scope_in": [
+        "Add web fallback to paste transcript text or upload .txt/.srt/.vtt after captions fail or before attempting YouTube fetch.",
+        "Normalize uploaded/pasted transcripts into the existing transcript and cleanup pipeline.",
+        "Persist transcript source as user_upload or user_paste with ownership/audit metadata.",
+        "Document deployed behavior and manual local smoke tests."
+      ],
+      "scope_out": [
+        "Proxy rotation or paid transcript scraping services.",
+        "Audio download/transcription fallback."
+      ],
+      "acceptance_criteria": [
+        "AC1: A user can continue a run using pasted/uploaded transcript text when YouTube captions are blocked.",
+        "AC2: Uploaded/pasted transcript data follows the same cleanup, analysis, report, and verification flow.",
+        "AC3: Tests cover paste/upload fallback and ownership.",
+        "AC4: Docs explain this is the supported VPS fallback."
+      ]
+    },
+    {
+      "title": "Version schema and validate deployable closeout",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Validation",
+      "request_acs": [
+        "AC12",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "Auth, sessions, ownership, encrypted keys, and transcript fallback require schema changes beyond v4.",
+        "Deployment readiness needs deterministic tests and operator documentation before any VPS run."
+      ],
+      "scope_in": [
+        "Add versioned migrations from schema v4 for users, sessions, encrypted keys, ownership, and transcript fallback.",
+        "Update README, ROADMAP, config example, and a deployment runbook.",
+        "Add validation commands and manual smoke-test procedure.",
+        "Run ruff, pytest, compileall, logics lint, and logics audit before closeout."
+      ],
+      "scope_out": [
+        "Running the production deployment.",
+        "Live external API tests in CI."
+      ],
+      "acceptance_criteria": [
+        "AC1: Schema changes are versioned and tested from v4.",
+        "AC2: Operator docs cover secrets, backup/restore, deployment, and local smoke tests.",
+        "AC3: Automated validation passes.",
+        "AC4: Logics closeout contains AC traceability proofs."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Deployable Web Auth And API Key Management",
+    "plan": [
+      "Confirm paulmondou-infra deployment constraints and keep ClaimLens as a separate deployable app/service.",
+      "Design schema v5 for users, sessions, encrypted API keys, ownership, and transcript fallback.",
+      "Implement authentication and secure session handling before adding saved secret storage.",
+      "Implement encrypted user API key storage with redaction and provider-specific key resolution.",
+      "Update process execution so guest keys are transient and authenticated saved keys are reused safely.",
+      "Add top navigation, login/logout pages, and authenticated Options page.",
+      "Add transcript paste/upload fallback for VPS-side YouTube blocking.",
+      "Package ClaimLens for container deployment and document paulmondou-infra Compose/Caddy changes.",
+      "Update docs, deployment runbook, and manual smoke tests.",
+      "Validate with deterministic tests, ruff, compileall, logics lint, and logics audit before closeout.",
+      "ADR 009 checkpoint: update affected Logics docs during each meaningful wave and leave the repo commit-ready; commit creation remains under operator control."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/deployable-web-auth-api-keys.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

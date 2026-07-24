@@ -13,6 +13,7 @@ The refined MVP is local-first:
 7. Optionally verify notable claims against PubMed and Semantic Scholar.
 8. Inspect and launch steps from a local HTML process page with guarded POST actions, async job
    status, and report viewing/download.
+9. Optionally log in to reuse encrypted per-user API keys and manage them from Options.
 
 Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
 verification is optional and disabled by default; when launched, it checks stored notable claims
@@ -60,6 +61,10 @@ CLAIMLENS_BRIEFS=outputs/briefs
 CLAIMLENS_CONFIG=config/claimlens.example.toml
 CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
+CLAIMLENS_KEY_ENCRYPTION_SECRET=
+CLAIMLENS_SECURE_COOKIES=false
+CLAIMLENS_REGISTRATION_ENABLED=false
+CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
 OPENAI_API_KEY=
 SEMANTIC_SCHOLAR_API_KEY=
 NCBI_API_KEY=
@@ -68,6 +73,11 @@ NCBI_API_KEY=
 `OPENAI_API_KEY` is required for the LLM analysis step. It can be supplied through the environment,
 `--openai-api-key`, or the local HTML UI and is not persisted in SQLite, generated transcripts, or
 generated briefs.
+
+Authenticated web users can save OpenAI, Semantic Scholar, and NCBI/PubMed keys from the Options
+page. Saved keys are encrypted in SQLite with `CLAIMLENS_KEY_ENCRYPTION_SECRET`; keep that secret
+outside Git and back it up separately. Guest users can still enter keys per process, and those keys
+are used only for the submitted job/action.
 
 Advanced source verification is disabled by default:
 
@@ -90,6 +100,8 @@ advanced_source_verification = false
 The source verification keys are optional for local tests and some API usage, but should be supplied
 for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not
 persisted in SQLite, generated transcripts, generated briefs, or the local HTML output.
+PubMed and Semantic Scholar can run without keys; saved or environment keys only improve quota and
+reliability.
 
 ## Current Implementation
 
@@ -111,6 +123,9 @@ Implemented:
 - Local HTML process page with CSRF-protected actions, bounded request bodies, step statuses,
   async job state, failure details, transcript preview, source links, report viewing, report
   download, and next-step controls.
+- Login/logout, secure session storage, top navigation, and an Options page for encrypted per-user
+  API key management.
+- Pasted transcript fallback for VPS/IP-blocked YouTube caption extraction.
 - SQLite WAL and `busy_timeout` pragmas for local concurrent web access.
 - Conservative source verification: adapter errors are logged and source verdicts no longer rely
   on title/snippet keyword polarity alone.
@@ -157,24 +172,37 @@ Open `http://127.0.0.1:8765`, load a run, and launch `source verification` after
 The page shows job status, verification status, failure details, source counts, transcript preview,
 and links to view or download the generated Markdown report.
 
+For a private local login test:
+
+```bash
+export CLAIMLENS_KEY_ENCRYPTION_SECRET="$(openssl rand -hex 32)"
+export CLAIMLENS_SECURE_COOKIES=false
+claimlens serve
+```
+
+Open `/login`. If no user exists, the create-account form bootstraps the first account even when
+registration is otherwise closed. After login, use `/options` to save, test, or delete API keys.
+
 Online-readiness smoke checks:
 
 - Oversized or stale form submissions should be rejected with controlled messages.
 - Repeated costly actions should be rejected while the same action is queued or running.
 - Report links must only serve files from the configured briefs directory.
 - Channel page scraping is disabled in the exposed CLI workflow; use one direct video URL.
+- If YouTube blocks transcript extraction, paste transcript text into the fallback form and continue
+  with cleanup, analysis, brief, and verification.
 
-Deployment standbys:
+Deployment notes:
 
-- OpenAI key ownership is not decided here. Before public exposure, choose server-owned key with
-  quotas or a BYO-key model with explicit trust warnings.
-- HTTPS, login, and reverse-proxy configuration are not implemented here. If hosted, keep the app
-  bound to `127.0.0.1` behind a hardened proxy until that work is explicitly completed.
+- ClaimLens now supports BYO keys for guests and encrypted saved keys for authenticated users.
+  Keep `CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=false` if you do not want any server-owned key use.
+- HTTPS still belongs at Caddy/reverse-proxy level. Do not publish the ClaimLens container port
+  directly. The deployable app shape is documented in `docs/deployment-paulmondou-infra.md`.
 
 ## SQLite Schema
 
-Schema version 4 creates and migrates the local tables for pipeline state, analysis, verification,
-brief artifacts, and async jobs:
+Schema version 5 creates and migrates the local tables for pipeline state, analysis, verification,
+brief artifacts, async jobs, web users, sessions, and encrypted API keys:
 
 - `channels`
 - `videos`
@@ -191,6 +219,9 @@ brief artifacts, and async jobs:
 - `evidence_snippets`
 - `brief_artifacts`
 - `jobs`
+- `users`
+- `sessions`
+- `user_api_keys`
 
 Before introducing the next schema version, any additive or destructive production schema change
 must include a tested migration path against an older schema/database fixture.

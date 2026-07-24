@@ -34,6 +34,17 @@ class ParsedVideoUrl:
     canonical_url: str
 
 
+@dataclass(frozen=True)
+class ManualTranscript:
+    video_id: str
+    source: str
+    language: str
+    text: str
+    segments: list
+    submitted_by_user_id: int | None = None
+    submitted_by_guest_token: str | None = None
+
+
 def parse_youtube_video_url(target: str) -> ParsedVideoUrl:
     """Return a single YouTube video ID from supported URL formats."""
 
@@ -68,6 +79,8 @@ def create_run(
     *,
     report_language: str = "en",
     fetch_metadata: bool = False,
+    user_id: int | None = None,
+    guest_token: str | None = None,
 ) -> int:
     parsed = parse_youtube_video_url(video_url)
     db.init_db(database_path)
@@ -88,6 +101,8 @@ def create_run(
         video_id=parsed.video_id,
         source_url=parsed.canonical_url,
         report_language=report_language,
+        user_id=user_id,
+        guest_token=guest_token,
     )
 
 
@@ -203,6 +218,48 @@ def clean_run_transcript(
     )
     db.set_run_status(database_path, run_id=run_id, status="running", current_step="analysis")
     return output_path
+
+
+def add_manual_transcript(
+    database_path: Path | str,
+    run_id: int,
+    *,
+    text: str,
+    language: str = "unknown",
+    source: str = "user_paste",
+    user_id: int | None = None,
+    guest_token: str | None = None,
+) -> int:
+    run = _require_run(database_path, run_id)
+    cleaned_text = text.strip()
+    if not cleaned_text:
+        raise PipelineError("Transcript text is required.")
+    transcript_id = db.upsert_transcript(
+        database_path,
+        ManualTranscript(
+            video_id=run["video_id"],
+            source=source,
+            language=language.strip() or "unknown",
+            text=cleaned_text,
+            segments=[],
+            submitted_by_user_id=user_id,
+            submitted_by_guest_token=guest_token,
+        ),
+    )
+    db.set_step_status(
+        database_path,
+        run_id=run_id,
+        step="captions",
+        status="succeeded",
+        output_path=f"sqlite:transcripts/{transcript_id}",
+    )
+    db.set_run_status(
+        database_path,
+        run_id=run_id,
+        status="running",
+        current_step="clean_transcript",
+    )
+    return transcript_id
 
 
 def next_eligible_step(database_path: Path | str, run_id: int) -> str | None:

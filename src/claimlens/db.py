@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     status TEXT NOT NULL,
     started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at TEXT,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    guest_token TEXT,
     details TEXT
 );
 
@@ -78,6 +80,8 @@ CREATE TABLE IF NOT EXISTS transcripts (
     source TEXT NOT NULL,
     language TEXT,
     text TEXT NOT NULL,
+    submitted_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    submitted_by_guest_token TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(video_id, source)
 );
@@ -216,8 +220,46 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_run_action ON jobs(run_id, action);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    display_name TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    csrf_token TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS user_api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    encrypted_value TEXT NOT NULL,
+    key_fingerprint TEXT NOT NULL,
+    masked_value TEXT NOT NULL,
+    tested_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, provider)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_api_keys_user_id ON user_api_keys(user_id);
+
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '4')
+VALUES ('schema_version', '5')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -276,6 +318,10 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _add_column_if_missing(connection, "videos", "author", "TEXT")
     _add_column_if_missing(connection, "claims", "transcript_excerpt", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "report_language", "TEXT")
+    _add_column_if_missing(connection, "pipeline_runs", "user_id", "INTEGER")
+    _add_column_if_missing(connection, "pipeline_runs", "guest_token", "TEXT")
+    _add_column_if_missing(connection, "transcripts", "submitted_by_user_id", "INTEGER")
+    _add_column_if_missing(connection, "transcripts", "submitted_by_guest_token", "TEXT")
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS jobs (
@@ -289,6 +335,48 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             finished_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            display_name TEXT,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash TEXT NOT NULL UNIQUE,
+            csrf_token TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            provider TEXT NOT NULL,
+            encrypted_value TEXT NOT NULL,
+            key_fingerprint TEXT NOT NULL,
+            masked_value TEXT NOT NULL,
+            tested_at TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, provider)
         )
         """
     )
@@ -372,11 +460,15 @@ def upsert_transcript(database_path: Path | str, transcript: TranscriptLike) -> 
         with connection:
             connection.execute(
                 """
-                INSERT INTO transcripts (video_id, source, language, text)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO transcripts
+                    (video_id, source, language, text, submitted_by_user_id,
+                     submitted_by_guest_token)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(video_id, source) DO UPDATE SET
                     language = excluded.language,
                     text = excluded.text,
+                    submitted_by_user_id = excluded.submitted_by_user_id,
+                    submitted_by_guest_token = excluded.submitted_by_guest_token,
                     created_at = CURRENT_TIMESTAMP
                 """,
                 (
@@ -384,6 +476,8 @@ def upsert_transcript(database_path: Path | str, transcript: TranscriptLike) -> 
                     transcript.source,
                     transcript.language,
                     transcript.text,
+                    getattr(transcript, "submitted_by_user_id", None),
+                    getattr(transcript, "submitted_by_guest_token", None),
                 ),
             )
             transcript_id = connection.execute(
@@ -418,6 +512,8 @@ def create_pipeline_run(
     video_id: str,
     source_url: str,
     report_language: str = "en",
+    user_id: int | None = None,
+    guest_token: str | None = None,
     command: str = "run-video",
 ) -> int:
     steps = ["captions", "clean_transcript", "analysis", "brief", "source_verification"]
@@ -426,14 +522,17 @@ def create_pipeline_run(
             cursor = connection.execute(
                 """
                 INSERT INTO pipeline_runs
-                    (command, status, video_id, source_url, current_step, report_language, details)
-                VALUES (?, 'created', ?, ?, 'captions', ?, ?)
+                    (command, status, video_id, source_url, current_step, report_language,
+                     user_id, guest_token, details)
+                VALUES (?, 'created', ?, ?, 'captions', ?, ?, ?, ?)
                 """,
                 (
                     command,
                     video_id,
                     source_url,
                     report_language,
+                    user_id,
+                    guest_token,
                     json.dumps(
                         {
                             "video_id": video_id,
@@ -531,6 +630,53 @@ def list_pipeline_runs(database_path: Path | str) -> list[sqlite3.Row]:
         return connection.execute(
             "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT 100",
         ).fetchall()
+
+
+def list_visible_pipeline_runs(
+    database_path: Path | str,
+    *,
+    user_id: int | None,
+    guest_token: str | None,
+) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        if user_id is not None:
+            return connection.execute(
+                """
+                SELECT * FROM pipeline_runs
+                WHERE user_id = ?
+                ORDER BY id DESC
+                LIMIT 100
+                """,
+                (user_id,),
+            ).fetchall()
+        if guest_token:
+            return connection.execute(
+                """
+                SELECT * FROM pipeline_runs
+                WHERE user_id IS NULL AND guest_token = ?
+                ORDER BY id DESC
+                LIMIT 100
+                """,
+                (guest_token,),
+            ).fetchall()
+    return []
+
+
+def get_visible_pipeline_run(
+    database_path: Path | str,
+    run_id: int,
+    *,
+    user_id: int | None,
+    guest_token: str | None,
+) -> sqlite3.Row | None:
+    run = get_pipeline_run(database_path, run_id)
+    if run is None:
+        return None
+    if user_id is not None and run["user_id"] == user_id:
+        return run
+    if user_id is None and guest_token and run["guest_token"] == guest_token:
+        return run
+    return None
 
 
 def get_video(database_path: Path | str, video_id: str) -> sqlite3.Row | None:
@@ -1012,6 +1158,172 @@ def latest_jobs_for_run(database_path: Path | str, run_id: int) -> list[sqlite3.
             LIMIT 20
             """,
             (run_id,),
+        ).fetchall()
+
+
+def create_user(
+    database_path: Path | str,
+    *,
+    email: str,
+    password_hash: str,
+    display_name: str | None = None,
+) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO users (email, password_hash, display_name)
+                VALUES (?, ?, ?)
+                """,
+                (email.strip().lower(), password_hash, display_name),
+            )
+    return int(cursor.lastrowid)
+
+
+def user_count(database_path: Path | str) -> int:
+    with closing(connect(database_path)) as connection:
+        return int(connection.execute("SELECT COUNT(*) FROM users").fetchone()[0])
+
+
+def get_user_by_email(database_path: Path | str, email: str) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            "SELECT * FROM users WHERE email = ? AND is_active = 1",
+            (email.strip().lower(),),
+        ).fetchone()
+
+
+def get_user(database_path: Path | str, user_id: int) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            "SELECT * FROM users WHERE id = ? AND is_active = 1",
+            (user_id,),
+        ).fetchone()
+
+
+def create_session(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    token_hash: str,
+    csrf_token: str,
+    expires_at: str,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO sessions (user_id, token_hash, csrf_token, expires_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (user_id, token_hash, csrf_token, expires_at),
+            )
+
+
+def get_session(database_path: Path | str, token_hash: str) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            row = connection.execute(
+                """
+                SELECT sessions.*, users.email, users.display_name
+                FROM sessions
+                INNER JOIN users ON users.id = sessions.user_id
+                WHERE token_hash = ?
+                  AND expires_at > CURRENT_TIMESTAMP
+                  AND users.is_active = 1
+                """,
+                (token_hash,),
+            ).fetchone()
+            if row is not None:
+                connection.execute(
+                    "UPDATE sessions SET last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (row["id"],),
+                )
+        return row
+
+
+def delete_session(database_path: Path | str, token_hash: str) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash,))
+
+
+def upsert_user_api_key(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    provider: str,
+    encrypted_value: str,
+    key_fingerprint: str,
+    masked_value: str,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                INSERT INTO user_api_keys
+                    (user_id, provider, encrypted_value, key_fingerprint, masked_value)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, provider) DO UPDATE SET
+                    encrypted_value = excluded.encrypted_value,
+                    key_fingerprint = excluded.key_fingerprint,
+                    masked_value = excluded.masked_value,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (user_id, provider, encrypted_value, key_fingerprint, masked_value),
+            )
+
+
+def delete_user_api_key(database_path: Path | str, *, user_id: int, provider: str) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                "DELETE FROM user_api_keys WHERE user_id = ? AND provider = ?",
+                (user_id, provider),
+            )
+
+
+def mark_user_api_key_tested(database_path: Path | str, *, user_id: int, provider: str) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE user_api_keys
+                SET tested_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND provider = ?
+                """,
+                (user_id, provider),
+            )
+
+
+def get_user_api_key(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    provider: str,
+) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM user_api_keys
+            WHERE user_id = ? AND provider = ?
+            """,
+            (user_id, provider),
+        ).fetchone()
+
+
+def list_user_api_keys(database_path: Path | str, *, user_id: int) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT provider, key_fingerprint, masked_value, tested_at, created_at, updated_at
+            FROM user_api_keys
+            WHERE user_id = ?
+            ORDER BY provider
+            """,
+            (user_id,),
         ).fetchall()
 
 

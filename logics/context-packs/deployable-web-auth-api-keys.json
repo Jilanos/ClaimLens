@@ -1,0 +1,448 @@
+{
+  "budgets": {
+    "max_docs": 40,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_006_deployable_web_auth_and_api_key_management item_041_package_claimlens_for_container_deployment item_042_specify_paulmondou_infra_integration item_043_implement_web_users_and_sessions item_044_encrypt_and_manage_user_api_keys item_045_add_guest_and_authenticated_process_key_resolution item_046_build_login_navigation_and_options_ui item_047_add_transcript_fallback_for_vps_blocked_youtube item_048_version_schema_and_validate_deployable_closeout task_007_orchestrate_deployable_web_auth_and_api_key_management --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_041_package_claimlens_for_container_deployment",
+          "item_042_specify_paulmondou_infra_integration",
+          "item_043_implement_web_users_and_sessions",
+          "item_044_encrypt_and_manage_user_api_keys",
+          "item_045_add_guest_and_authenticated_process_key_resolution",
+          "item_046_build_login_navigation_and_options_ui",
+          "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+          "item_048_version_schema_and_validate_deployable_closeout"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md",
+      "ref": "prod_007_claimlens_deployable_web_auth_and_api_key_management",
+      "status": "Proposed",
+      "title": "ClaimLens Deployable Web Auth And API Key Management"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, deployable web auth and api key management, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Deployable Web Auth And API Key Management",
+        "use when": "You need to implement or review the scaffolded workflow for Deployable Web Auth And API Key Management."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_041_package_claimlens_for_container_deployment",
+          "item_042_specify_paulmondou_infra_integration",
+          "item_043_implement_web_users_and_sessions",
+          "item_044_encrypt_and_manage_user_api_keys",
+          "item_045_add_guest_and_authenticated_process_key_resolution",
+          "item_046_build_login_navigation_and_options_ui",
+          "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+          "item_048_version_schema_and_validate_deployable_closeout"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/request/req_006_deployable_web_auth_and_api_key_management.md",
+      "ref": "req_006_deployable_web_auth_and_api_key_management",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Deployable Web Auth And API Key Management"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, package claimlens for container deployment, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Package ClaimLens for container deployment",
+        "use when": "Implementing the scaffolded slice for Package ClaimLens for container deployment."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_041_package_claimlens_for_container_deployment"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_041_package_claimlens_for_container_deployment.md",
+      "ref": "item_041_package_claimlens_for_container_deployment",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Package ClaimLens for container deployment"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, specify paulmondou-infra integration, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Specify paulmondou-infra integration",
+        "use when": "Implementing the scaffolded slice for Specify paulmondou-infra integration."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_042_specify_paulmondou_infra_integration"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_042_specify_paulmondou_infra_integration.md",
+      "ref": "item_042_specify_paulmondou_infra_integration",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Specify paulmondou-infra integration"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement web users and sessions, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement web users and sessions",
+        "use when": "Implementing the scaffolded slice for Implement web users and sessions."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_043_implement_web_users_and_sessions"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_043_implement_web_users_and_sessions.md",
+      "ref": "item_043_implement_web_users_and_sessions",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement web users and sessions"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Deployable Web Auth And API Key Management",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_041_package_claimlens_for_container_deployment",
+          "item_042_specify_paulmondou_infra_integration",
+          "item_043_implement_web_users_and_sessions",
+          "item_044_encrypt_and_manage_user_api_keys",
+          "item_045_add_guest_and_authenticated_process_key_resolution",
+          "item_046_build_login_navigation_and_options_ui",
+          "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+          "item_048_version_schema_and_validate_deployable_closeout"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md",
+      "ref": "task_007_orchestrate_deployable_web_auth_and_api_key_management",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Deployable Web Auth And API Key Management"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_041_package_claimlens_for_container_deployment",
+          "item_042_specify_paulmondou_infra_integration",
+          "item_043_implement_web_users_and_sessions",
+          "item_044_encrypt_and_manage_user_api_keys",
+          "item_045_add_guest_and_authenticated_process_key_resolution",
+          "item_046_build_login_navigation_and_options_ui",
+          "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+          "item_048_version_schema_and_validate_deployable_closeout"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md",
+      "ref": "prod_007_claimlens_deployable_web_auth_and_api_key_management",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Deployable Web Auth And API Key Management"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, encrypt and manage user api keys, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Encrypt and manage user API keys",
+        "use when": "Implementing the scaffolded slice for Encrypt and manage user API keys."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_044_encrypt_and_manage_user_api_keys"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_044_encrypt_and_manage_user_api_keys.md",
+      "ref": "item_044_encrypt_and_manage_user_api_keys",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Encrypt and manage user API keys"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add guest and authenticated process key resolution, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add guest and authenticated process key resolution",
+        "use when": "Implementing the scaffolded slice for Add guest and authenticated process key resolution."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_045_add_guest_and_authenticated_process_key_resolution"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_045_add_guest_and_authenticated_process_key_resolution.md",
+      "ref": "item_045_add_guest_and_authenticated_process_key_resolution",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add guest and authenticated process key resolution"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, build login navigation and options ui, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Build login navigation and options UI",
+        "use when": "Implementing the scaffolded slice for Build login navigation and options UI."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_046_build_login_navigation_and_options_ui"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_046_build_login_navigation_and_options_ui.md",
+      "ref": "item_046_build_login_navigation_and_options_ui",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Build login navigation and options UI"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add transcript fallback for vps-blocked youtube, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add transcript fallback for VPS-blocked YouTube",
+        "use when": "Implementing the scaffolded slice for Add transcript fallback for VPS-blocked YouTube."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_047_add_transcript_fallback_for_vps_blocked_youtube"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_047_add_transcript_fallback_for_vps_blocked_youtube.md",
+      "ref": "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add transcript fallback for VPS-blocked YouTube"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, version schema and validate deployable closeout, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Version schema and validate deployable closeout",
+        "use when": "Implementing the scaffolded slice for Version schema and validate deployable closeout."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_048_version_schema_and_validate_deployable_closeout"
+        ],
+        "prod": [
+          "prod_007_claimlens_deployable_web_auth_and_api_key_management"
+        ],
+        "req": [
+          "req_006_deployable_web_auth_and_api_key_management"
+        ],
+        "task": [
+          "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+        ]
+      },
+      "path": "logics/backlog/item_048_version_schema_and_validate_deployable_closeout.md",
+      "ref": "item_048_version_schema_and_validate_deployable_closeout",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Version schema and validate deployable closeout"
+    }
+  ],
+  "estimates": {
+    "char_count": 11403,
+    "companion_doc_count": 1,
+    "doc_count": 11
+  },
+  "generated_at": "2026-07-24T08:34:55Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_006_deployable_web_auth_and_api_key_management",
+      "item_041_package_claimlens_for_container_deployment",
+      "item_042_specify_paulmondou_infra_integration",
+      "item_043_implement_web_users_and_sessions",
+      "item_044_encrypt_and_manage_user_api_keys",
+      "item_045_add_guest_and_authenticated_process_key_resolution",
+      "item_046_build_login_navigation_and_options_ui",
+      "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+      "item_048_version_schema_and_validate_deployable_closeout",
+      "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_006_deployable_web_auth_and_api_key_management,item_041_package_claimlens_for_container_deployment,item_042_specify_paulmondou_infra_integration,item_043_implement_web_users_and_sessions,item_044_encrypt_and_manage_user_api_keys,item_045_add_guest_and_authenticated_process_key_resolution,item_046_build_login_navigation_and_options_ui,item_047_add_transcript_fallback_for_vps_blocked_youtube,item_048_version_schema_and_validate_deployable_closeout,task_007_orchestrate_deployable_web_auth_and_api_key_management",
+  "refs": [
+    "req_006_deployable_web_auth_and_api_key_management",
+    "item_041_package_claimlens_for_container_deployment",
+    "item_042_specify_paulmondou_infra_integration",
+    "item_043_implement_web_users_and_sessions",
+    "item_044_encrypt_and_manage_user_api_keys",
+    "item_045_add_guest_and_authenticated_process_key_resolution",
+    "item_046_build_login_navigation_and_options_ui",
+    "item_047_add_transcript_fallback_for_vps_blocked_youtube",
+    "item_048_version_schema_and_validate_deployable_closeout",
+    "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md",
+      "ref": "task_007_orchestrate_deployable_web_auth_and_api_key_management"
+    }
+  ]
+}

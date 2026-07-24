@@ -17,6 +17,7 @@
 | [prod_004_claimlens_single_video_local_first_mvp](product/prod_004_claimlens_single_video_local_first_mvp.md) | ClaimLens Single Video Local First MVP | Proposed |  |  | product/prod_004_claimlens_single_video_local_first_mvp.md |
 | [prod_005_claimlens_advanced_source_verification_mode](product/prod_005_claimlens_advanced_source_verification_mode.md) | ClaimLens Advanced Source Verification Mode | Settled |  |  | product/prod_005_claimlens_advanced_source_verification_mode.md |
 | [prod_006_claimlens_online_readiness_audit_implementation](product/prod_006_claimlens_online_readiness_audit_implementation.md) | ClaimLens Online Readiness Audit Implementation | Settled |  |  | product/prod_006_claimlens_online_readiness_audit_implementation.md |
+| [prod_007_claimlens_deployable_web_auth_and_api_key_management](product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md) | ClaimLens Deployable Web Auth And API Key Management | Settled |  |  | product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md |
 
 ## Roadmaps
 
@@ -32,6 +33,7 @@ _None_
 | [req_003_mvp_single_video_local_first_pipeline](request/req_003_mvp_single_video_local_first_pipeline.md) | MVP: Single Video Local First Pipeline | Done |  |  | request/req_003_mvp_single_video_local_first_pipeline.md |
 | [req_004_advanced_source_verification_mode](request/req_004_advanced_source_verification_mode.md) | Advanced Source Verification Mode | Done |  |  | request/req_004_advanced_source_verification_mode.md |
 | [req_005_online_readiness_audit_implementation](request/req_005_online_readiness_audit_implementation.md) | Online Readiness Audit Implementation | Done |  |  | request/req_005_online_readiness_audit_implementation.md |
+| [req_006_deployable_web_auth_and_api_key_management](request/req_006_deployable_web_auth_and_api_key_management.md) | Deployable Web Auth And API Key Management | Done |  |  | request/req_006_deployable_web_auth_and_api_key_management.md |
 
 ## Backlog
 
@@ -77,6 +79,14 @@ _None_
 | [item_038_stabilize_production_configuration_and_observability](backlog/item_038_stabilize_production_configuration_and_observability.md) | Stabilize production configuration and observability | Done |  | 100% | backlog/item_038_stabilize_production_configuration_and_observability.md |
 | [item_039_add_local_abuse_controls_for_costly_actions](backlog/item_039_add_local_abuse_controls_for_costly_actions.md) | Add local abuse controls for costly actions | Done |  | 100% | backlog/item_039_add_local_abuse_controls_for_costly_actions.md |
 | [item_040_validate_and_document_online_readiness_closeout](backlog/item_040_validate_and_document_online_readiness_closeout.md) | Validate and document online readiness closeout | Done |  | 100% | backlog/item_040_validate_and_document_online_readiness_closeout.md |
+| [item_041_package_claimlens_for_container_deployment](backlog/item_041_package_claimlens_for_container_deployment.md) | Package ClaimLens for container deployment | Done |  | 100% | backlog/item_041_package_claimlens_for_container_deployment.md |
+| [item_042_specify_paulmondou_infra_integration](backlog/item_042_specify_paulmondou_infra_integration.md) | Specify paulmondou-infra integration | Done |  | 100% | backlog/item_042_specify_paulmondou_infra_integration.md |
+| [item_043_implement_web_users_and_sessions](backlog/item_043_implement_web_users_and_sessions.md) | Implement web users and sessions | Done |  | 100% | backlog/item_043_implement_web_users_and_sessions.md |
+| [item_044_encrypt_and_manage_user_api_keys](backlog/item_044_encrypt_and_manage_user_api_keys.md) | Encrypt and manage user API keys | Done |  | 100% | backlog/item_044_encrypt_and_manage_user_api_keys.md |
+| [item_045_add_guest_and_authenticated_process_key_resolution](backlog/item_045_add_guest_and_authenticated_process_key_resolution.md) | Add guest and authenticated process key resolution | Done |  | 100% | backlog/item_045_add_guest_and_authenticated_process_key_resolution.md |
+| [item_046_build_login_navigation_and_options_ui](backlog/item_046_build_login_navigation_and_options_ui.md) | Build login navigation and options UI | Done |  | 100% | backlog/item_046_build_login_navigation_and_options_ui.md |
+| [item_047_add_transcript_fallback_for_vps_blocked_youtube](backlog/item_047_add_transcript_fallback_for_vps_blocked_youtube.md) | Add transcript fallback for VPS-blocked YouTube | Done |  | 100% | backlog/item_047_add_transcript_fallback_for_vps_blocked_youtube.md |
+| [item_048_version_schema_and_validate_deployable_closeout](backlog/item_048_version_schema_and_validate_deployable_closeout.md) | Version schema and validate deployable closeout | Done |  | 100% | backlog/item_048_version_schema_and_validate_deployable_closeout.md |
 
 ## Tasks
 
@@ -88,3 +98,4 @@ _None_
 | [task_004_orchestrate_single_video_local_first_mvp](tasks/task_004_orchestrate_single_video_local_first_mvp.md) | Orchestrate Single Video Local First MVP | Done |  | 100% | tasks/task_004_orchestrate_single_video_local_first_mvp.md |
 | [task_005_orchestrate_advanced_source_verification_mode](tasks/task_005_orchestrate_advanced_source_verification_mode.md) | Orchestrate Advanced Source Verification Mode | Done |  | 100% | tasks/task_005_orchestrate_advanced_source_verification_mode.md |
 | [task_006_orchestrate_online_readiness_audit_implementation](tasks/task_006_orchestrate_online_readiness_audit_implementation.md) | Orchestrate Online Readiness Audit Implementation | Done | codex | 100% | tasks/task_006_orchestrate_online_readiness_audit_implementation.md |
+| [task_007_orchestrate_deployable_web_auth_and_api_key_management](tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md) | Orchestrate Deployable Web Auth And API Key Management | Done | codex | 100% | tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md |

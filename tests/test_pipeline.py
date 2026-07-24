@@ -5,6 +5,7 @@ import pytest
 from claimlens import db
 from claimlens.pipeline import (
     PipelineError,
+    add_manual_transcript,
     clean_run_transcript,
     clean_transcript_text,
     create_run,
@@ -125,3 +126,23 @@ def test_clean_run_transcript_writes_artifact_and_keeps_raw_segments(monkeypatch
     assert output_path.read_text(encoding="utf-8") == "hello\nworld\n"
     assert cleaned["text"] == "hello\nworld"
     assert raw_count == 2
+
+
+def test_manual_transcript_fallback_continues_pipeline(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+
+    transcript_id = add_manual_transcript(
+        database,
+        run_id,
+        text="00:00 pasted transcript",
+        language="en",
+        guest_token="guest123",
+    )
+    output_path = clean_run_transcript(database, run_id, outputs_path=tmp_path / "transcripts")
+
+    transcript = db.latest_transcript(database, "abc123XYZ_")
+    assert transcript["id"] == transcript_id
+    assert transcript["source"] == "user_paste"
+    assert transcript["submitted_by_guest_token"] == "guest123"
+    assert output_path.read_text(encoding="utf-8") == "pasted transcript\n"

@@ -26,6 +26,10 @@ capabilities can return later as batch inputs once the one-video workflow is rel
 - The local HTML process page guards mutating actions, submits long-running work as jobs, and
   exposes generated reports for viewing and Markdown download.
 - The final report language can be configured independently of subtitle language.
+- Authenticated users can save encrypted provider API keys; guest users can still provide transient
+  per-process keys.
+- A pasted transcript fallback keeps deployed VPS usage viable when YouTube blocks server-side
+  caption fetching.
 - The implementation remains local-first and can later be hosted on a VPS without a rewrite.
 
 ## Base MVP Pipeline
@@ -123,6 +127,8 @@ Scope:
 - Show pipeline steps with statuses: `pending`, `running`, `succeeded`, `failed`, `skipped`.
 - Use CSRF protection, request-size limits, controlled error messages, and local rate limits for
   costly actions.
+- Provide login/logout, secure sessions, top navigation, and an Options page for encrypted API key
+  management.
 - Submit long-running actions to a local async job model and show queued/running/failed/succeeded
   progress.
 - Show failure causes and block ineligible downstream steps.
@@ -232,13 +238,15 @@ and the first transcript implementation uses public caption availability.
 ## Key Risks
 
 - YouTube subtitle availability varies by video.
+- YouTube may block VPS/datacenter IPs; pasted/uploaded transcript fallback is the supported
+  deployment-safe path before considering proxy services.
 - YouTube page/caption surfaces can change; tests should mock boundaries and manual smoke tests
   should catch live drift.
 - LLM analysis can overstate certainty; briefs must remain review-first and label source status.
 - API costs and failures need clear handling.
 - Local web UI must not leak API keys into persisted artifacts.
-- VPS hosting later still needs explicit OpenAI key ownership, auth, TLS, and reverse-proxy
-  decisions before exposure beyond private use. These remain standby deployment decisions.
+- VPS hosting still needs Caddy/Compose changes in `paulmondou-infra`, DNS, and production secret
+  handling before exposure beyond private use.
 - YouTube datacenter blocking remains a live hosting risk and must be tested from the target VPS.
 
 ## MVP Principle

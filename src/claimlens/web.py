@@ -7,15 +7,26 @@ import logging
 import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
+from claimlens.api_keys import KeyContext, resolve_api_key, save_user_api_key
+from claimlens.auth import (
+    hash_password,
+    new_guest_token,
+    new_session_token,
+    token_digest,
+    verify_password,
+)
 from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import AppConfig
 from claimlens.pipeline import (
+    add_manual_transcript,
     clean_run_transcript,
     create_run,
     extract_required_subtitles,
@@ -28,39 +39,92 @@ EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
 RATE_LIMITS: dict[str, list[float]] = {}
 
 
+@dataclass(frozen=True)
+class WebContext:
+    user_id: int | None
+    email: str | None
+    csrf_token: str
+    guest_token: str
+    session_token: str | None
+
+
 def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
     database_path = config.paths.database
     db.init_db(database_path)
-    csrf_token = secrets.token_urlsafe(32)
+    guest_csrf_token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             run_id = _int_value(query.get("run_id", [""])[0])
+            context = self._context()
+            if parsed.path == "/health":
+                self._send_text("ok\n")
+                return
+            if parsed.path == "/login":
+                self._send_html(render_login_page(context=context))
+                return
+            if parsed.path == "/options":
+                self._send_html(
+                    render_options_page(database_path, config, context=context),
+                    status=200 if context.user_id is not None else 403,
+                )
+                return
             if parsed.path == "/brief":
                 self._send_html(
-                    render_brief_page(database_path, config.paths.briefs, run_id=run_id)
+                    render_brief_page(
+                        database_path,
+                        config.paths.briefs,
+                        run_id=run_id,
+                        user_id=context.user_id,
+                        guest_token=context.guest_token,
+                        context=context,
+                    )
                 )
                 return
             if parsed.path == "/brief/download":
-                self._send_brief_download(database_path, config.paths.briefs, run_id=run_id)
+                self._send_brief_download(
+                    database_path,
+                    config.paths.briefs,
+                    run_id=run_id,
+                    user_id=context.user_id,
+                    guest_token=context.guest_token,
+                )
                 return
-            body = render_process_page(database_path, run_id=run_id, csrf_token=csrf_token)
+            body = render_process_page(
+                database_path,
+                run_id=run_id,
+                csrf_token=context.csrf_token,
+                user_id=context.user_id,
+                guest_token=context.guest_token,
+                context=context,
+            )
             self._send_html(body)
 
         def do_POST(self) -> None:  # noqa: N802
+            context = self._context()
             try:
                 form = self._read_form()
             except ValueError as exc:
-                body = render_process_page(database_path, notice=str(exc), csrf_token=csrf_token)
+                body = render_process_page(
+                    database_path,
+                    notice=str(exc),
+                    csrf_token=context.csrf_token,
+                    user_id=context.user_id,
+                    guest_token=context.guest_token,
+                    context=context,
+                )
                 self._send_html(body, status=400)
                 return
-            if form.get("csrf_token", [""])[0] != csrf_token:
+            if form.get("csrf_token", [""])[0] != context.csrf_token:
                 body = render_process_page(
                     database_path,
                     notice="The form expired. Reload the page and try again.",
-                    csrf_token=csrf_token,
+                    csrf_token=context.csrf_token,
+                    user_id=context.user_id,
+                    guest_token=context.guest_token,
+                    context=context,
                 )
                 self._send_html(body, status=403)
                 return
@@ -68,6 +132,18 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             run_id: int | None = None
             try:
                 _check_rate_limit(self.client_address[0], config)
+                if action == "login":
+                    self._handle_login(form)
+                    return
+                if action == "register":
+                    self._handle_register(form)
+                    return
+                if action == "logout":
+                    self._handle_logout(context)
+                    return
+                if action in {"save_api_key", "delete_api_key", "test_api_key"}:
+                    self._handle_options_action(form, context)
+                    return
                 if action == "create":
                     run_id = create_run(
                         database_path,
@@ -77,26 +153,51 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                             [config.pipeline.report_language],
                         )[0],
                         fetch_metadata=True,
+                        user_id=context.user_id,
+                        guest_token=None if context.user_id is not None else context.guest_token,
                     )
                 else:
                     run_id = int(form.get("run_id", [""])[0])
+                    run = db.get_visible_pipeline_run(
+                        database_path,
+                        run_id,
+                        user_id=context.user_id,
+                        guest_token=context.guest_token,
+                    )
+                    if run is None:
+                        raise ValueError("Run not found.")
                     job_id = db.create_job(database_path, run_id=run_id, action=action)
                     if job_id is None:
                         raise ValueError("This action is already queued or running for the run.")
-                    EXECUTOR.submit(_run_job, config, database_path, run_id, action, form, job_id)
+                    EXECUTOR.submit(
+                        _run_job,
+                        config,
+                        database_path,
+                        run_id,
+                        action,
+                        form,
+                        job_id,
+                        context.user_id,
+                        context.guest_token,
+                    )
             except Exception as exc:
                 LOGGER.info("Web action rejected: %s", exc)
                 body = render_process_page(
                     database_path,
                     run_id=run_id,
                     notice=_public_error(exc),
-                    csrf_token=csrf_token,
+                    csrf_token=context.csrf_token,
+                    user_id=context.user_id,
+                    guest_token=context.guest_token,
+                    context=context,
                 )
                 self._send_html(body, status=400)
                 return
 
             self.send_response(303)
             self.send_header("Location", f"/?run_id={run_id}")
+            if not self._cookie("claimlens_guest"):
+                self._set_cookie("claimlens_guest", context.guest_token, config=config)
             self.end_headers()
 
         def log_message(self, format: str, *args: object) -> None:
@@ -120,14 +221,30 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             self.end_headers()
             self.wfile.write(encoded)
 
+        def _send_text(self, body: str, *, status: int = 200) -> None:
+            encoded = body.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+
         def _send_brief_download(
             self,
             database_path: Path | str,
             briefs_path: Path | str,
             *,
             run_id: int | None,
+            user_id: int | None,
+            guest_token: str | None,
         ) -> None:
-            path = _brief_path_for_run(database_path, briefs_path, run_id)
+            path = _brief_path_for_run(
+                database_path,
+                briefs_path,
+                run_id,
+                user_id=user_id,
+                guest_token=guest_token,
+            )
             if path is None:
                 self._send_html(
                     render_brief_page(database_path, briefs_path, run_id=run_id),
@@ -145,6 +262,143 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             self.end_headers()
             self.wfile.write(data)
 
+        def _context(self) -> WebContext:
+            session_token = self._cookie("claimlens_session")
+            guest_token = self._cookie("claimlens_guest") or new_guest_token()
+            if session_token:
+                session = db.get_session(database_path, token_digest(session_token))
+                if session is not None:
+                    return WebContext(
+                        user_id=int(session["user_id"]),
+                        email=session["email"],
+                        csrf_token=session["csrf_token"],
+                        guest_token=guest_token,
+                        session_token=session_token,
+                    )
+            return WebContext(
+                user_id=None,
+                email=None,
+                csrf_token=guest_csrf_token,
+                guest_token=guest_token,
+                session_token=None,
+            )
+
+        def _handle_login(self, form: dict[str, list[str]]) -> None:
+            email = form.get("email", [""])[0]
+            password = form.get("password", [""])[0]
+            user = db.get_user_by_email(database_path, email)
+            if user is None or not verify_password(password, user["password_hash"]):
+                self._send_html(
+                    render_login_page(
+                        context=WebContext(
+                            user_id=None,
+                            email=None,
+                            csrf_token=guest_csrf_token,
+                            guest_token=self._cookie("claimlens_guest") or new_guest_token(),
+                            session_token=None,
+                        ),
+                        notice="Invalid email or password.",
+                    ),
+                    status=403,
+                )
+                return
+            self._create_login_session(int(user["id"]))
+
+        def _handle_register(self, form: dict[str, list[str]]) -> None:
+            if not config.web.registration_enabled and db.user_count(database_path) > 0:
+                raise ValueError("Registration is closed.")
+            email = form.get("email", [""])[0]
+            password = form.get("password", [""])[0]
+            user_id = db.create_user(
+                database_path,
+                email=email,
+                password_hash=hash_password(password),
+                display_name=email,
+            )
+            self._create_login_session(user_id)
+
+        def _create_login_session(self, user_id: int) -> None:
+            token = new_session_token()
+            csrf = secrets.token_urlsafe(32)
+            expires_at = (datetime.now(UTC) + timedelta(days=14)).strftime("%Y-%m-%d %H:%M:%S")
+            db.create_session(
+                database_path,
+                user_id=user_id,
+                token_hash=token_digest(token),
+                csrf_token=csrf,
+                expires_at=expires_at,
+            )
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self._set_cookie("claimlens_session", token, config=config)
+            self.end_headers()
+
+        def _handle_logout(self, context: WebContext) -> None:
+            if context.session_token:
+                db.delete_session(database_path, token_digest(context.session_token))
+            self.send_response(303)
+            self.send_header("Location", "/")
+            self._clear_cookie("claimlens_session", config=config)
+            self.end_headers()
+
+        def _handle_options_action(
+            self,
+            form: dict[str, list[str]],
+            context: WebContext,
+        ) -> None:
+            if context.user_id is None:
+                raise ValueError("Login is required.")
+            provider = form.get("provider", [""])[0]
+            if form.get("action", [""])[0] == "delete_api_key":
+                db.delete_user_api_key(database_path, user_id=context.user_id, provider=provider)
+            elif form.get("action", [""])[0] == "test_api_key":
+                key = resolve_api_key(
+                    database_path,
+                    config,
+                    provider=provider,
+                    context=KeyContext(user_id=context.user_id, request_keys={}),
+                )
+                if not key:
+                    raise ValueError("No saved key to test.")
+                db.mark_user_api_key_tested(
+                    database_path,
+                    user_id=context.user_id,
+                    provider=provider,
+                )
+            else:
+                save_user_api_key(
+                    database_path,
+                    user_id=context.user_id,
+                    provider=provider,
+                    value=form.get("api_key", [""])[0],
+                    deployment_secret=config.web.key_encryption_secret,
+                )
+            self.send_response(303)
+            self.send_header("Location", "/options")
+            self.end_headers()
+
+        def _cookie(self, name: str) -> str | None:
+            raw = self.headers.get("Cookie", "")
+            for part in raw.split(";"):
+                key, _, value = part.strip().partition("=")
+                if key == name:
+                    return value or None
+            return None
+
+        def _set_cookie(self, name: str, value: str, *, config: AppConfig) -> None:
+            secure = "; Secure" if config.web.secure_cookies else ""
+            self.send_header(
+                "Set-Cookie",
+                f"{name}={value}; HttpOnly; SameSite=Lax; Path=/{secure}",
+            )
+
+        def _clear_cookie(self, name: str, *, config: AppConfig) -> None:
+            secure = "; Secure" if config.web.secure_cookies else ""
+            self.send_header(
+                "Set-Cookie",
+                f"{name}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/{secure}",
+            )
+
     server = ThreadingHTTPServer((host, port), Handler)
     print(f"ClaimLens process page: http://{host}:{port}")
     server.serve_forever()
@@ -156,9 +410,27 @@ def render_process_page(
     run_id: int | None = None,
     notice: str | None = None,
     csrf_token: str = "",
+    user_id: int | None = None,
+    guest_token: str | None = None,
+    context: WebContext | None = None,
 ) -> str:
-    selected_run = db.get_pipeline_run(database_path, run_id) if run_id else None
-    runs = db.list_pipeline_runs(database_path)
+    selected_run = (
+        db.get_visible_pipeline_run(
+            database_path,
+            run_id,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        if run_id and (user_id is not None or guest_token)
+        else db.get_pipeline_run(database_path, run_id)
+        if run_id
+        else None
+    )
+    runs = (
+        db.list_visible_pipeline_runs(database_path, user_id=user_id, guest_token=guest_token)
+        if user_id is not None or guest_token
+        else db.list_pipeline_runs(database_path)
+    )
     rows = ""
     controls = ""
     outputs = ""
@@ -193,6 +465,9 @@ def render_process_page(
   <title>ClaimLens Process</title>
   <style>
     body {{ margin: 0; font-family: system-ui, sans-serif; color: #172026; background: #f6f7f8; }}
+    nav {{ display: flex; gap: 16px; justify-content: space-between; align-items: center;
+      padding: 12px 28px; background: #172026; color: white; }}
+    nav a, nav button {{ color: white; background: transparent; border: 0; padding: 0; }}
     main {{ max-width: 980px; margin: 0 auto; padding: 28px; }}
     section {{ margin: 22px 0; }}
     form {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
@@ -220,6 +495,7 @@ def render_process_page(
   </style>
 </head>
 <body>
+{_nav(context, csrf_token)}
 <main>
   <h1>ClaimLens Process</h1>
   {notice_html}
@@ -251,6 +527,7 @@ def render_process_page(
       <tbody>{rows}</tbody>
     </table>
     {controls}
+    {_manual_transcript_form(selected_run["id"], csrf_token) if selected_run is not None else ""}
   </section>
   {outputs}
 </main>
@@ -266,10 +543,20 @@ def _run_job(
     action: str,
     form: dict[str, list[str]],
     job_id: int,
+    user_id: int | None = None,
+    guest_token: str | None = None,
 ) -> None:
     db.update_job(database_path, job_id=job_id, status="running", progress=5, message="Running")
     try:
-        output = _run_action(config, database_path, run_id, action, form)
+        output = _run_action(
+            config,
+            database_path,
+            run_id,
+            action,
+            form,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
     except Exception as exc:
         LOGGER.exception("Job failed: run=%s action=%s", run_id, action)
         db.update_job(
@@ -296,6 +583,8 @@ def _run_action(
     run_id: int,
     action: str,
     form: dict[str, list[str]],
+    user_id: int | None = None,
+    guest_token: str | None = None,
 ) -> Path | str | None:
     run = db.get_pipeline_run(database_path, run_id)
     if run is None:
@@ -304,10 +593,28 @@ def _run_action(
     if action == "captions":
         extract_required_subtitles(database_path, run_id)
         return None
+    elif action == "manual_transcript":
+        transcript_id = add_manual_transcript(
+            database_path,
+            run_id,
+            text=form.get("transcript_text", [""])[0],
+            language=form.get("transcript_language", ["unknown"])[0],
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        return f"sqlite:transcripts/{transcript_id}"
     elif action == "clean_transcript":
         return clean_run_transcript(database_path, run_id, outputs_path=config.paths.transcripts)
     elif action == "analysis":
-        api_key = form.get("openai_api_key", [""])[0] or config.api_keys.openai
+        api_key = resolve_api_key(
+            database_path,
+            config,
+            provider="openai",
+            context=KeyContext(
+                user_id=user_id,
+                request_keys={"openai": form.get("openai_api_key", [""])[0]},
+            ),
+        )
         client = OpenAIAnalysisClient(api_key=api_key)
         db.set_step_status(database_path, run_id=run_id, step="analysis", status="running")
         summary_id = analyze_cleaned_transcript(
@@ -341,11 +648,26 @@ def _run_action(
         db.set_run_status(database_path, run_id=run_id, status="succeeded", current_step="brief")
         return path
     elif action == "source_verification":
-        semantic_key = (
-            form.get("semantic_scholar_api_key", [""])[0]
-            or config.api_keys.semantic_scholar
+        semantic_key = resolve_api_key(
+            database_path,
+            config,
+            provider="semantic_scholar",
+            context=KeyContext(
+                user_id=user_id,
+                request_keys={
+                    "semantic_scholar": form.get("semantic_scholar_api_key", [""])[0]
+                },
+            ),
         )
-        ncbi_key = form.get("ncbi_api_key", [""])[0] or config.api_keys.ncbi
+        ncbi_key = resolve_api_key(
+            database_path,
+            config,
+            provider="ncbi",
+            context=KeyContext(
+                user_id=user_id,
+                request_keys={"ncbi": form.get("ncbi_api_key", [""])[0]},
+            ),
+        )
         adapters = default_adapters(semantic_scholar_key=semantic_key, ncbi_key=ncbi_key)
         db.set_step_status(
             database_path,
@@ -413,6 +735,24 @@ def _controls(run_id: int, next_step: str | None, *, csrf_token: str = "") -> st
     """
 
 
+def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
+    return f"""
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
+      <input type="hidden" name="run_id" value="{run_id}">
+      <input type="hidden" name="action" value="manual_transcript">
+      <label>Transcript language
+        <input name="transcript_language" value="unknown">
+      </label>
+      <label>Paste transcript fallback
+        <textarea name="transcript_text"
+          placeholder="Paste .txt, .srt, or .vtt text here"></textarea>
+      </label>
+      <button type="submit">Use pasted transcript</button>
+    </form>
+    """
+
+
 def _outputs(database_path: Path | str, video_id: str) -> str:
     cleaned = db.get_cleaned_transcript(database_path, video_id)
     brief = db.latest_brief_artifact(database_path, video_id)
@@ -447,6 +787,123 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
     if not links and not preview:
         return ""
     return f"<section><h2>Outputs</h2><ul>{''.join(links)}</ul>{preview}</section>"
+
+
+def _nav(context: WebContext | None, csrf_token: str) -> str:
+    if context is not None and context.user_id is not None:
+        auth = (
+            f"<span>{html.escape(context.email or '')}</span>"
+            '<a href="/options">Options</a>'
+            '<form method="post" style="display:inline">'
+            f'<input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">'
+            '<input type="hidden" name="action" value="logout">'
+            '<button type="submit">Logout</button></form>'
+        )
+    else:
+        auth = '<a href="/login">Login</a>'
+    return f"<nav><a href=\"/\">ClaimLens</a><div>{auth}</div></nav>"
+
+
+def render_login_page(*, context: WebContext, notice: str | None = None) -> str:
+    notice_html = f'<p class="notice">{html.escape(notice)}</p>' if notice else ""
+    csrf = html.escape(context.csrf_token)
+    return f"""<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimLens Login</title></head>
+<body>
+{_nav(context, context.csrf_token)}
+<main>
+  <h1>Login</h1>
+  {notice_html}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{csrf}">
+    <input type="hidden" name="action" value="login">
+    <label>Email <input name="email" type="email" required></label>
+    <label>Password <input name="password" type="password" required></label>
+    <button type="submit">Login</button>
+  </form>
+  <h2>Create first account</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{csrf}">
+    <input type="hidden" name="action" value="register">
+    <label>Email <input name="email" type="email" required></label>
+    <label>Password <input name="password" type="password" required></label>
+    <button type="submit">Create account</button>
+  </form>
+</main>
+</body></html>"""
+
+
+def render_options_page(
+    database_path: Path | str,
+    config: AppConfig,
+    *,
+    context: WebContext,
+) -> str:
+    if context.user_id is None:
+        return """<!doctype html><html lang="en"><body><main>
+<p class="notice">Login is required.</p></main></body></html>"""
+    rows = db.list_user_api_keys(database_path, user_id=context.user_id)
+    status = {row["provider"]: row for row in rows}
+    sections = []
+    for provider, label in [
+        ("openai", "OpenAI"),
+        ("semantic_scholar", "Semantic Scholar"),
+        ("ncbi", "NCBI / PubMed"),
+    ]:
+        row = status.get(provider)
+        saved = (
+            f"Saved: {html.escape(row['masked_value'])}, updated {html.escape(row['updated_at'])}"
+            + (
+                f", tested {html.escape(row['tested_at'])}"
+                if row and row["tested_at"]
+                else ""
+            )
+            if row
+            else "No saved key."
+        )
+        sections.append(
+            f"""
+            <section>
+              <h2>{label}</h2>
+              <p>{saved}</p>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
+                <input type="hidden" name="action" value="save_api_key">
+                <input type="hidden" name="provider" value="{provider}">
+                <label>API key <input name="api_key" type="password" required></label>
+                <button type="submit">Save key</button>
+              </form>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
+                <input type="hidden" name="action" value="test_api_key">
+                <input type="hidden" name="provider" value="{provider}">
+                <button type="submit">Test saved key</button>
+              </form>
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
+                <input type="hidden" name="action" value="delete_api_key">
+                <input type="hidden" name="provider" value="{provider}">
+                <button type="submit">Delete key</button>
+              </form>
+            </section>
+            """
+        )
+    secret_notice = (
+        ""
+        if config.web.key_encryption_secret
+        else "<p class=\"notice\">Set CLAIMLENS_KEY_ENCRYPTION_SECRET before saving keys.</p>"
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimLens Options</title></head>
+<body>{_nav(context, context.csrf_token)}<main>
+<h1>Options</h1>
+{secret_notice}
+{''.join(sections)}
+</main></body></html>"""
 
 
 def _verification_counts(database_path: Path | str, verification_run_id: int) -> str:
@@ -490,8 +947,17 @@ def render_brief_page(
     briefs_path: Path | str,
     *,
     run_id: int | None,
+    user_id: int | None = None,
+    guest_token: str | None = None,
+    context: WebContext | None = None,
 ) -> str:
-    path = _brief_path_for_run(database_path, briefs_path, run_id)
+    path = _brief_path_for_run(
+        database_path,
+        briefs_path,
+        run_id,
+        user_id=user_id,
+        guest_token=guest_token,
+    )
     if path is None:
         content = "<p class=\"notice\">No report is available for this run.</p>"
     else:
@@ -500,17 +966,28 @@ def render_brief_page(
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClaimLens Report</title></head>
-<body><main>{content}</main></body></html>"""
+<body>{_nav(context, context.csrf_token) if context else ''}<main>{content}</main></body></html>"""
 
 
 def _brief_path_for_run(
     database_path: Path | str,
     briefs_path: Path | str,
     run_id: int | None,
+    user_id: int | None = None,
+    guest_token: str | None = None,
 ) -> Path | None:
     if run_id is None:
         return None
-    run = db.get_pipeline_run(database_path, run_id)
+    run = (
+        db.get_visible_pipeline_run(
+            database_path,
+            run_id,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        if user_id is not None or guest_token
+        else db.get_pipeline_run(database_path, run_id)
+    )
     if run is None or not run["video_id"]:
         return None
     artifact = db.latest_brief_artifact(database_path, run["video_id"])
