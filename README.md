@@ -66,6 +66,8 @@ CLAIMLENS_KEY_ENCRYPTION_SECRET=
 CLAIMLENS_SECURE_COOKIES=false
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
+CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=youtube
+CLAIMLENS_SUPADATA_LANGUAGE=en
 OPENAI_API_KEY=
 SEMANTIC_SCHOLAR_API_KEY=
 NCBI_API_KEY=
@@ -79,6 +81,30 @@ Authenticated web users can save OpenAI, Semantic Scholar, and NCBI/PubMed keys 
 page. Saved keys are encrypted in SQLite with `CLAIMLENS_KEY_ENCRYPTION_SECRET`; keep that secret
 outside Git and back it up separately. Guest users can still enter keys per process, and those keys
 are used only for the submitted job/action.
+
+Authenticated users can also save multiple Supadata keys from Options. Supadata transcript fetching
+is opt-in through configuration:
+
+```toml
+[transcripts]
+provider_order = ["supadata", "youtube"]
+supadata_monthly_request_cap = 100
+supadata_language = "en"
+```
+
+ClaimLens always calls Supadata in native subtitle mode:
+
+```bash
+curl --request GET \
+  --url 'https://api.supadata.ai/v1/transcript?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DVIDEO_ID&lang=en&text=false&mode=native' \
+  --header 'x-api-key: <SUPADATA_API_KEY>'
+```
+
+The application does not expose or call Supadata `auto`, `generate`, translation, extract, or file
+transcription modes. Saved Supadata keys are tried by priority; keys that return quota responses or
+whose `/me` usage has `usedCredits >= maxCredits` are marked exhausted until the next billing month.
+When all native Supadata keys are exhausted, invalid, or missing, the captions step stops and the
+pasted transcript fallback remains the continuation path.
 
 When `CLAIMLENS_KAPSULE_DB` points to a readable Kapsule SQLite database, ClaimLens also accepts
 existing Kapsule email/password credentials. The Kapsule database is read-only from ClaimLens; the
@@ -208,8 +234,8 @@ Deployment notes:
 
 ## SQLite Schema
 
-Schema version 5 creates and migrates the local tables for pipeline state, analysis, verification,
-brief artifacts, async jobs, web users, sessions, and encrypted API keys:
+Schema version 6 creates and migrates the local tables for pipeline state, analysis, verification,
+brief artifacts, async jobs, web users, sessions, encrypted API keys, and Supadata key pools:
 
 - `channels`
 - `videos`
@@ -229,6 +255,7 @@ brief artifacts, async jobs, web users, sessions, and encrypted API keys:
 - `users`
 - `sessions`
 - `user_api_keys`
+- `supadata_api_keys`
 
 Before introducing the next schema version, any additive or destructive production schema change
 must include a tested migration path against an older schema/database fixture.

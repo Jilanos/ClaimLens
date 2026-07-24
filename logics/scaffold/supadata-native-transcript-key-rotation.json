@@ -1,0 +1,296 @@
+{
+  "title": "Supadata Native Transcript Key Rotation",
+  "references": [
+    "README.md",
+    "config/claimlens.example.toml",
+    "src/claimlens/youtube.py",
+    "src/claimlens/pipeline.py",
+    "src/claimlens/api_keys.py",
+    "src/claimlens/db.py",
+    "src/claimlens/web.py",
+    "tests/test_youtube.py",
+    "tests/test_pipeline.py",
+    "tests/test_auth_api_keys.py",
+    "https://docs.supadata.ai/api-reference/introduction",
+    "https://docs.supadata.ai/api-reference/endpoint/transcript/transcript",
+    "https://docs.supadata.ai/api-reference/endpoint/account/me"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Transcript acquisition",
+    "needs": [
+      "Route deployed transcript extraction through Supadata when configured, while preserving the existing local YouTube transcript path as a fallback only when allowed by configuration.",
+      "Add Supadata as a supported encrypted API key provider in authenticated user profiles.",
+      "Allow each authenticated profile to save multiple Supadata API keys with labels, priority, enabled/disabled state, masked display, testing, and deletion.",
+      "Rotate between saved Supadata keys when a key has exhausted its monthly free-tier quota, reaches the account maxCredits/usedCredits limit, or receives a quota response from Supadata.",
+      "Always request Supadata transcripts in native mode so ClaimLens fetches existing subtitles only and never triggers AI generation, auto fallback, translation, extraction, or other higher-credit Supadata features.",
+      "Persist enough usage metadata to avoid repeatedly selecting exhausted keys during the current billing month without storing plaintext keys or leaking keys in logs, jobs, reports, transcripts, or HTML.",
+      "Keep transcript extraction failure clear: if no configured Supadata key has native captions available or quota remaining, stop at the captions step and let the existing pasted transcript fallback continue the run."
+    ],
+    "context": [
+      "Supadata requires the x-api-key header and uses https://api.supadata.ai/v1 as the base URL.",
+      "The native transcript request must be GET https://api.supadata.ai/v1/transcript?url=<youtube-url>&lang=<lang>&text=false&mode=native with x-api-key set from the selected profile key.",
+      "Supadata documents transcript mode values native, auto, and generate; ClaimLens must force mode=native and reject config or UI paths that would use auto or generate.",
+      "Supadata account usage is available through GET https://api.supadata.ai/v1/me and returns maxCredits and usedCredits, which can be used to mark a key exhausted for the billing period.",
+      "Supadata returns conventional API status codes including 401 for missing/invalid authentication, 402 for payment required, and 429 when a plan limit is surpassed.",
+      "The current ClaimLens user_api_keys model stores one encrypted key per user/provider, so this request requires a compatible migration to support multiple keys for the supadata provider without weakening existing OpenAI, Semantic Scholar, and NCBI behavior.",
+      "The current transcript boundary lives in src/claimlens/youtube.py and pipeline.extract_required_subtitles stores TranscriptResult values with timestamped segments.",
+      "The current deployed UX already includes an Options page for saved keys and a pasted transcript fallback for VPS-side YouTube blocking."
+    ],
+    "acceptance_criteria": [
+      "AC1: Supadata is a supported transcript provider with a bounded client that calls GET /v1/transcript using x-api-key and query parameters url, optional lang, text=false, and mode=native.",
+      "AC2: The Supadata client parses synchronous transcript content into the existing TranscriptResult shape, converting offset/duration milliseconds into start/end seconds and preserving language metadata.",
+      "AC3: The Supadata client handles asynchronous job responses defensively if returned, but does not use generate, auto, translation, extract, or file-url transcription modes.",
+      "AC4: Authenticated users can save, list, mask-display, test, enable/disable, reorder, and delete multiple Supadata keys in their profile or Options page.",
+      "AC5: Existing single-key providers OpenAI, Semantic Scholar, and NCBI/PubMed continue to work exactly as before after the schema migration.",
+      "AC6: Saved Supadata keys are encrypted at rest with the existing deployment secret, never stored in plaintext, never rendered in full, and redacted from exceptions, logs, job payloads, reports, transcripts, and tests.",
+      "AC7: Key selection chooses the first enabled non-exhausted Supadata key by explicit priority, skips keys marked exhausted for the current billing period, and records which key fingerprint was used without storing plaintext.",
+      "AC8: On Supadata 402, 429, or account usage where usedCredits >= maxCredits, ClaimLens marks that key exhausted for the current billing period and retries the same native transcript request with the next eligible key.",
+      "AC9: On Supadata 401, ClaimLens marks the key invalid or test-failed and tries the next eligible key without disabling unrelated providers.",
+      "AC10: If every Supadata key is exhausted, invalid, missing, or unable to return native captions, the captions step fails with a user-facing message that explains native Supadata captions were unavailable and points to the pasted transcript fallback.",
+      "AC11: Configuration makes transcript provider order explicit, defaulting to the existing local YouTube transcript extraction unless Supadata is enabled for the deployment or user profile.",
+      "AC12: Supadata free-tier assumptions are configurable, with a default monthly soft cap of 100 requests per key used only as local bookkeeping when /me data is unavailable.",
+      "AC13: Tests cover native request construction, response parsing, quota rotation, exhausted-key skipping, 401/402/429 handling, encryption/redaction, Options UI flows, migration compatibility, and the no-auto/no-generate invariant.",
+      "AC14: Documentation explains the exact Supadata request, the native-only cost-control constraint, how to add multiple keys, how rotation works, and what happens when all keys are exhausted.",
+      "AC15: Validation passes with ruff, pytest, compileall where applicable, logics-manager lint --require-status, and logics-manager audit before closeout."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Supadata Native Transcript Key Rotation",
+    "overview": "A transcript-acquisition upgrade that lets ClaimLens use Supadata native captions with multiple encrypted profile keys and deterministic quota rotation while preventing AI-generated transcript spend.",
+    "goals": [
+      "Improve deployed transcript reliability by adding Supadata as a managed transcript source.",
+      "Keep Supadata usage cost-controlled by forcing native subtitle extraction only.",
+      "Let a profile store several Supadata keys and rotate through them when free monthly quota is consumed.",
+      "Preserve existing encrypted key handling and access-control guarantees.",
+      "Keep the pasted transcript fallback as the final path when native captions or quota are unavailable."
+    ],
+    "non_goals": [
+      "Do not use Supadata auto mode, generate mode, translation, extract, file transcription, or any AI fallback path in this request.",
+      "Do not implement billing, payments, account sharing, or public multi-tenant quota administration.",
+      "Do not bypass Supadata plan limits or retry indefinitely after quota exhaustion.",
+      "Do not remove the existing local YouTube transcript extraction path.",
+      "Do not store API keys in plaintext or expose full key values in the UI."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Implement Supadata native transcript client",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Transcript provider",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC10",
+        "AC11",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "The deployed app can still fail when server-side YouTube transcript extraction is blocked.",
+        "Supadata offers a transcript endpoint, but ClaimLens needs a strict native-only integration to avoid AI generation."
+      ],
+      "scope_in": [
+        "Create a Supadata transcript client around GET https://api.supadata.ai/v1/transcript.",
+        "Always send mode=native and text=false, with url and optional lang query parameters.",
+        "Parse content segments into TranscriptResult and TranscriptSegment.",
+        "Map Supadata errors into controlled transcript provider errors.",
+        "Add provider-order configuration for transcript acquisition.",
+        "Document the exact cURL request and native-only invariant."
+      ],
+      "scope_out": [
+        "Using Supadata auto or generate modes.",
+        "Using Supadata translation, extract, scrape, file-url transcription, or batch endpoints.",
+        "Removing youtube-transcript-api support."
+      ],
+      "acceptance_criteria": [
+        "AC1: Unit tests assert the Supadata request uses x-api-key, mode=native, text=false, url, and optional lang.",
+        "AC2: A Supadata response with offset and duration in milliseconds becomes existing transcript segments in seconds.",
+        "AC3: Non-native modes cannot be selected through config, UI, or client defaults.",
+        "AC4: Captions fail cleanly when Supadata native captions are unavailable.",
+        "AC5: README or deployment docs include the exact native Supadata request."
+      ]
+    },
+    {
+      "title": "Support multiple Supadata keys per profile",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Secret management",
+      "request_acs": [
+        "AC4",
+        "AC5",
+        "AC6",
+        "AC7",
+        "AC9",
+        "AC12",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "The current user_api_keys schema supports one key per user/provider, but Supadata rotation requires multiple keys in one profile.",
+        "Adding multi-key support must not regress existing single-key providers."
+      ],
+      "scope_in": [
+        "Add a compatible schema migration for multiple Supadata key records with label, priority, enabled state, status, quota metadata, usage counters, and masked fingerprint fields.",
+        "Keep existing single-key provider APIs working for OpenAI, Semantic Scholar, and NCBI/PubMed.",
+        "Encrypt Supadata key values with the existing deployment secret.",
+        "Add helper APIs to save, update, list, reorder, enable/disable, test, and delete Supadata keys.",
+        "Use GET /v1/me during key test when possible to record maxCredits and usedCredits.",
+        "Redact Supadata keys anywhere exceptions or UI messages might include request context."
+      ],
+      "scope_out": [
+        "Sharing Supadata keys across users.",
+        "Changing OpenAI, Semantic Scholar, or NCBI into multi-key pools unless required by migration compatibility.",
+        "External secret stores."
+      ],
+      "acceptance_criteria": [
+        "AC1: A profile can store at least three encrypted Supadata keys with independent labels and priorities.",
+        "AC2: Existing provider rows migrate without data loss and existing API key tests continue to pass.",
+        "AC3: Options/profile UI masks all Supadata keys and never renders plaintext after save.",
+        "AC4: Testing a key calls Supadata account information and stores quota metadata when returned.",
+        "AC5: Tests prove plaintext Supadata keys are absent from SQLite, logs, rendered HTML, and job rows."
+      ]
+    },
+    {
+      "title": "Rotate Supadata keys on quota exhaustion",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Quota management",
+      "request_acs": [
+        "AC7",
+        "AC8",
+        "AC9",
+        "AC10",
+        "AC12",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "Each free Supadata key can exhaust its monthly request budget, so ClaimLens needs deterministic key selection and failover.",
+        "Retries must be bounded and must not accidentally switch to paid or generated transcript modes."
+      ],
+      "scope_in": [
+        "Implement a key-pool selector that picks enabled non-exhausted Supadata keys by priority.",
+        "Record attempt counts, last used time, last status, usedCredits, maxCredits, and exhausted_until or billing_period marker per key.",
+        "Mark keys exhausted on 402, 429, or account usage where usedCredits >= maxCredits.",
+        "Retry the same native transcript request with the next eligible key after quota exhaustion or invalid-key response.",
+        "Use a configurable default monthly soft cap of 100 native requests per key when Supadata account usage cannot be fetched.",
+        "Stop after each eligible key has been tried once for a transcript action."
+      ],
+      "scope_out": [
+        "Circumventing provider limits.",
+        "Unbounded retry loops.",
+        "Mixing keys from different users or guest sessions."
+      ],
+      "acceptance_criteria": [
+        "AC1: Rotation skips exhausted or disabled keys before making Supadata calls.",
+        "AC2: A 429 on the first key retries the same mode=native request with the second key.",
+        "AC3: When all keys are exhausted, the captions step fails once with a clear fallback message.",
+        "AC4: Local monthly soft-cap bookkeeping resets or expires according to a deterministic billing-period policy.",
+        "AC5: Tests cover happy path, quota path, invalid-key path, all-keys-exhausted path, and no-generate invariants."
+      ]
+    },
+    {
+      "title": "Expose Supadata profile key management UI",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Web UI",
+      "request_acs": [
+        "AC4",
+        "AC6",
+        "AC7",
+        "AC9",
+        "AC10",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "Users need to manage several Supadata keys without seeing or leaking saved plaintext secrets.",
+        "Users also need to understand which keys are enabled, exhausted, invalid, or ready without exposing sensitive data."
+      ],
+      "scope_in": [
+        "Add Supadata to the authenticated Options/profile page as a multi-key section.",
+        "Support add, test, enable/disable, reorder, and delete actions with CSRF protection.",
+        "Show masked key, label, priority, status, last tested, last used, and quota usage when available.",
+        "Show a native-only transcript note without offering auto or generate controls.",
+        "Surface all-keys-exhausted messages on the process page with a pasted transcript fallback link or form."
+      ],
+      "scope_out": [
+        "Showing full keys after save.",
+        "Letting users choose Supadata auto or generate modes.",
+        "Admin-wide key pooling."
+      ],
+      "acceptance_criteria": [
+        "AC1: Authenticated users can manage multiple Supadata keys from the Options/profile UI.",
+        "AC2: The UI never displays a full Supadata key after submission.",
+        "AC3: Disabled and exhausted keys are visibly distinct from ready keys.",
+        "AC4: The process page explains native-caption exhaustion without implying generated transcription will be used.",
+        "AC5: Web tests cover the Supadata key management forms and access control."
+      ]
+    },
+    {
+      "title": "Validate Supadata native transcript delivery",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Validation",
+      "request_acs": [
+        "AC5",
+        "AC6",
+        "AC10",
+        "AC11",
+        "AC12",
+        "AC13",
+        "AC14",
+        "AC15"
+      ],
+      "problem": [
+        "The Supadata integration touches transcript acquisition, secret storage, schema migrations, UI, and cost controls.",
+        "Closeout needs proof that native-only behavior and key rotation are enforced across boundaries."
+      ],
+      "scope_in": [
+        "Add focused tests for client, pipeline, API key storage, DB migration, web Options UI, and documentation examples.",
+        "Update README and deployment docs with configuration, quota rotation, and failure behavior.",
+        "Run ruff, pytest, compileall, logics-manager lint --require-status, and logics-manager audit.",
+        "Record validation output in the orchestration task before closeout."
+      ],
+      "scope_out": [
+        "Live Supadata calls in CI.",
+        "VPS deployment execution.",
+        "Load testing paid Supadata plans."
+      ],
+      "acceptance_criteria": [
+        "AC1: Tests can run offline with mocked Supadata responses.",
+        "AC2: Validation includes assertions that no code path requests mode=auto or mode=generate.",
+        "AC3: Documentation is specific enough to configure Supadata without reading code.",
+        "AC4: Logics lint and audit pass before closeout."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Supadata Native Transcript Key Rotation",
+    "plan": [
+      "Confirm Supadata API contract and lock ClaimLens to native transcript mode only.",
+      "Design the schema migration for multiple Supadata keys per authenticated profile while preserving existing single-key providers.",
+      "Implement Supadata native transcript client and provider-order configuration.",
+      "Implement encrypted Supadata key pool persistence, testing, quota metadata, and redaction.",
+      "Implement deterministic key selection and rotation on exhausted, invalid, or quota-limited keys.",
+      "Wire Supadata native transcript extraction into the pipeline and web process actions.",
+      "Extend the Options/profile UI for multiple Supadata keys and quota/status visibility.",
+      "Update README, deployment docs, and offline smoke-test notes.",
+      "Validate with ruff, pytest, compileall, logics-manager lint --require-status, and logics-manager audit.",
+      "ADR 009 checkpoint: update affected Logics docs during each meaningful wave and leave the repo commit-ready; commit creation remains under operator control.",
+      "GATE: do not close until native-only Supadata behavior, key encryption, quota rotation, and migration compatibility have test evidence."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/supadata-native-transcript-key-rotation.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

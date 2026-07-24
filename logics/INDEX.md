@@ -18,6 +18,7 @@
 | [prod_005_claimlens_advanced_source_verification_mode](product/prod_005_claimlens_advanced_source_verification_mode.md) | ClaimLens Advanced Source Verification Mode | Settled |  |  | product/prod_005_claimlens_advanced_source_verification_mode.md |
 | [prod_006_claimlens_online_readiness_audit_implementation](product/prod_006_claimlens_online_readiness_audit_implementation.md) | ClaimLens Online Readiness Audit Implementation | Settled |  |  | product/prod_006_claimlens_online_readiness_audit_implementation.md |
 | [prod_007_claimlens_deployable_web_auth_and_api_key_management](product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md) | ClaimLens Deployable Web Auth And API Key Management | Settled |  |  | product/prod_007_claimlens_deployable_web_auth_and_api_key_management.md |
+| [prod_008_claimlens_supadata_native_transcript_key_rotation](product/prod_008_claimlens_supadata_native_transcript_key_rotation.md) | ClaimLens Supadata Native Transcript Key Rotation | Settled |  |  | product/prod_008_claimlens_supadata_native_transcript_key_rotation.md |
 
 ## Roadmaps
 
@@ -34,6 +35,7 @@ _None_
 | [req_004_advanced_source_verification_mode](request/req_004_advanced_source_verification_mode.md) | Advanced Source Verification Mode | Done |  |  | request/req_004_advanced_source_verification_mode.md |
 | [req_005_online_readiness_audit_implementation](request/req_005_online_readiness_audit_implementation.md) | Online Readiness Audit Implementation | Done |  |  | request/req_005_online_readiness_audit_implementation.md |
 | [req_006_deployable_web_auth_and_api_key_management](request/req_006_deployable_web_auth_and_api_key_management.md) | Deployable Web Auth And API Key Management | Done |  |  | request/req_006_deployable_web_auth_and_api_key_management.md |
+| [req_007_supadata_native_transcript_key_rotation](request/req_007_supadata_native_transcript_key_rotation.md) | Supadata Native Transcript Key Rotation | Done |  |  | request/req_007_supadata_native_transcript_key_rotation.md |
 
 ## Backlog
 
@@ -87,6 +89,11 @@ _None_
 | [item_046_build_login_navigation_and_options_ui](backlog/item_046_build_login_navigation_and_options_ui.md) | Build login navigation and options UI | Done |  | 100% | backlog/item_046_build_login_navigation_and_options_ui.md |
 | [item_047_add_transcript_fallback_for_vps_blocked_youtube](backlog/item_047_add_transcript_fallback_for_vps_blocked_youtube.md) | Add transcript fallback for VPS-blocked YouTube | Done |  | 100% | backlog/item_047_add_transcript_fallback_for_vps_blocked_youtube.md |
 | [item_048_version_schema_and_validate_deployable_closeout](backlog/item_048_version_schema_and_validate_deployable_closeout.md) | Version schema and validate deployable closeout | Done |  | 100% | backlog/item_048_version_schema_and_validate_deployable_closeout.md |
+| [item_049_implement_supadata_native_transcript_client](backlog/item_049_implement_supadata_native_transcript_client.md) | Implement Supadata native transcript client | Done |  | 100% | backlog/item_049_implement_supadata_native_transcript_client.md |
+| [item_050_support_multiple_supadata_keys_per_profile](backlog/item_050_support_multiple_supadata_keys_per_profile.md) | Support multiple Supadata keys per profile | Done |  | 100% | backlog/item_050_support_multiple_supadata_keys_per_profile.md |
+| [item_051_rotate_supadata_keys_on_quota_exhaustion](backlog/item_051_rotate_supadata_keys_on_quota_exhaustion.md) | Rotate Supadata keys on quota exhaustion | Done |  | 100% | backlog/item_051_rotate_supadata_keys_on_quota_exhaustion.md |
+| [item_052_expose_supadata_profile_key_management_ui](backlog/item_052_expose_supadata_profile_key_management_ui.md) | Expose Supadata profile key management UI | Done |  | 100% | backlog/item_052_expose_supadata_profile_key_management_ui.md |
+| [item_053_validate_supadata_native_transcript_delivery](backlog/item_053_validate_supadata_native_transcript_delivery.md) | Validate Supadata native transcript delivery | Done |  | 100% | backlog/item_053_validate_supadata_native_transcript_delivery.md |
 
 ## Tasks
 
@@ -99,3 +106,4 @@ _None_
 | [task_005_orchestrate_advanced_source_verification_mode](tasks/task_005_orchestrate_advanced_source_verification_mode.md) | Orchestrate Advanced Source Verification Mode | Done |  | 100% | tasks/task_005_orchestrate_advanced_source_verification_mode.md |
 | [task_006_orchestrate_online_readiness_audit_implementation](tasks/task_006_orchestrate_online_readiness_audit_implementation.md) | Orchestrate Online Readiness Audit Implementation | Done | codex | 100% | tasks/task_006_orchestrate_online_readiness_audit_implementation.md |
 | [task_007_orchestrate_deployable_web_auth_and_api_key_management](tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md) | Orchestrate Deployable Web Auth And API Key Management | Done | codex | 100% | tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md |
+| [task_008_orchestrate_supadata_native_transcript_key_rotation](tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md) | Orchestrate Supadata Native Transcript Key Rotation | Done | codex | 100% | tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md |

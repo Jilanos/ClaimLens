@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from claimlens import db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, parse_analysis_json
+from claimlens.api_keys import save_supadata_api_key
 from claimlens.auth import hash_password
 from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.config import load_config
@@ -276,6 +277,43 @@ def test_render_options_page_masks_saved_keys(tmp_path):
 
     assert "sk-u...cret" in rendered
     assert "encrypted-value" not in rendered
+
+
+def test_render_options_page_shows_supadata_pool_without_plaintext(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(
+        database,
+        email="user@example.test",
+        password_hash=hash_password("correct horse battery"),
+    )
+    save_supadata_api_key(
+        database,
+        user_id=user_id,
+        label="free key",
+        value="supadata-plain-secret",
+        priority=10,
+        deployment_secret="deploy-secret",
+    )
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+
+    rendered = render_options_page(
+        database,
+        config,
+        context=WebContext(
+            user_id=user_id,
+            email="user@example.test",
+            csrf_token="csrf",
+            guest_token="guest",
+            session_token="session",
+        ),
+    )
+
+    assert "Supadata native captions" in rendered
+    assert "mode=native" in rendered
+    assert "supadata-plain-secret" not in rendered
+    assert "mode=auto" not in rendered
+    assert "mode=generate" not in rendered
 
 
 def test_report_access_is_scoped_by_owner(tmp_path):

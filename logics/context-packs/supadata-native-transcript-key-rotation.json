@@ -1,0 +1,346 @@
+{
+  "budgets": {
+    "max_docs": 28,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_007_supadata_native_transcript_key_rotation item_049_implement_supadata_native_transcript_client item_050_support_multiple_supadata_keys_per_profile item_051_rotate_supadata_keys_on_quota_exhaustion item_052_expose_supadata_profile_key_management_ui item_053_validate_supadata_native_transcript_delivery task_008_orchestrate_supadata_native_transcript_key_rotation --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_049_implement_supadata_native_transcript_client",
+          "item_050_support_multiple_supadata_keys_per_profile",
+          "item_051_rotate_supadata_keys_on_quota_exhaustion",
+          "item_052_expose_supadata_profile_key_management_ui",
+          "item_053_validate_supadata_native_transcript_delivery"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/product/prod_008_claimlens_supadata_native_transcript_key_rotation.md",
+      "ref": "prod_008_claimlens_supadata_native_transcript_key_rotation",
+      "status": "Proposed",
+      "title": "ClaimLens Supadata Native Transcript Key Rotation"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, supadata native transcript key rotation, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Supadata Native Transcript Key Rotation",
+        "use when": "You need to implement or review the scaffolded workflow for Supadata Native Transcript Key Rotation."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_049_implement_supadata_native_transcript_client",
+          "item_050_support_multiple_supadata_keys_per_profile",
+          "item_051_rotate_supadata_keys_on_quota_exhaustion",
+          "item_052_expose_supadata_profile_key_management_ui",
+          "item_053_validate_supadata_native_transcript_delivery"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/request/req_007_supadata_native_transcript_key_rotation.md",
+      "ref": "req_007_supadata_native_transcript_key_rotation",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Supadata Native Transcript Key Rotation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, implement supadata native transcript client, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Implement Supadata native transcript client",
+        "use when": "Implementing the scaffolded slice for Implement Supadata native transcript client."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_049_implement_supadata_native_transcript_client"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/backlog/item_049_implement_supadata_native_transcript_client.md",
+      "ref": "item_049_implement_supadata_native_transcript_client",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Implement Supadata native transcript client"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, support multiple supadata keys per profile, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Support multiple Supadata keys per profile",
+        "use when": "Implementing the scaffolded slice for Support multiple Supadata keys per profile."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_050_support_multiple_supadata_keys_per_profile"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/backlog/item_050_support_multiple_supadata_keys_per_profile.md",
+      "ref": "item_050_support_multiple_supadata_keys_per_profile",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Support multiple Supadata keys per profile"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rotate supadata keys on quota exhaustion, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rotate Supadata keys on quota exhaustion",
+        "use when": "Implementing the scaffolded slice for Rotate Supadata keys on quota exhaustion."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_051_rotate_supadata_keys_on_quota_exhaustion"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/backlog/item_051_rotate_supadata_keys_on_quota_exhaustion.md",
+      "ref": "item_051_rotate_supadata_keys_on_quota_exhaustion",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Rotate Supadata keys on quota exhaustion"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Supadata Native Transcript Key Rotation",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_049_implement_supadata_native_transcript_client",
+          "item_050_support_multiple_supadata_keys_per_profile",
+          "item_051_rotate_supadata_keys_on_quota_exhaustion",
+          "item_052_expose_supadata_profile_key_management_ui",
+          "item_053_validate_supadata_native_transcript_delivery"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md",
+      "ref": "task_008_orchestrate_supadata_native_transcript_key_rotation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Supadata Native Transcript Key Rotation"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_049_implement_supadata_native_transcript_client",
+          "item_050_support_multiple_supadata_keys_per_profile",
+          "item_051_rotate_supadata_keys_on_quota_exhaustion",
+          "item_052_expose_supadata_profile_key_management_ui",
+          "item_053_validate_supadata_native_transcript_delivery"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/product/prod_008_claimlens_supadata_native_transcript_key_rotation.md",
+      "ref": "prod_008_claimlens_supadata_native_transcript_key_rotation",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Supadata Native Transcript Key Rotation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, expose supadata profile key management ui, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Expose Supadata profile key management UI",
+        "use when": "Implementing the scaffolded slice for Expose Supadata profile key management UI."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_052_expose_supadata_profile_key_management_ui"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/backlog/item_052_expose_supadata_profile_key_management_ui.md",
+      "ref": "item_052_expose_supadata_profile_key_management_ui",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Expose Supadata profile key management UI"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, validate supadata native transcript delivery, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Validate Supadata native transcript delivery",
+        "use when": "Implementing the scaffolded slice for Validate Supadata native transcript delivery."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_053_validate_supadata_native_transcript_delivery"
+        ],
+        "prod": [
+          "prod_008_claimlens_supadata_native_transcript_key_rotation"
+        ],
+        "req": [
+          "req_007_supadata_native_transcript_key_rotation"
+        ],
+        "task": [
+          "task_008_orchestrate_supadata_native_transcript_key_rotation"
+        ]
+      },
+      "path": "logics/backlog/item_053_validate_supadata_native_transcript_delivery.md",
+      "ref": "item_053_validate_supadata_native_transcript_delivery",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Validate Supadata native transcript delivery"
+    }
+  ],
+  "estimates": {
+    "char_count": 8093,
+    "companion_doc_count": 1,
+    "doc_count": 8
+  },
+  "generated_at": "2026-07-24T12:14:13Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_007_supadata_native_transcript_key_rotation",
+      "item_049_implement_supadata_native_transcript_client",
+      "item_050_support_multiple_supadata_keys_per_profile",
+      "item_051_rotate_supadata_keys_on_quota_exhaustion",
+      "item_052_expose_supadata_profile_key_management_ui",
+      "item_053_validate_supadata_native_transcript_delivery",
+      "task_008_orchestrate_supadata_native_transcript_key_rotation"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_007_supadata_native_transcript_key_rotation,item_049_implement_supadata_native_transcript_client,item_050_support_multiple_supadata_keys_per_profile,item_051_rotate_supadata_keys_on_quota_exhaustion,item_052_expose_supadata_profile_key_management_ui,item_053_validate_supadata_native_transcript_delivery,task_008_orchestrate_supadata_native_transcript_key_rotation",
+  "refs": [
+    "req_007_supadata_native_transcript_key_rotation",
+    "item_049_implement_supadata_native_transcript_client",
+    "item_050_support_multiple_supadata_keys_per_profile",
+    "item_051_rotate_supadata_keys_on_quota_exhaustion",
+    "item_052_expose_supadata_profile_key_management_ui",
+    "item_053_validate_supadata_native_transcript_delivery",
+    "task_008_orchestrate_supadata_native_transcript_key_rotation"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md",
+      "ref": "task_008_orchestrate_supadata_native_transcript_key_rotation"
+    }
+  ]
+}

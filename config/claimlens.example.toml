@@ -12,6 +12,13 @@ source_verification_timeout_seconds = 20
 analysis_max_chars = 60000
 report_language = "en"
 
+[transcripts]
+# Default keeps the existing local YouTube transcript path. Use ["supadata", "youtube"]
+# when deployed transcript acquisition should try Supadata native captions first.
+provider_order = ["youtube"]
+supadata_monthly_request_cap = 100
+supadata_language = "en"
+
 [web]
 max_request_bytes = 16384
 rate_limit_actions = 12

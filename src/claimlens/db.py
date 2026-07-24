@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -258,8 +258,33 @@ CREATE TABLE IF NOT EXISTS user_api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_user_api_keys_user_id ON user_api_keys(user_id);
 
+CREATE TABLE IF NOT EXISTS supadata_api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 100,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'saved',
+    encrypted_value TEXT NOT NULL,
+    key_fingerprint TEXT NOT NULL,
+    masked_value TEXT NOT NULL,
+    max_credits INTEGER,
+    used_credits INTEGER,
+    monthly_request_count INTEGER NOT NULL DEFAULT 0,
+    billing_period TEXT,
+    exhausted_until TEXT,
+    last_error TEXT,
+    tested_at TEXT,
+    last_used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_supadata_api_keys_user_priority
+ON supadata_api_keys(user_id, enabled, priority, id);
+
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '5')
+VALUES ('schema_version', '6')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -380,6 +405,57 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         )
         """
     )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS supadata_api_keys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            priority INTEGER NOT NULL DEFAULT 100,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            status TEXT NOT NULL DEFAULT 'saved',
+            encrypted_value TEXT NOT NULL,
+            key_fingerprint TEXT NOT NULL,
+            masked_value TEXT NOT NULL,
+            max_credits INTEGER,
+            used_credits INTEGER,
+            monthly_request_count INTEGER NOT NULL DEFAULT 0,
+            billing_period TEXT,
+            exhausted_until TEXT,
+            last_error TEXT,
+            tested_at TEXT,
+            last_used_at TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    _add_column_if_missing(
+        connection,
+        "supadata_api_keys",
+        "priority",
+        "INTEGER NOT NULL DEFAULT 100",
+    )
+    _add_column_if_missing(connection, "supadata_api_keys", "enabled", "INTEGER NOT NULL DEFAULT 1")
+    _add_column_if_missing(
+        connection,
+        "supadata_api_keys",
+        "status",
+        "TEXT NOT NULL DEFAULT 'saved'",
+    )
+    _add_column_if_missing(connection, "supadata_api_keys", "max_credits", "INTEGER")
+    _add_column_if_missing(connection, "supadata_api_keys", "used_credits", "INTEGER")
+    _add_column_if_missing(
+        connection,
+        "supadata_api_keys",
+        "monthly_request_count",
+        "INTEGER NOT NULL DEFAULT 0",
+    )
+    _add_column_if_missing(connection, "supadata_api_keys", "billing_period", "TEXT")
+    _add_column_if_missing(connection, "supadata_api_keys", "exhausted_until", "TEXT")
+    _add_column_if_missing(connection, "supadata_api_keys", "last_error", "TEXT")
+    _add_column_if_missing(connection, "supadata_api_keys", "tested_at", "TEXT")
+    _add_column_if_missing(connection, "supadata_api_keys", "last_used_at", "TEXT")
 
 
 def _add_column_if_missing(
@@ -1344,6 +1420,231 @@ def list_user_api_keys(database_path: Path | str, *, user_id: int) -> list[sqlit
             """,
             (user_id,),
         ).fetchall()
+
+
+def create_supadata_api_key(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    label: str,
+    priority: int,
+    encrypted_value: str,
+    key_fingerprint: str,
+    masked_value: str,
+) -> int:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO supadata_api_keys
+                    (user_id, label, priority, encrypted_value, key_fingerprint, masked_value)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    label.strip() or f"Supadata key {key_fingerprint}",
+                    priority,
+                    encrypted_value,
+                    key_fingerprint,
+                    masked_value,
+                ),
+            )
+    return int(cursor.lastrowid)
+
+
+def list_supadata_api_keys(database_path: Path | str, *, user_id: int) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM supadata_api_keys
+            WHERE user_id = ?
+            ORDER BY priority, id
+            """,
+            (user_id,),
+        ).fetchall()
+
+
+def list_eligible_supadata_api_keys(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    billing_period: str,
+    monthly_cap: int,
+) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM supadata_api_keys
+            WHERE user_id = ?
+              AND enabled = 1
+              AND status NOT IN ('invalid')
+              AND (
+                    exhausted_until IS NULL
+                    OR exhausted_until < CURRENT_TIMESTAMP
+                  )
+              AND (
+                    billing_period IS NULL
+                    OR billing_period != ?
+                    OR monthly_request_count < ?
+                  )
+            ORDER BY priority, id
+            """,
+            (user_id, billing_period, monthly_cap),
+        ).fetchall()
+
+
+def get_supadata_api_key(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM supadata_api_keys
+            WHERE user_id = ? AND id = ?
+            """,
+            (user_id, key_id),
+        ).fetchone()
+
+
+def delete_supadata_api_key(database_path: Path | str, *, user_id: int, key_id: int) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                "DELETE FROM supadata_api_keys WHERE user_id = ? AND id = ?",
+                (user_id, key_id),
+            )
+
+
+def update_supadata_api_key_controls(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+    label: str,
+    priority: int,
+    enabled: bool,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE supadata_api_keys
+                SET label = ?,
+                    priority = ?,
+                    enabled = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND id = ?
+                """,
+                (label.strip() or "Supadata key", priority, 1 if enabled else 0, user_id, key_id),
+            )
+
+
+def mark_supadata_api_key_tested(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+    status: str,
+    max_credits: int | None = None,
+    used_credits: int | None = None,
+    last_error: str | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE supadata_api_keys
+                SET status = ?,
+                    max_credits = COALESCE(?, max_credits),
+                    used_credits = COALESCE(?, used_credits),
+                    last_error = ?,
+                    tested_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND id = ?
+                """,
+                (status, max_credits, used_credits, last_error, user_id, key_id),
+            )
+
+
+def mark_supadata_api_key_used(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+    billing_period: str,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE supadata_api_keys
+                SET status = CASE WHEN status = 'saved' THEN 'ready' ELSE status END,
+                    billing_period = ?,
+                    monthly_request_count = CASE
+                        WHEN billing_period = ? THEN monthly_request_count + 1
+                        ELSE 1
+                    END,
+                    last_used_at = CURRENT_TIMESTAMP,
+                    last_error = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND id = ?
+                """,
+                (billing_period, billing_period, user_id, key_id),
+            )
+
+
+def mark_supadata_api_key_exhausted(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+    exhausted_until: str,
+    last_error: str,
+    max_credits: int | None = None,
+    used_credits: int | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE supadata_api_keys
+                SET status = 'exhausted',
+                    exhausted_until = ?,
+                    max_credits = COALESCE(?, max_credits),
+                    used_credits = COALESCE(?, used_credits),
+                    last_error = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND id = ?
+                """,
+                (exhausted_until, max_credits, used_credits, last_error, user_id, key_id),
+            )
+
+
+def mark_supadata_api_key_invalid(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    key_id: int,
+    last_error: str,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE supadata_api_keys
+                SET status = 'invalid',
+                    last_error = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND id = ?
+                """,
+                (last_error, user_id, key_id),
+            )
 
 
 def _duration_seconds(value: str | None) -> int | None:

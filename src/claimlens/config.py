@@ -28,6 +28,13 @@ class PipelineConfig:
 
 
 @dataclass(frozen=True)
+class TranscriptConfig:
+    provider_order: tuple[str, ...]
+    supadata_monthly_request_cap: int
+    supadata_language: str | None
+
+
+@dataclass(frozen=True)
 class WebConfig:
     max_request_bytes: int
     rate_limit_actions: int
@@ -61,6 +68,7 @@ class AppConfig:
     repo_root: Path
     paths: PathsConfig
     pipeline: PipelineConfig
+    transcripts: TranscriptConfig
     web: WebConfig
     sources: SourceConfig
     api_keys: ApiKeys
@@ -89,6 +97,7 @@ def load_config(
 
     paths = raw.get("paths", {})
     pipeline = raw.get("pipeline", {})
+    transcripts_config = raw.get("transcripts", {})
     web = raw.get("web", {})
     sources = raw.get("sources", {})
 
@@ -144,6 +153,21 @@ def load_config(
             ),
             analysis_max_chars=_int_setting(pipeline, "analysis_max_chars", 60000),
             report_language=str(pipeline.get("report_language", "en")).strip() or "en",
+        ),
+        transcripts=TranscriptConfig(
+            provider_order=_provider_order(
+                environ.get("CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER")
+                or transcripts_config.get("provider_order", "youtube")
+            ),
+            supadata_monthly_request_cap=_int_setting(
+                transcripts_config,
+                "supadata_monthly_request_cap",
+                100,
+            ),
+            supadata_language=_optional_string(
+                environ.get("CLAIMLENS_SUPADATA_LANGUAGE")
+                or transcripts_config.get("supadata_language")
+            ),
         ),
         web=WebConfig(
             max_request_bytes=_int_setting(web, "max_request_bytes", 16_384),
@@ -222,6 +246,21 @@ def _optional_string(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _provider_order(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        parts = value.split(",")
+    elif isinstance(value, list | tuple):
+        parts = [str(part) for part in value]
+    else:
+        raise ConfigError(f"Invalid transcripts.provider_order: {value!r}")
+    providers = tuple(part.strip().lower() for part in parts if part.strip())
+    allowed = {"youtube", "supadata"}
+    invalid = sorted(set(providers) - allowed)
+    if invalid:
+        raise ConfigError(f"Unsupported transcript provider(s): {', '.join(invalid)}")
+    return providers or ("youtube",)
 
 
 def _bool_setting(

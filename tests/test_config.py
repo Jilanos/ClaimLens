@@ -14,6 +14,8 @@ def test_load_config_uses_defaults_without_file(tmp_path, monkeypatch):
     assert config.pipeline.max_videos_per_channel == 10
     assert config.pipeline.source_verification_max_results == 5
     assert config.pipeline.source_verification_timeout_seconds == 20
+    assert config.transcripts.provider_order == ("youtube",)
+    assert config.transcripts.supadata_monthly_request_cap == 100
     assert config.sources.advanced_source_verification is False
     assert config.sources.enable_pubmed is True
     assert config.api_keys.openai is None
@@ -33,6 +35,11 @@ source_verification_max_results = 7
 source_verification_timeout_seconds = 15
 analysis_max_chars = 12345
 report_language = "fr"
+
+[transcripts]
+provider_order = ["supadata", "youtube"]
+supadata_monthly_request_cap = 25
+supadata_language = "fr"
 
 [web]
 max_request_bytes = 8192
@@ -65,6 +72,9 @@ enable_web_search = true
     assert config.pipeline.source_verification_timeout_seconds == 15
     assert config.pipeline.analysis_max_chars == 12345
     assert config.pipeline.report_language == "fr"
+    assert config.transcripts.provider_order == ("supadata", "youtube")
+    assert config.transcripts.supadata_monthly_request_cap == 25
+    assert config.transcripts.supadata_language == "fr"
     assert config.web.max_request_bytes == 8192
     assert config.web.rate_limit_actions == 4
     assert config.web.rate_limit_window_seconds == 60
@@ -88,6 +98,20 @@ max_videos_per_channel = "many"
         ConfigError,
         match="Invalid integer config value for pipeline.max_videos_per_channel",
     ):
+        load_config(config_file)
+
+
+def test_load_config_rejects_generated_transcript_provider(tmp_path):
+    config_file = tmp_path / "claimlens.toml"
+    config_file.write_text(
+        """
+[transcripts]
+provider_order = ["generate"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="Unsupported transcript provider"):
         load_config(config_file)
 
 

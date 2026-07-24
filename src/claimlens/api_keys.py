@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from claimlens import db
@@ -17,6 +18,14 @@ PROVIDERS = {"openai", "semantic_scholar", "ncbi"}
 class KeyContext:
     user_id: int | None
     request_keys: dict[str, str]
+
+
+@dataclass(frozen=True)
+class SupadataKeyCandidate:
+    id: int
+    api_key: str
+    fingerprint: str
+    masked_value: str
 
 
 def save_user_api_key(
@@ -79,3 +88,68 @@ def _provider(provider: str) -> str:
 
 def _fingerprint(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+def save_supadata_api_key(
+    database_path: Path | str,
+    *,
+    user_id: int,
+    label: str,
+    value: str,
+    priority: int,
+    deployment_secret: str | None,
+) -> int:
+    clean_value = value.strip()
+    encrypted = encrypt_secret(clean_value, deployment_secret or "")
+    return db.create_supadata_api_key(
+        database_path,
+        user_id=user_id,
+        label=label,
+        priority=priority,
+        encrypted_value=encrypted,
+        key_fingerprint=_fingerprint(clean_value),
+        masked_value=mask_secret(clean_value),
+    )
+
+
+def eligible_supadata_keys(
+    database_path: Path | str,
+    *,
+    user_id: int | None,
+    deployment_secret: str | None,
+    monthly_cap: int,
+) -> list[SupadataKeyCandidate]:
+    if user_id is None:
+        return []
+    rows = db.list_eligible_supadata_api_keys(
+        database_path,
+        user_id=user_id,
+        billing_period=current_billing_period(),
+        monthly_cap=monthly_cap,
+    )
+    candidates: list[SupadataKeyCandidate] = []
+    for row in rows:
+        candidates.append(
+            SupadataKeyCandidate(
+                id=int(row["id"]),
+                api_key=decrypt_secret(row["encrypted_value"], deployment_secret or ""),
+                fingerprint=row["key_fingerprint"],
+                masked_value=row["masked_value"],
+            )
+        )
+    return candidates
+
+
+def current_billing_period(now: datetime | None = None) -> str:
+    value = now or datetime.now(UTC)
+    return value.strftime("%Y-%m")
+
+
+def next_billing_period_start(now: datetime | None = None) -> str:
+    value = now or datetime.now(UTC)
+    if value.month == 12:
+        reset = value.replace(year=value.year + 1, month=1, day=1)
+    else:
+        reset = value.replace(month=value.month + 1, day=1)
+    reset = reset.replace(hour=0, minute=0, second=0, microsecond=0)
+    return reset.strftime("%Y-%m-%d %H:%M:%S")

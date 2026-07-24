@@ -49,6 +49,7 @@ EXPECTED_TABLES = {
     "users",
     "sessions",
     "user_api_keys",
+    "supadata_api_keys",
 }
 
 
@@ -72,7 +73,58 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "5"
+    assert schema_version == "6"
+
+
+def test_supadata_api_key_pool_tracks_quota_state(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    init_db(database)
+    user_id = db.create_user(database, email="user@example.test", password_hash="hash")
+
+    key_id = db.create_supadata_api_key(
+        database,
+        user_id=user_id,
+        label="Free key 1",
+        priority=10,
+        encrypted_value="encrypted",
+        key_fingerprint="fingerprint",
+        masked_value="sup...key",
+    )
+    db.mark_supadata_api_key_used(
+        database,
+        user_id=user_id,
+        key_id=key_id,
+        billing_period="2026-07",
+    )
+    assert len(
+        db.list_eligible_supadata_api_keys(
+            database,
+            user_id=user_id,
+            billing_period="2026-07",
+            monthly_cap=100,
+        )
+    ) == 1
+
+    db.mark_supadata_api_key_exhausted(
+        database,
+        user_id=user_id,
+        key_id=key_id,
+        exhausted_until="2099-01-01 00:00:00",
+        last_error="quota",
+        max_credits=100,
+        used_credits=100,
+    )
+
+    rows = db.list_supadata_api_keys(database, user_id=user_id)
+    eligible = db.list_eligible_supadata_api_keys(
+        database,
+        user_id=user_id,
+        billing_period="2026-07",
+        monthly_cap=100,
+    )
+    assert rows[0]["status"] == "exhausted"
+    assert rows[0]["used_credits"] == 100
+    assert eligible == []
 
 
 def test_connect_applies_sqlite_concurrency_pragmas(tmp_path):

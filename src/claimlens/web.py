@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
-from claimlens.api_keys import KeyContext, resolve_api_key, save_user_api_key
+from claimlens.api_keys import KeyContext, resolve_api_key, save_supadata_api_key, save_user_api_key
 from claimlens.auth import (
     hash_password,
     new_guest_token,
@@ -34,6 +34,7 @@ from claimlens.pipeline import (
     next_eligible_step,
 )
 from claimlens.verification import default_adapters, verify_sources
+from claimlens.youtube import SupadataClient, SupadataError
 
 LOGGER = logging.getLogger(__name__)
 EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
@@ -105,6 +106,8 @@ main { max-width:1000px; margin:0 auto; padding:34px 24px 80px; }
 .card-body { padding:20px; }
 .field { display:grid; gap:6px; }
 .field > span { font-size:13px; font-weight:600; color:var(--ink-2); }
+.check { display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); }
+.check input { width:auto; min-height:0; }
 input, select, textarea { font:inherit; color:var(--ink); background:var(--surface); width:100%;
   border:1px solid var(--line); border-radius:var(--radius-sm); padding:9px 11px; min-height:40px;
   transition:border-color .12s, box-shadow .12s; }
@@ -198,14 +201,26 @@ def _badge_class(status: str) -> str:
     return {
         "succeeded": "ok",
         "completed": "ok",
+        "ready": "ok",
+        "native": "ok",
         "running": "run",
+        "saved": "warn",
+        "exhausted": "warn",
         "failed": "bad",
+        "invalid": "bad",
     }.get((status or "").lower(), "idle")
 
 
 def _status_badge(status: str, *, suffix: str = "") -> str:
     label = html.escape((status or "").replace("_", " ")) + suffix
     return f'<span class="badge {_badge_class(status)}">{label}</span>'
+
+
+def _int_form(form: dict[str, list[str]], name: str, default: int) -> int:
+    try:
+        return int(form.get(name, [str(default)])[0])
+    except (TypeError, ValueError):
+        return default
 
 
 def _page_shell(
@@ -336,7 +351,15 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 if action == "logout":
                     self._handle_logout(context)
                     return
-                if action in {"save_api_key", "delete_api_key", "test_api_key"}:
+                if action in {
+                    "save_api_key",
+                    "delete_api_key",
+                    "test_api_key",
+                    "save_supadata_key",
+                    "test_supadata_key",
+                    "update_supadata_key",
+                    "delete_supadata_key",
+                }:
                     self._handle_options_action(form, context)
                     return
                 if action == "create":
@@ -561,10 +584,20 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
         ) -> None:
             if context.user_id is None:
                 raise ValueError("Login is required.")
+            supadata_actions = {
+                "save_supadata_key",
+                "test_supadata_key",
+                "update_supadata_key",
+                "delete_supadata_key",
+            }
+            action = form.get("action", [""])[0]
+            if action in supadata_actions:
+                self._handle_supadata_options_action(form, context, action)
+                return
             provider = form.get("provider", [""])[0]
-            if form.get("action", [""])[0] == "delete_api_key":
+            if action == "delete_api_key":
                 db.delete_user_api_key(database_path, user_id=context.user_id, provider=provider)
-            elif form.get("action", [""])[0] == "test_api_key":
+            elif action == "test_api_key":
                 key = resolve_api_key(
                     database_path,
                     config,
@@ -586,6 +619,84 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     value=form.get("api_key", [""])[0],
                     deployment_secret=config.web.key_encryption_secret,
                 )
+            self.send_response(303)
+            self.send_header("Location", "/options")
+            self.end_headers()
+
+        def _handle_supadata_options_action(
+            self,
+            form: dict[str, list[str]],
+            context: WebContext,
+            action: str,
+        ) -> None:
+            if context.user_id is None:
+                raise ValueError("Login is required.")
+            if action == "save_supadata_key":
+                save_supadata_api_key(
+                    database_path,
+                    user_id=context.user_id,
+                    label=form.get("label", [""])[0],
+                    value=form.get("api_key", [""])[0],
+                    priority=_int_form(form, "priority", 100),
+                    deployment_secret=config.web.key_encryption_secret,
+                )
+            else:
+                key_id = _int_form(form, "key_id", 0)
+                if action == "delete_supadata_key":
+                    db.delete_supadata_api_key(
+                        database_path,
+                        user_id=context.user_id,
+                        key_id=key_id,
+                    )
+                elif action == "update_supadata_key":
+                    db.update_supadata_api_key_controls(
+                        database_path,
+                        user_id=context.user_id,
+                        key_id=key_id,
+                        label=form.get("label", [""])[0],
+                        priority=_int_form(form, "priority", 100),
+                        enabled=form.get("enabled", [""])[0] == "1",
+                    )
+                elif action == "test_supadata_key":
+                    row = db.get_supadata_api_key(
+                        database_path,
+                        user_id=context.user_id,
+                        key_id=key_id,
+                    )
+                    if row is None:
+                        raise ValueError("Supadata key not found.")
+                    from claimlens.secrets import decrypt_secret
+
+                    key = decrypt_secret(
+                        row["encrypted_value"],
+                        config.web.key_encryption_secret or "",
+                    )
+                    try:
+                        account = SupadataClient(api_key=key).account_info()
+                    except SupadataError as exc:
+                        db.mark_supadata_api_key_tested(
+                            database_path,
+                            user_id=context.user_id,
+                            key_id=key_id,
+                            status="invalid",
+                            last_error=str(exc),
+                        )
+                    else:
+                        status = "ready"
+                        if (
+                            account.max_credits is not None
+                            and account.used_credits is not None
+                            and account.used_credits >= account.max_credits
+                        ):
+                            status = "exhausted"
+                        db.mark_supadata_api_key_tested(
+                            database_path,
+                            user_id=context.user_id,
+                            key_id=key_id,
+                            status=status,
+                            max_credits=account.max_credits,
+                            used_credits=account.used_credits,
+                        )
             self.send_response(303)
             self.send_header("Location", "/options")
             self.end_headers()
@@ -824,7 +935,7 @@ def _run_action(
         raise ValueError(f"Run not found: {run_id}")
 
     if action == "captions":
-        extract_required_subtitles(database_path, run_id)
+        extract_required_subtitles(database_path, run_id, config=config, user_id=user_id)
         return None
     elif action == "manual_transcript":
         transcript_id = add_manual_transcript(
@@ -1180,6 +1291,7 @@ def render_options_page(
   </div>
   {secret_notice}
   {''.join(sections)}
+  {_supadata_options_section(database_path, context)}
 </main>
 """
     return _page_shell(
@@ -1189,6 +1301,85 @@ def render_options_page(
         csrf_token=context.csrf_token,
         active="options",
     )
+
+
+def _supadata_options_section(database_path: Path | str, context: WebContext) -> str:
+    if context.user_id is None:
+        return ""
+    csrf = html.escape(context.csrf_token)
+    rows = db.list_supadata_api_keys(database_path, user_id=context.user_id)
+    key_rows = []
+    for row in rows:
+        quota = "quota unknown"
+        if row["max_credits"] is not None and row["used_credits"] is not None:
+            quota = f"{row['used_credits']} / {row['max_credits']} credits"
+        enabled = "checked" if row["enabled"] else ""
+        status = html.escape(row["status"])
+        key_rows.append(
+            f"""
+            <div class="card" style="box-shadow:none;border-color:var(--line-2)">
+              <div class="card-head">
+                <h3>{html.escape(row['label'])}</h3>
+                {_status_badge(status)}
+              </div>
+              <div class="card-body">
+                <p style="margin:0 0 12px;color:var(--muted);font-size:13.5px">
+                  <span class="mono">{html.escape(row['masked_value'])}</span> · {quota}
+                  · monthly native requests: {row['monthly_request_count']}
+                </p>
+                <form method="post" class="row">
+                  <input type="hidden" name="csrf_token" value="{csrf}">
+                  <input type="hidden" name="action" value="update_supadata_key">
+                  <input type="hidden" name="key_id" value="{row['id']}">
+                  <label class="field grow"><span>Label</span>
+                    <input name="label" value="{html.escape(row['label'])}"></label>
+                  <label class="field"><span>Priority</span>
+                    <input name="priority" type="number" value="{row['priority']}"></label>
+                  <label class="check"><input name="enabled" value="1" type="checkbox" {enabled}>
+                    Enabled</label>
+                  <button type="submit" class="btn btn-ghost btn-sm">Update</button>
+                </form>
+                <div class="row" style="margin-top:12px">
+                  <form method="post" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{csrf}">
+                    <input type="hidden" name="action" value="test_supadata_key">
+                    <input type="hidden" name="key_id" value="{row['id']}">
+                    <button type="submit" class="btn btn-ghost btn-sm">Test quota</button>
+                  </form>
+                  <form method="post" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{csrf}">
+                    <input type="hidden" name="action" value="delete_supadata_key">
+                    <input type="hidden" name="key_id" value="{row['id']}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete key</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            """
+        )
+    saved = "".join(key_rows) or "<p>No Supadata keys saved.</p>"
+    return f"""
+  <div class="card">
+    <div class="card-head"><h2>Supadata native captions</h2>{_status_badge('native')}</div>
+    <div class="card-body">
+      <p style="margin:0 0 16px;color:var(--muted);font-size:13.5px">
+        ClaimLens only requests Supadata transcripts with <span class="mono">mode=native</span>
+        and <span class="mono">text=false</span>. Auto and generated transcript modes are not used.
+      </p>
+      <form method="post" class="row">
+        <input type="hidden" name="csrf_token" value="{csrf}">
+        <input type="hidden" name="action" value="save_supadata_key">
+        <label class="field grow"><span>Label</span><input name="label" required></label>
+        <label class="field"><span>Priority</span>
+          <input name="priority" type="number" value="100"></label>
+        <label class="field grow"><span>Supadata API key</span>
+          <input name="api_key" type="password" required></label>
+        <button type="submit" class="btn btn-primary">Add key</button>
+      </form>
+      <div style="margin-top:16px">{saved}</div>
+    </div>
+  </div>
+"""
 
 
 def _verification_counts(database_path: Path | str, verification_run_id: int) -> str:

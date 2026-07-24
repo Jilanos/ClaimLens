@@ -4,7 +4,13 @@ import sqlite3
 import pytest
 
 from claimlens import db
-from claimlens.api_keys import KeyContext, resolve_api_key, save_user_api_key
+from claimlens.api_keys import (
+    KeyContext,
+    eligible_supadata_keys,
+    resolve_api_key,
+    save_supadata_api_key,
+    save_user_api_key,
+)
 from claimlens.auth import hash_password, token_digest, verify_password
 from claimlens.config import load_config
 from claimlens.kapsule_auth import authenticate, verify_kapsule_password
@@ -93,6 +99,48 @@ def test_request_key_wins_and_semantic_can_be_anonymous(tmp_path):
         )
         is None
     )
+
+
+def test_supadata_key_pool_is_encrypted_and_ordered(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(database, email="user@example.test", password_hash="hash")
+
+    save_supadata_api_key(
+        database,
+        user_id=user_id,
+        label="second",
+        value="supadata-second-secret",
+        priority=20,
+        deployment_secret="deploy-secret",
+    )
+    first_id = save_supadata_api_key(
+        database,
+        user_id=user_id,
+        label="first",
+        value="supadata-first-secret",
+        priority=10,
+        deployment_secret="deploy-secret",
+    )
+    db.mark_supadata_api_key_exhausted(
+        database,
+        user_id=user_id,
+        key_id=first_id,
+        exhausted_until="2099-01-01 00:00:00",
+        last_error="quota",
+    )
+
+    raw = database.read_bytes()
+    keys = eligible_supadata_keys(
+        database,
+        user_id=user_id,
+        deployment_secret="deploy-secret",
+        monthly_cap=100,
+    )
+
+    assert b"supadata-first-secret" not in raw
+    assert b"supadata-second-secret" not in raw
+    assert [key.api_key for key in keys] == ["supadata-second-secret"]
 
 
 def test_sessions_store_hashed_token(tmp_path):

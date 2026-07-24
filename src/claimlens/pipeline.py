@@ -8,7 +8,18 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
+from claimlens.api_keys import (
+    current_billing_period,
+    eligible_supadata_keys,
+    next_billing_period_start,
+)
+from claimlens.config import AppConfig
 from claimlens.youtube import (
+    SupadataAuthError,
+    SupadataClient,
+    SupadataError,
+    SupadataQuotaError,
+    SupadataTranscriptUnavailable,
     TranscriptResult,
     YouTubeError,
     YouTubeVideo,
@@ -106,19 +117,32 @@ def create_run(
     )
 
 
-def extract_required_subtitles(database_path: Path | str, run_id: int) -> TranscriptResult:
+def extract_required_subtitles(
+    database_path: Path | str,
+    run_id: int,
+    *,
+    config: AppConfig | None = None,
+    user_id: int | None = None,
+) -> TranscriptResult:
     run = _require_run(database_path, run_id)
     video_id = run["video_id"]
     db.set_run_status(database_path, run_id=run_id, status="running", current_step="captions")
     db.set_step_status(database_path, run_id=run_id, step="captions", status="running")
 
     try:
-        transcript = fetch_transcript(video_id)
+        transcript = _fetch_configured_transcript(
+            database_path,
+            run,
+            config=config,
+            user_id=user_id,
+        )
     except Exception as exc:
         message = (
             f"Subtitles are unavailable for video {video_id}; "
-            "the MVP does not use audio fallback."
+            "use the pasted transcript fallback to continue."
         )
+        if isinstance(exc, PipelineError) and "YouTube captions unavailable" not in str(exc):
+            message = str(exc)
         db.set_step_status(
             database_path,
             run_id=run_id,
@@ -150,6 +174,126 @@ def extract_required_subtitles(database_path: Path | str, run_id: int) -> Transc
         current_step="clean_transcript",
     )
     return transcript
+
+
+def _fetch_configured_transcript(
+    database_path: Path | str,
+    run,
+    *,
+    config: AppConfig | None,
+    user_id: int | None,
+) -> TranscriptResult:
+    provider_order = config.transcripts.provider_order if config else ("youtube",)
+    errors: list[str] = []
+    for provider in provider_order:
+        if provider == "youtube":
+            try:
+                return fetch_transcript(run["video_id"])
+            except Exception as exc:
+                errors.append(f"YouTube captions unavailable: {exc}")
+                continue
+        if provider == "supadata" and config is not None:
+            try:
+                return _fetch_supadata_native_transcript(
+                    database_path,
+                    run,
+                    config=config,
+                    user_id=user_id,
+                )
+            except PipelineError as exc:
+                errors.append(str(exc))
+                continue
+    if errors:
+        raise PipelineError(errors[-1])
+    raise PipelineError("No transcript provider is configured.")
+
+
+def _fetch_supadata_native_transcript(
+    database_path: Path | str,
+    run,
+    *,
+    config: AppConfig,
+    user_id: int | None,
+) -> TranscriptResult:
+    if user_id is None:
+        raise PipelineError(
+            "Supadata native transcript extraction requires a logged-in profile key."
+        )
+    candidates = eligible_supadata_keys(
+        database_path,
+        user_id=user_id,
+        deployment_secret=config.web.key_encryption_secret,
+        monthly_cap=config.transcripts.supadata_monthly_request_cap,
+    )
+    if not candidates:
+        raise PipelineError(
+            "No Supadata native transcript key is available with remaining quota; "
+            "use the pasted transcript fallback to continue."
+        )
+    billing_period = current_billing_period()
+    final_error = "Supadata native captions were unavailable."
+    for candidate in candidates:
+        client = SupadataClient(api_key=candidate.api_key)
+        try:
+            try:
+                account = client.account_info()
+            except (SupadataAuthError, SupadataQuotaError):
+                raise
+            except SupadataError:
+                account = None
+            if (
+                account is not None
+                and account.max_credits is not None
+                and account.used_credits is not None
+                and account.used_credits >= account.max_credits
+            ):
+                final_error = "A Supadata key reached its account credit limit."
+                db.mark_supadata_api_key_exhausted(
+                    database_path,
+                    user_id=user_id,
+                    key_id=candidate.id,
+                    exhausted_until=next_billing_period_start(),
+                    last_error=final_error,
+                    max_credits=account.max_credits,
+                    used_credits=account.used_credits,
+                )
+                continue
+            db.mark_supadata_api_key_used(
+                database_path,
+                user_id=user_id,
+                key_id=candidate.id,
+                billing_period=billing_period,
+            )
+            transcript = client.fetch_native_transcript(
+                video_url=run["source_url"],
+                video_id=run["video_id"],
+                language=config.transcripts.supadata_language,
+            )
+            return transcript
+        except SupadataAuthError as exc:
+            final_error = "Supadata rejected one saved key."
+            db.mark_supadata_api_key_invalid(
+                database_path,
+                user_id=user_id,
+                key_id=candidate.id,
+                last_error=str(exc),
+            )
+        except SupadataQuotaError as exc:
+            final_error = "A Supadata key reached its quota."
+            db.mark_supadata_api_key_exhausted(
+                database_path,
+                user_id=user_id,
+                key_id=candidate.id,
+                exhausted_until=next_billing_period_start(),
+                last_error=str(exc),
+            )
+        except SupadataTranscriptUnavailable as exc:
+            final_error = str(exc)
+            continue
+    raise PipelineError(
+        f"{final_error} No configured Supadata key could fetch native captions; "
+        "use the pasted transcript fallback to continue."
+    )
 
 
 def clean_transcript_text(text: str) -> str:

@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 USER_AGENT = "Mozilla/5.0 (compatible; ClaimLens/0.1)"
+SUPADATA_BASE_URL = "https://api.supadata.ai/v1"
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,144 @@ class TranscriptResult:
 
 class YouTubeError(RuntimeError):
     """Raised when YouTube discovery or transcript extraction fails."""
+
+
+class SupadataError(RuntimeError):
+    """Raised when Supadata native transcript extraction cannot continue."""
+
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class SupadataAuthError(SupadataError):
+    """Raised for invalid Supadata credentials."""
+
+
+class SupadataQuotaError(SupadataError):
+    """Raised when a Supadata key has exhausted available quota."""
+
+
+class SupadataTranscriptUnavailable(SupadataError):
+    """Raised when Supadata native captions are unavailable."""
+
+
+@dataclass(frozen=True)
+class SupadataAccountInfo:
+    max_credits: int | None
+    used_credits: int | None
+
+
+class SupadataClient:
+    """Small native-only Supadata client."""
+
+    def __init__(self, *, api_key: str, base_url: str = SUPADATA_BASE_URL, timeout: int = 30):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+
+    def fetch_native_transcript(
+        self,
+        *,
+        video_url: str,
+        video_id: str,
+        language: str | None = None,
+    ) -> TranscriptResult:
+        params = {
+            "url": video_url,
+            "text": "false",
+            "mode": "native",
+        }
+        if language:
+            params["lang"] = language
+        body = self._get_json("/transcript", params=params)
+        if "jobId" in body:
+            raise SupadataTranscriptUnavailable(
+                "Supadata returned an asynchronous transcript job; native captions are not ready."
+            )
+        content = body.get("content")
+        if isinstance(content, str):
+            text = content.strip()
+            if not text:
+                raise SupadataTranscriptUnavailable("Supadata native transcript was empty.")
+            return TranscriptResult(
+                video_id=video_id,
+                source="supadata-native",
+                language=str(body.get("lang") or language or "unknown"),
+                text=text,
+                segments=[],
+            )
+        if not isinstance(content, list) or not content:
+            raise SupadataTranscriptUnavailable("Supadata native transcript was unavailable.")
+
+        segments = []
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            segment_text = str(item.get("text") or "").strip()
+            if not segment_text:
+                continue
+            offset = _number(item.get("offset")) or 0.0
+            duration = _number(item.get("duration")) or 0.0
+            start = offset / 1000.0
+            segments.append(
+                TranscriptSegment(
+                    start_seconds=start,
+                    end_seconds=start + (duration / 1000.0),
+                    text=segment_text,
+                )
+            )
+        if not segments:
+            raise SupadataTranscriptUnavailable("Supadata native transcript had no text segments.")
+        return TranscriptResult(
+            video_id=video_id,
+            source="supadata-native",
+            language=str(body.get("lang") or content[0].get("lang") or language or "unknown"),
+            text="\n".join(segment.text for segment in segments),
+            segments=segments,
+        )
+
+    def account_info(self) -> SupadataAccountInfo:
+        body = self._get_json("/me", params={})
+        return SupadataAccountInfo(
+            max_credits=_int_value(body.get("maxCredits")),
+            used_credits=_int_value(body.get("usedCredits")),
+        )
+
+    def _get_json(self, path: str, *, params: dict[str, str]) -> dict[str, Any]:
+        query = f"?{urlencode(params)}" if params else ""
+        request = Request(
+            f"{self.base_url}{path}{query}",
+            headers={
+                "User-Agent": USER_AGENT,
+                "x-api-key": self.api_key,
+                "Accept": "application/json",
+            },
+        )
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                payload = response.read().decode("utf-8", "ignore")
+        except HTTPError as exc:
+            self._raise_http_error(exc)
+        except Exception as exc:
+            raise SupadataError(f"Supadata request failed: {exc}") from exc
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise SupadataError("Supadata returned invalid JSON.") from exc
+        if not isinstance(data, dict):
+            raise SupadataError("Supadata returned an unexpected response.")
+        return data
+
+    def _raise_http_error(self, exc: HTTPError) -> None:
+        message = _supadata_error_message(exc)
+        if exc.code == 401:
+            raise SupadataAuthError(message, status_code=exc.code) from exc
+        if exc.code in {402, 429}:
+            raise SupadataQuotaError(message, status_code=exc.code) from exc
+        if exc.code in {206, 404}:
+            raise SupadataTranscriptUnavailable(message, status_code=exc.code) from exc
+        raise SupadataError(message, status_code=exc.code) from exc
 
 
 def fetch_video_metadata(video_url: str, *, timeout: int = 5) -> YouTubeVideo | None:
@@ -117,6 +257,34 @@ def _read_url(url: str, *, timeout: int = 30) -> str:
     )
     with urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8", "ignore")
+
+
+def _supadata_error_message(exc: HTTPError) -> str:
+    try:
+        payload = exc.read().decode("utf-8", "ignore")
+        data = json.loads(payload)
+    except Exception:
+        data = {}
+    if isinstance(data, dict):
+        for key in ("message", "error", "details"):
+            value = data.get(key)
+            if value:
+                return f"Supadata error {exc.code}: {value}"
+    return f"Supadata error {exc.code}"
+
+
+def _number(value: object) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_value(value: object) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _video_id_from_url(video_url: str) -> str | None:
