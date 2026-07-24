@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from claimlens import db
@@ -140,6 +141,12 @@ def test_analyze_cleaned_transcript_bounds_long_transcripts(tmp_path):
         video_id=run["video_id"],
         client=BoundedClient(),
         max_chars=1200,
+    )
+    analysis = db.latest_analysis(database, run["video_id"])
+    details = json.loads(analysis["key_points_json"])
+    assert any(
+        "characters from the middle were omitted" in note
+        for note in details["editorial_notes"]
     )
 
 

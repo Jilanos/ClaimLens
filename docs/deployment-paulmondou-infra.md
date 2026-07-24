@@ -95,6 +95,11 @@ DEPLOY_APP_REPOS="ClaimLens:../ClaimLens:ClaimLens" \
 - PubMed and Semantic Scholar can run without keys; saved user keys only improve quotas.
 - `CLAIMLENS_KAPSULE_DB` lets ClaimLens verify existing Kapsule accounts against the Kapsule
   SQLite database mounted read-only. ClaimLens creates only its own local user/session rows.
+- Web action limits are persisted in the ClaimLens SQLite database and keyed by authenticated account
+  or guest token, not by the Caddy socket address. Keep the deployment on one ClaimLens application
+  process unless a shared job and session architecture is introduced.
+- Jobs interrupted by an application restart are surfaced as retryable interruptions rather than
+  remaining indefinitely in `running`.
 
 ## VPS transcript fallback
 

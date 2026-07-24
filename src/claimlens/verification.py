@@ -24,6 +24,7 @@ HUMAN_REVIEW_DISCLAIMER = (
 )
 DEFAULT_ADAPTERS = ("pubmed", "semantic_scholar")
 LOGGER = logging.getLogger(__name__)
+SOURCE_COOLDOWNS: dict[str, float] = {}
 
 
 class VerificationError(RuntimeError):
@@ -90,12 +91,18 @@ class SourceAdapter(Protocol):
 
 
 def build_claim_query(claim: str) -> str:
+    stop_words = {
+        "the", "and", "that", "with", "from", "this", "have", "has", "been",
+        "being", "for", "than", "more", "less", "very", "only", "you", "your",
+        "they", "their", "into", "what", "when", "where", "were", "will", "does",
+        "are", "can", "just", "about", "often", "most",
+    }
     words = [
         word.lower()
         for word in re.findall(r"[A-Za-z][A-Za-z0-9-]{2,}", claim)
-        if word.lower() not in {"the", "and", "that", "with", "from", "this", "have", "has"}
+        if word.lower() not in stop_words
     ]
-    return " ".join(words[:12])
+    return " ".join(words[:16])
 
 
 class PubMedAdapter:
@@ -364,11 +371,15 @@ def default_adapters(
     *,
     semantic_scholar_key: str | None,
     ncbi_key: str | None,
+    enable_pubmed: bool = True,
+    enable_semantic_scholar: bool = True,
 ) -> list[SourceAdapter]:
-    return [
-        PubMedAdapter(api_key=ncbi_key),
-        SemanticScholarAdapter(api_key=semantic_scholar_key),
-    ]
+    adapters: list[SourceAdapter] = []
+    if enable_pubmed:
+        adapters.append(PubMedAdapter(api_key=ncbi_key))
+    if enable_semantic_scholar:
+        adapters.append(SemanticScholarAdapter(api_key=semantic_scholar_key))
+    return adapters
 
 
 def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSearchResult:
@@ -376,55 +387,68 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
     errors: list[str] = []
     outcomes: list[dict] = []
     for adapter in adapters:
-        retry_count = 0
-        while True:
-            try:
-                adapter_candidates = adapter.search(query)
-                candidates.extend(adapter_candidates)
-                outcomes.append(
-                    {
-                        "adapter": adapter.name,
-                        "status": "candidates" if adapter_candidates else "no_candidates",
-                        "candidate_count": len(adapter_candidates),
-                        "message": None if adapter_candidates else "No candidates returned.",
-                    }
-                )
-                break
-            except SourceRateLimitError as exc:
-                if retry_count == 0:
-                    retry_count += 1
-                    delay = min(exc.retry_after_seconds or 1, 3)
-                    time.sleep(delay)
-                    continue
-                message = f"Rate limited (HTTP 429) after {retry_count} retry."
-                LOGGER.warning(
-                    "Source adapter rate limited for claim %s: %s",
-                    query.claim_id,
-                    adapter.name,
-                )
-                errors.append(f"{adapter.name}: {message}")
-                outcomes.append(
-                    {
-                        "adapter": adapter.name,
-                        "status": "rate_limited",
-                        "candidate_count": 0,
-                        "message": message,
-                    }
-                )
-                break
-            except Exception as exc:
-                message = str(exc)
-                LOGGER.warning("Source adapter failed for claim %s: %s", query.claim_id, message)
-                errors.append(f"{adapter.name}: {message}")
-                outcomes.append(
-                    {
-                        "adapter": adapter.name,
-                        "status": "error",
-                        "candidate_count": 0,
-                        "message": message,
-                    }
-                )
-                break
+        query_text = build_claim_query(query.claim)
+        cooldown_remaining = SOURCE_COOLDOWNS.get(adapter.name, 0.0) - time.monotonic()
+        if cooldown_remaining > 0:
+            message = f"Provider cooldown active; retry after {int(cooldown_remaining) + 1}s."
+            errors.append(f"{adapter.name}: {message}")
+            outcomes.append(
+                {
+                    "adapter": adapter.name,
+                    "status": "rate_limited",
+                    "candidate_count": 0,
+                    "message": message,
+                    "query": query_text,
+                }
+            )
+            continue
+        try:
+            adapter_candidates = adapter.search(query)
+            candidates.extend(adapter_candidates)
+            outcomes.append(
+                {
+                    "adapter": adapter.name,
+                    "status": "candidates" if adapter_candidates else "no_candidates",
+                    "candidate_count": len(adapter_candidates),
+                    "message": None if adapter_candidates else "No candidates returned.",
+                    "query": query_text,
+                }
+            )
+        except SourceRateLimitError as exc:
+            delay = max(1, exc.retry_after_seconds or 3)
+            SOURCE_COOLDOWNS[adapter.name] = max(
+                SOURCE_COOLDOWNS.get(adapter.name, 0.0),
+                time.monotonic() + delay,
+            )
+            message = f"Rate limited (HTTP 429); retry after {delay}s."
+            LOGGER.warning(
+                "Source adapter rate limited for claim %s: %s",
+                query.claim_id,
+                adapter.name,
+            )
+            errors.append(f"{adapter.name}: {message}")
+            outcomes.append(
+                {
+                    "adapter": adapter.name,
+                    "status": "rate_limited",
+                    "candidate_count": 0,
+                    "message": message,
+                    "query": query_text,
+                }
+            )
+        except Exception as exc:
+            message = str(exc)
+            LOGGER.warning("Source adapter failed for claim %s: %s", query.claim_id, message)
+            errors.append(f"{adapter.name}: {message}")
+            outcomes.append(
+                {
+                    "adapter": adapter.name,
+                    "status": "error",
+                    "candidate_count": 0,
+                    "message": message,
+                    "query": query_text,
+                }
+            )
     return AdapterSearchResult(candidates=candidates, errors=errors, outcomes=outcomes)
 
 

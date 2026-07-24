@@ -24,6 +24,7 @@
 | [prod_011_validate_supadata_first_fallback_delivery](product/prod_011_validate_supadata_first_fallback_delivery.md) | Validate Supadata-first fallback delivery | Proposed |  |  | product/prod_011_validate_supadata_first_fallback_delivery.md |
 | [prod_012_claimlens_supadata_first_transcript_deployment](product/prod_012_claimlens_supadata_first_transcript_deployment.md) | ClaimLens Supadata-first transcript deployment | Superseded |  |  | product/prod_012_claimlens_supadata_first_transcript_deployment.md |
 | [prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results](product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md) | Live ClaimLens process feedback and trustworthy verification results | Settled |  |  | product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md |
+| [prod_014_reliable_claimlens_jobs_and_evidence_aware_reports](product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md) | Reliable ClaimLens jobs and evidence-aware reports | Settled |  |  | product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md |
 
 ## Roadmaps
 
@@ -43,6 +44,7 @@ _None_
 | [req_007_supadata_native_transcript_key_rotation](request/req_007_supadata_native_transcript_key_rotation.md) | Supadata Native Transcript Key Rotation | Done |  |  | request/req_007_supadata_native_transcript_key_rotation.md |
 | [req_008_supadata_first_provider_order_fix](request/req_008_supadata_first_provider_order_fix.md) | Enable Supadata-first transcript provider order in deployment | Done |  |  | request/req_008_supadata_first_provider_order_fix.md |
 | [req_009_make_process_state_live_and_verification_outcomes_actionable](request/req_009_make_process_state_live_and_verification_outcomes_actionable.md) | Make process state live and verification outcomes actionable | Done |  |  | request/req_009_make_process_state_live_and_verification_outcomes_actionable.md |
+| [req_010_harden_claimlens_production_reliability_and_verification_integrity](request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md) | Harden ClaimLens production reliability and verification integrity | Done |  |  | request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md |
 
 ## Backlog
 
@@ -109,6 +111,12 @@ _None_
 | [item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs](backlog/item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs.md) | Reflow cleaned transcript segments into readable paragraphs | Done |  | 100% | backlog/item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs.md |
 | [item_060_report_source_verification_limits_and_rate_limited_adapters_honestly](backlog/item_060_report_source_verification_limits_and_rate_limited_adapters_honestly.md) | Report source verification limits and rate-limited adapters honestly | Done |  | 100% | backlog/item_060_report_source_verification_limits_and_rate_limited_adapters_honestly.md |
 | [item_061_validate_live_process_feedback_and_verification_outcome_delivery](backlog/item_061_validate_live_process_feedback_and_verification_outcome_delivery.md) | Validate live process feedback and verification outcome delivery | Done |  | 100% | backlog/item_061_validate_live_process_feedback_and_verification_outcome_delivery.md |
+| [item_062_recover_durable_jobs_after_process_restart](backlog/item_062_recover_durable_jobs_after_process_restart.md) | Recover durable jobs after process restart | Done |  | 100% | backlog/item_062_recover_durable_jobs_after_process_restart.md |
+| [item_063_make_web_action_rate_limits_proxy_aware_and_durable](backlog/item_063_make_web_action_rate_limits_proxy_aware_and_durable.md) | Make web action rate limits proxy-aware and durable | Done |  | 100% | backlog/item_063_make_web_action_rate_limits_proxy_aware_and_durable.md |
+| [item_064_apply_source_verification_configuration_switches](backlog/item_064_apply_source_verification_configuration_switches.md) | Apply source-verification configuration switches | Done |  | 100% | backlog/item_064_apply_source_verification_configuration_switches.md |
+| [item_065_control_source_provider_quotas_and_report_verification_truthfully](backlog/item_065_control_source_provider_quotas_and_report_verification_truthfully.md) | Control source-provider quotas and report verification truthfully | Done |  | 100% | backlog/item_065_control_source_provider_quotas_and_report_verification_truthfully.md |
+| [item_066_improve_claim_retrieval_relevance_and_transcript_coverage](backlog/item_066_improve_claim_retrieval_relevance_and_transcript_coverage.md) | Improve claim retrieval relevance and transcript coverage | Done |  | 100% | backlog/item_066_improve_claim_retrieval_relevance_and_transcript_coverage.md |
+| [item_067_add_production_workflow_integration_coverage](backlog/item_067_add_production_workflow_integration_coverage.md) | Add production workflow integration coverage | Done |  | 100% | backlog/item_067_add_production_workflow_integration_coverage.md |
 
 ## Tasks
 
@@ -124,3 +132,4 @@ _None_
 | [task_008_orchestrate_supadata_native_transcript_key_rotation](tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md) | Orchestrate Supadata Native Transcript Key Rotation | Done | codex | 100% | tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md |
 | [task_009_orchestrate_supadata_first_deployment_provider_fix](tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md) | Orchestrate Supadata-first deployment provider fix | Done | codex | 100% | tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md |
 | [task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery](tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md) | Orchestrate live process feedback and verification reliability delivery | Done | codex | 100% | tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md |
+| [task_011_orchestrate_production_reliability_and_verification_integrity_hardening](tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md) | Orchestrate production reliability and verification integrity hardening | Done | codex | 100% | tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md |

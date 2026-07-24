@@ -220,6 +220,15 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_run_action ON jobs(run_id, action);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 
+CREATE TABLE IF NOT EXISTS rate_limit_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    identity TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rate_limit_events_identity_created
+ON rate_limit_events(identity, created_at);
+
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
@@ -361,6 +370,21 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             finished_at TEXT
         )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS rate_limit_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_rate_limit_events_identity_created
+        ON rate_limit_events(identity, created_at)
         """
     )
     connection.execute(
@@ -1246,6 +1270,62 @@ def latest_jobs_for_run(database_path: Path | str, run_id: int) -> list[sqlite3.
             """,
             (run_id,),
         ).fetchall()
+
+
+def recover_orphaned_jobs(database_path: Path | str) -> int:
+    """Make in-process jobs retryable after an application restart."""
+
+    with closing(connect(database_path)) as connection:
+        with connection:
+            cursor = connection.execute(
+                """
+                UPDATE jobs
+                SET status = 'interrupted',
+                    message = 'Interrupted by application restart; retry this action.',
+                    updated_at = CURRENT_TIMESTAMP,
+                    finished_at = CURRENT_TIMESTAMP
+                WHERE status IN ('queued', 'running')
+                """
+            )
+    return cursor.rowcount
+
+
+def record_rate_limit_event(
+    database_path: Path | str,
+    *,
+    identity: str,
+    window_seconds: int,
+    max_actions: int,
+) -> bool:
+    """Atomically record an action when the identity is below its limit."""
+
+    with closing(connect(database_path)) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            modifier = f"-{max(1, int(window_seconds))} seconds"
+            connection.execute(
+                "DELETE FROM rate_limit_events WHERE created_at < datetime('now', ?)",
+                (modifier,),
+            )
+            count = connection.execute(
+                """
+                SELECT COUNT(*) FROM rate_limit_events
+                WHERE identity = ? AND created_at >= datetime('now', ?)
+                """,
+                (identity, modifier),
+            ).fetchone()[0]
+            if count >= max_actions:
+                connection.rollback()
+                return False
+            connection.execute(
+                "INSERT INTO rate_limit_events (identity) VALUES (?)",
+                (identity,),
+            )
+            connection.commit()
+            return True
+        except Exception:
+            connection.rollback()
+            raise
 
 
 def create_user(

@@ -333,12 +333,20 @@ def _brief(args: argparse.Namespace) -> int:
 
 def _verify_sources(args: argparse.Namespace) -> int:
     config = load_config(args.config)
+    if not config.sources.advanced_source_verification:
+        print("Advanced source verification is disabled in configuration.")
+        return 1
     database_path = args.database or config.paths.database
     init_db(database_path)
     adapters = default_adapters(
         semantic_scholar_key=args.semantic_scholar_api_key or config.api_keys.semantic_scholar,
         ncbi_key=args.ncbi_api_key or config.api_keys.ncbi,
+        enable_pubmed=config.sources.enable_pubmed,
+        enable_semantic_scholar=config.sources.enable_semantic_scholar,
     )
+    if not adapters:
+        print("No source-verification adapters are enabled in configuration.")
+        return 1
     try:
         verification_run_id = verify_sources(
             database_path,

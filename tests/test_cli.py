@@ -72,7 +72,7 @@ def test_source_check_requires_analysis(tmp_path, capsys):
     exit_code = main(["source-check", "video123", "--database", str(database)])
 
     assert exit_code == 1
-    assert "Cannot verify sources before analysis exists" in capsys.readouterr().out
+    assert "Advanced source verification is disabled" in capsys.readouterr().out
 
 
 def test_transcribe_channel_is_disabled_for_online_readiness(tmp_path, capsys):

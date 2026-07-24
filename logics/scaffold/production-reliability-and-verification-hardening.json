@@ -1,0 +1,219 @@
+{
+  "title": "Harden ClaimLens production reliability and verification integrity",
+  "references": [
+    "src/claimlens/web.py",
+    "src/claimlens/db.py",
+    "src/claimlens/config.py",
+    "src/claimlens/verification.py",
+    "src/claimlens/analysis.py",
+    "src/claimlens/briefs.py",
+    "src/claimlens/pipeline.py",
+    "tests/test_analysis_briefs_web.py",
+    "tests/test_db.py",
+    "tests/test_verification.py",
+    "docs/deployment-paulmondou-infra.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Production reliability and evidence integrity",
+    "needs": [
+      "Make persisted web jobs recoverable after a process or container restart so a queued or running action cannot remain permanently blocked.",
+      "Make action rate limiting correct behind the documented Caddy reverse proxy and fair across users.",
+      "Apply the configured source-verification switches consistently in the CLI and web workflows.",
+      "Handle provider quotas without retry storms and ensure verification artifacts describe their actual evidentiary status.",
+      "Improve claim retrieval relevance and long-transcript coverage so reports do not silently overstate their scope.",
+      "Cover the browser-facing live workflow and operational recovery paths with deterministic integration tests."
+    ],
+    "context": [
+      "Jobs are inserted into SQLite and then submitted to an in-process ThreadPoolExecutor. A restart loses the executor queue while queued or running rows still reject the same action.",
+      "The deployment uses Caddy as a reverse proxy, while the current in-memory rate limiter keys actions by the direct socket peer IP.",
+      "Source configuration flags are loaded but the web flow unconditionally constructs PubMed and Semantic Scholar adapters.",
+      "Semantic Scholar HTTP 429 is retried after a delay capped at three seconds for every claim, which can repeatedly call a provider still in cooldown.",
+      "A completed-with-warnings verification writes a file named .verified.md and retains a source-verified report heading even when no usable evidence exists.",
+      "Verification searches use the first twelve filtered claim words and analysis truncates long transcripts to their head and tail without exposing coverage in the final report.",
+      "Existing tests cover state helper functions but do not exercise the HTTP polling flow, container restart recovery, or reverse-proxy client identity behavior."
+    ],
+    "acceptance_criteria": [
+      "On application startup, every stale queued or running job is deterministically recovered, resumed, or moved to a retryable terminal state with an actionable message; no stale row can prevent the user from submitting the action again.",
+      "Job execution has a recorded lease or heartbeat and bounded timeout policy, and the Process page represents orphaned work as failed or retryable rather than indefinitely running.",
+      "In the documented Caddy deployment, rate limits use a trusted client identity or an authenticated account/session identity; a shared proxy IP cannot exhaust every user's action budget, and forwarded headers are never trusted from arbitrary direct clients.",
+      "Rate-limit state is suitable for the deployed process model and persists or is explicitly centralized when multiple instances are enabled.",
+      "The advanced source-verification, PubMed, Semantic Scholar, and web-search configuration switches control the adapters and controls actually exposed by both CLI and web workflows.",
+      "A provider HTTP 429 creates a shared cooldown that honors Retry-After when present, avoids premature retries, and gives a retry/remediation state without repeatedly consuming worker capacity for each claim.",
+      "A report is described as source verified only when usable evidence was retrieved; all-warning or no-evidence attempts are exported and displayed with distinct names, status, and adapter diagnostics.",
+      "Claim search queries are generated or normalized for retrieval relevance, adapter selection is domain-aware, and each verification run has a configured claim and time budget.",
+      "Long transcript analysis preserves coverage across the full transcript through chunking and consolidation, or visibly records the exact omitted coverage in the resulting report.",
+      "Deterministic tests cover restart recovery, rate-limit client identity, source configuration switches, provider cooldown behavior, report status semantics, long-transcript coverage, and authenticated HTTP polling. Ruff, pytest, Logics lint, and Logics audit pass before closeout."
+    ]
+  },
+  "product": {
+    "title": "Reliable ClaimLens jobs and evidence-aware reports",
+    "overview": "ClaimLens needs to remain correct when workers restart, traffic passes through its documented proxy, and scholarly providers are limited. Its reports must distinguish retrieved evidence from an incomplete verification attempt and disclose the coverage of the analysis.",
+    "goals": [
+      "Prevent abandoned asynchronous work from blocking user workflows.",
+      "Protect provider quotas and make rate limits understandable and recoverable.",
+      "Make configuration flags operational rather than declarative.",
+      "Improve the truthfulness, relevance, and coverage transparency of verification reports.",
+      "Establish end-to-end regression coverage for production-critical workflows."
+    ],
+    "non_goals": [
+      "Introduce an unbounded background worker fleet or a paid queue service without a deployment decision.",
+      "Claim clinical or scientific certainty from retrieved literature candidates.",
+      "Enable untrusted forwarded headers or remove existing authorization checks.",
+      "Run live third-party provider calls in the automated test suite."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Recover durable jobs after process restart",
+      "priority": "Critical",
+      "complexity": "High",
+      "theme": "Job durability",
+      "request_acs": ["AC1", "AC2"],
+      "problem": [
+        "SQLite preserves queued and running job rows while the in-process executor loses them on restart, leaving runs permanently blocked from retrying the same action."
+      ],
+      "scope_in": [
+        "Add durable job lease, heartbeat, stale-job reconciliation, and retryable terminal states.",
+        "Define a bounded execution timeout and Process-page representation for interrupted work.",
+        "Add startup and failure-path tests."
+      ],
+      "scope_out": [
+        "Distributed task processing across arbitrary hosts.",
+        "Fine-grained percentage progress for opaque third-party calls."
+      ],
+      "acceptance_criteria": [
+        "Restarting after job submission never leaves an unrepeatable queued or running action.",
+        "The user can retry recovered work and sees an actionable interruption message."
+      ]
+    },
+    {
+      "title": "Make web action rate limits proxy-aware and durable",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Deployment security",
+      "request_acs": ["AC3", "AC4"],
+      "problem": [
+        "The Caddy deployment makes the proxy IP the direct client address, so the current process-local limiter pools every user's quota and resets on restart."
+      ],
+      "scope_in": [
+        "Define a trusted-proxy client identity contract.",
+        "Rate limit by authenticated account/session or validated client identity.",
+        "Persist or centralize state according to the supported deployment topology."
+      ],
+      "scope_out": [
+        "Trusting arbitrary X-Forwarded-For headers from the public network.",
+        "Introducing user billing or subscription quotas."
+      ],
+      "acceptance_criteria": [
+        "Two users behind Caddy do not share an action quota solely because they share a proxy.",
+        "Direct requests cannot spoof another client's rate-limit identity."
+      ]
+    },
+    {
+      "title": "Apply source-verification configuration switches",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Configuration correctness",
+      "request_acs": ["AC5"],
+      "problem": [
+        "Source configuration flags are parsed but PubMed and Semantic Scholar adapters are always instantiated by the application workflows."
+      ],
+      "scope_in": [
+        "Build adapters from SourceConfig for CLI and web paths.",
+        "Hide or reject unavailable verification actions with a clear message.",
+        "Test every enabled and disabled adapter combination."
+      ],
+      "scope_out": [
+        "Adding a provider implementation without an explicit product decision."
+      ],
+      "acceptance_criteria": [
+        "Disabled adapters receive no network calls and are absent from outcome reporting.",
+        "The advanced verification switch has an observable, documented effect."
+      ]
+    },
+    {
+      "title": "Control source-provider quotas and report verification truthfully",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Verification resilience",
+      "request_acs": ["AC6", "AC7"],
+      "problem": [
+        "Per-claim retries capped at three seconds can amplify HTTP 429 responses, while no-evidence attempts still create a .verified.md artifact."
+      ],
+      "scope_in": [
+        "Implement provider-level cooldown, Retry-After handling, bounded retries, and remediation states.",
+        "Separate verified evidence reports from incomplete verification-attempt reports.",
+        "Expose adapter diagnostics in the UI and exported Markdown."
+      ],
+      "scope_out": [
+        "Guaranteeing a research source for every claim.",
+        "Presenting literature candidates as medical advice."
+      ],
+      "acceptance_criteria": [
+        "A 429 does not cause an early repeated request while the provider cooldown remains active.",
+        "An all-warning result cannot be mistaken for a successful source-verified report."
+      ]
+    },
+    {
+      "title": "Improve claim retrieval relevance and transcript coverage",
+      "priority": "Medium",
+      "complexity": "High",
+      "theme": "Evidence quality",
+      "request_acs": ["AC8", "AC9"],
+      "problem": [
+        "The first twelve filtered words of a claim are often a poor scholarly query, and long video analysis omits the middle of the transcript without a report-level coverage signal."
+      ],
+      "scope_in": [
+        "Define domain-aware retrieval query generation and claim/time budgets.",
+        "Chunk and consolidate long transcripts or disclose omitted coverage in every affected report.",
+        "Add representative fitness and long-transcript fixtures."
+      ],
+      "scope_out": [
+        "Replacing human expert review for health or science claims."
+      ],
+      "acceptance_criteria": [
+        "The verification workflow records the final retrieval query and its adapter selection for auditability.",
+        "A long transcript report states its coverage or derives claims from all chunks."
+      ]
+    },
+    {
+      "title": "Add production workflow integration coverage",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Regression prevention",
+      "request_acs": ["AC10"],
+      "problem": [
+        "Current unit tests do not verify the actual HTTP polling lifecycle, restart recovery, or deployment-sensitive client identity behavior."
+      ],
+      "scope_in": [
+        "Add deterministic HTTP integration tests for polling authorization and terminal updates.",
+        "Add restart, stale-job, configuration, cooldown, and report-semantic regression tests.",
+        "Document the supported operational behavior and validation commands."
+      ],
+      "scope_out": [
+        "Live API calls in CI.",
+        "Browser visual regression infrastructure beyond the critical workflow coverage."
+      ],
+      "acceptance_criteria": [
+        "The focused integration suite reproduces the previously stuck-job condition and proves the recovery behavior.",
+        "All repository and Logics validation commands pass without external credentials."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate production reliability and verification integrity hardening",
+    "plan": [
+      "Establish durable job recovery and proxy-safe rate limiting before modifying higher-level workflow behavior.",
+      "Make source configuration and provider quota behavior enforceable in shared adapter construction.",
+      "Separate verification attempt semantics from evidence-backed verification artifacts.",
+      "Improve retrieval and transcript coverage with explicit budgets and disclosure.",
+      "Validate the HTTP, restart, proxy, provider, and report paths before closeout."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/production-reliability-and-verification-hardening.json",
+    "mode": "full",
+    "profile": "normal"
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "budgets": {
+    "max_docs": 32,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_010_harden_claimlens_production_reliability_and_verification_integrity item_062_recover_durable_jobs_after_process_restart item_063_make_web_action_rate_limits_proxy_aware_and_durable item_064_apply_source_verification_configuration_switches item_065_control_source_provider_quotas_and_report_verification_truthfully item_066_improve_claim_retrieval_relevance_and_transcript_coverage item_067_add_production_workflow_integration_coverage task_011_orchestrate_production_reliability_and_verification_integrity_hardening --mode full --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_062_recover_durable_jobs_after_process_restart",
+          "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+          "item_064_apply_source_verification_configuration_switches",
+          "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+          "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+          "item_067_add_production_workflow_integration_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md",
+      "ref": "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports",
+      "sections": {
+        "Goals": [
+          "- Prevent abandoned asynchronous work from blocking user workflows.",
+          "- Protect provider quotas and make rate limits understandable and recoverable.",
+          "- Make configuration flags operational rather than declarative.",
+          "- Improve the truthfulness, relevance, and coverage transparency of verification reports.",
+          "- Establish end-to-end regression coverage for production-critical workflows."
+        ],
+        "Key product decisions": [
+          "- Use structured input as the source of truth for generated docs.",
+          "- Keep generated write paths local and repo-bounded."
+        ],
+        "Overview": [
+          "ClaimLens needs to remain correct when workers restart, traffic passes through its documented proxy, and scholarly providers are limited. Its reports must distinguish retrieved evidence from an incomplete verification attempt and disclose the coverage of the analysis."
+        ],
+        "References": [
+          "- Product back-reference: `req_010_harden_claimlens_production_reliability_and_verification_integrity`",
+          "- Task back-reference: `task_011_orchestrate_production_reliability_and_verification_integrity_hardening`"
+        ]
+      },
+      "status": "Proposed",
+      "title": "Reliable ClaimLens jobs and evidence-aware reports"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, harden claimlens production reliability and verification integrity, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Harden ClaimLens production reliability and verification integrity",
+        "use when": "You need to implement or review the scaffolded workflow for Harden ClaimLens production reliability and verification integrity."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_062_recover_durable_jobs_after_process_restart",
+          "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+          "item_064_apply_source_verification_configuration_switches",
+          "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+          "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+          "item_067_add_production_workflow_integration_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ]
+      },
+      "path": "logics/request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md",
+      "ref": "req_010_harden_claimlens_production_reliability_and_verification_integrity",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- On application startup, every stale queued or running job is deterministically recovered, resumed, or moved to a retryable terminal state with an actionable message; no stale row can prevent the user from submitting the action again.",
+          "- Job execution has a recorded lease or heartbeat and bounded timeout policy, and the Process page represents orphaned work as failed or retryable rather than indefinitely running.",
+          "- In the documented Caddy deployment, rate limits use a trusted client identity or an authenticated account/session identity; a shared proxy IP cannot exhaust every user's action budget, and forwarded headers are never trusted from arbitrary direct clients.",
+          "- Rate-limit state is suitable for the deployed process model and persists or is explicitly centralized when multiple instances are enabled.",
+          "- The advanced source-verification, PubMed, Semantic Scholar, and web-search configuration switches control the adapters and controls actually exposed by both CLI and web workflows.",
+          "- A provider HTTP 429 creates a shared cooldown that honors Retry-After when present, avoids premature retries, and gives a retry/remediation state without repeatedly consuming worker capacity for each claim."
+        ],
+        "Needs": [
+          "- Make persisted web jobs recoverable after a process or container restart so a queued or running action cannot remain permanently blocked.",
+          "- Make action rate limiting correct behind the documented Caddy reverse proxy and fair across users.",
+          "- Apply the configured source-verification switches consistently in the CLI and web workflows.",
+          "- Handle provider quotas without retry storms and ensure verification artifacts describe their actual evidentiary status.",
+          "- Improve claim retrieval relevance and long-transcript coverage so reports do not silently overstate their scope.",
+          "- Cover the browser-facing live workflow and operational recovery paths with deterministic integration tests."
+        ]
+      },
+      "status": "Draft",
+      "title": "Harden ClaimLens production reliability and verification integrity"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, recover durable jobs after process restart, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Recover durable jobs after process restart",
+        "use when": "Implementing the scaffolded slice for Recover durable jobs after process restart."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_062_recover_durable_jobs_after_process_restart"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_062_recover_durable_jobs_after_process_restart.md",
+      "ref": "item_062_recover_durable_jobs_after_process_restart",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Restarting after job submission never leaves an unrepeatable queued or running action.",
+          "- The user can retry recovered work and sees an actionable interruption message."
+        ],
+        "Problem": [
+          "- SQLite preserves queued and running job rows while the in-process executor loses them on restart, leaving runs permanently blocked from retrying the same action."
+        ]
+      },
+      "status": "Ready",
+      "title": "Recover durable jobs after process restart"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make web action rate limits proxy-aware and durable, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make web action rate limits proxy-aware and durable",
+        "use when": "Implementing the scaffolded slice for Make web action rate limits proxy-aware and durable."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_063_make_web_action_rate_limits_proxy_aware_and_durable"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_063_make_web_action_rate_limits_proxy_aware_and_durable.md",
+      "ref": "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Two users behind Caddy do not share an action quota solely because they share a proxy.",
+          "- Direct requests cannot spoof another client's rate-limit identity."
+        ],
+        "Problem": [
+          "- The Caddy deployment makes the proxy IP the direct client address, so the current process-local limiter pools every user's quota and resets on restart."
+        ]
+      },
+      "status": "Ready",
+      "title": "Make web action rate limits proxy-aware and durable"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, apply source-verification configuration switches, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Apply source-verification configuration switches",
+        "use when": "Implementing the scaffolded slice for Apply source-verification configuration switches."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_064_apply_source_verification_configuration_switches"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_064_apply_source_verification_configuration_switches.md",
+      "ref": "item_064_apply_source_verification_configuration_switches",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Disabled adapters receive no network calls and are absent from outcome reporting.",
+          "- The advanced verification switch has an observable, documented effect."
+        ],
+        "Problem": [
+          "- Source configuration flags are parsed but PubMed and Semantic Scholar adapters are always instantiated by the application workflows."
+        ]
+      },
+      "status": "Ready",
+      "title": "Apply source-verification configuration switches"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate production reliability and verification integrity hardening",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_062_recover_durable_jobs_after_process_restart",
+          "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+          "item_064_apply_source_verification_configuration_switches",
+          "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+          "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+          "item_067_add_production_workflow_integration_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md",
+      "ref": "task_011_orchestrate_production_reliability_and_verification_integrity_hardening",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- Run `python3 -m logics_manager lint --require-status`.",
+          "- Run scaffold command tests."
+        ]
+      },
+      "status": "Ready",
+      "title": "Orchestrate production reliability and verification integrity hardening"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_062_recover_durable_jobs_after_process_restart",
+          "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+          "item_064_apply_source_verification_configuration_switches",
+          "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+          "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+          "item_067_add_production_workflow_integration_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md",
+      "ref": "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Reliable ClaimLens jobs and evidence-aware reports"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, control source-provider quotas and report verification truthfully, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Control source-provider quotas and report verification truthfully",
+        "use when": "Implementing the scaffolded slice for Control source-provider quotas and report verification truthfully."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_065_control_source_provider_quotas_and_report_verification_truthfully"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_065_control_source_provider_quotas_and_report_verification_truthfully.md",
+      "ref": "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- A 429 does not cause an early repeated request while the provider cooldown remains active.",
+          "- An all-warning result cannot be mistaken for a successful source-verified report."
+        ],
+        "Problem": [
+          "- Per-claim retries capped at three seconds can amplify HTTP 429 responses, while no-evidence attempts still create a .verified.md artifact."
+        ]
+      },
+      "status": "Ready",
+      "title": "Control source-provider quotas and report verification truthfully"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, improve claim retrieval relevance and transcript coverage, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Improve claim retrieval relevance and transcript coverage",
+        "use when": "Implementing the scaffolded slice for Improve claim retrieval relevance and transcript coverage."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_066_improve_claim_retrieval_relevance_and_transcript_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_066_improve_claim_retrieval_relevance_and_transcript_coverage.md",
+      "ref": "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The verification workflow records the final retrieval query and its adapter selection for auditability.",
+          "- A long transcript report states its coverage or derives claims from all chunks."
+        ],
+        "Problem": [
+          "- The first twelve filtered words of a claim are often a poor scholarly query, and long video analysis omits the middle of the transcript without a report-level coverage signal."
+        ]
+      },
+      "status": "Ready",
+      "title": "Improve claim retrieval relevance and transcript coverage"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add production workflow integration coverage, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add production workflow integration coverage",
+        "use when": "Implementing the scaffolded slice for Add production workflow integration coverage."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_067_add_production_workflow_integration_coverage"
+        ],
+        "prod": [
+          "prod_014_reliable_claimlens_jobs_and_evidence_aware_reports"
+        ],
+        "req": [
+          "req_010_harden_claimlens_production_reliability_and_verification_integrity"
+        ],
+        "task": [
+          "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+        ]
+      },
+      "path": "logics/backlog/item_067_add_production_workflow_integration_coverage.md",
+      "ref": "item_067_add_production_workflow_integration_coverage",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The focused integration suite reproduces the previously stuck-job condition and proves the recovery behavior.",
+          "- All repository and Logics validation commands pass without external credentials."
+        ],
+        "Problem": [
+          "- Current unit tests do not verify the actual HTTP polling lifecycle, restart recovery, or deployment-sensitive client identity behavior."
+        ]
+      },
+      "status": "Ready",
+      "title": "Add production workflow integration coverage"
+    }
+  ],
+  "estimates": {
+    "char_count": 16136,
+    "companion_doc_count": 1,
+    "doc_count": 9
+  },
+  "generated_at": "2026-07-24T14:57:18Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_010_harden_claimlens_production_reliability_and_verification_integrity",
+      "item_062_recover_durable_jobs_after_process_restart",
+      "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+      "item_064_apply_source_verification_configuration_switches",
+      "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+      "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+      "item_067_add_production_workflow_integration_coverage",
+      "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "full",
+  "profile": "normal",
+  "ref": "req_010_harden_claimlens_production_reliability_and_verification_integrity,item_062_recover_durable_jobs_after_process_restart,item_063_make_web_action_rate_limits_proxy_aware_and_durable,item_064_apply_source_verification_configuration_switches,item_065_control_source_provider_quotas_and_report_verification_truthfully,item_066_improve_claim_retrieval_relevance_and_transcript_coverage,item_067_add_production_workflow_integration_coverage,task_011_orchestrate_production_reliability_and_verification_integrity_hardening",
+  "refs": [
+    "req_010_harden_claimlens_production_reliability_and_verification_integrity",
+    "item_062_recover_durable_jobs_after_process_restart",
+    "item_063_make_web_action_rate_limits_proxy_aware_and_durable",
+    "item_064_apply_source_verification_configuration_switches",
+    "item_065_control_source_provider_quotas_and_report_verification_truthfully",
+    "item_066_improve_claim_retrieval_relevance_and_transcript_coverage",
+    "item_067_add_production_workflow_integration_coverage",
+    "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md",
+      "ref": "task_011_orchestrate_production_reliability_and_verification_integrity_hardening"
+    }
+  ]
+}

@@ -123,6 +123,12 @@ def analyze_cleaned_transcript(
     analysis = client.analyze(transcript_text)
     if not analysis.summary:
         raise AnalysisError("Analysis response did not include a summary.")
+    editorial_notes = list(analysis.editorial_notes)
+    if len(cleaned["text"]) > max_chars:
+        editorial_notes.append(
+            f"Analysis input was limited to {max_chars} characters; approximately "
+            f"{len(cleaned['text']) - max_chars} characters from the middle were omitted."
+        )
 
     return db.upsert_analysis(
         database_path,
@@ -137,7 +143,7 @@ def analyze_cleaned_transcript(
             analysis.claim_excerpts,
         ),
         caveats=analysis.caveats,
-        editorial_notes=analysis.editorial_notes,
+        editorial_notes=editorial_notes,
     )
 
 

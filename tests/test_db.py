@@ -222,3 +222,48 @@ def test_create_job_rejects_duplicate_running_action(tmp_path):
     assert first is not None
     assert second is None
     assert third is not None
+
+
+def test_recover_orphaned_jobs_makes_restart_work_retryable(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    init_db(database)
+    db.upsert_channel(database, channel_id="manual")
+    db.upsert_video(
+        database,
+        channel_id="manual",
+        video=Video(
+            id="video123",
+            title="Video",
+            url="https://www.youtube.com/watch?v=video123",
+        ),
+    )
+    run_id = db.create_pipeline_run(
+        database,
+        video_id="video123",
+        source_url="https://www.youtube.com/watch?v=video123",
+    )
+    job_id = db.create_job(database, run_id=run_id, action="analysis")
+    db.update_job(database, job_id=job_id, status="running", progress=5)
+
+    assert db.recover_orphaned_jobs(database) == 1
+    recovered = db.latest_jobs_for_run(database, run_id)[0]
+    retry = db.create_job(database, run_id=run_id, action="analysis")
+
+    assert recovered["status"] == "interrupted"
+    assert "restart" in recovered["message"]
+    assert retry is not None
+
+
+def test_record_rate_limit_event_is_atomic_and_identity_scoped(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    init_db(database)
+
+    assert db.record_rate_limit_event(
+        database, identity="user:1", window_seconds=60, max_actions=1
+    )
+    assert not db.record_rate_limit_event(
+        database, identity="user:1", window_seconds=60, max_actions=1
+    )
+    assert db.record_rate_limit_event(
+        database, identity="user:2", window_seconds=60, max_actions=1
+    )

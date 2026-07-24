@@ -6,11 +6,14 @@ from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript
 from claimlens.briefs import generate_verified_brief
 from claimlens.pipeline import create_run
 from claimlens.verification import (
+    SOURCE_COOLDOWNS,
     SourceCandidate,
     SourceQuery,
     SourceRateLimitError,
+    _search_all,
     assess_claim_evidence,
     build_claim_query,
+    default_adapters,
     verify_sources,
 )
 from claimlens.web import render_process_page
@@ -193,9 +196,58 @@ def test_verify_sources_surfaces_no_candidates_and_rate_limits(tmp_path):
         briefs_path=tmp_path / "briefs",
     )
     markdown = report.read_text(encoding="utf-8")
+    assert report.name == "abc123XYZ_.verification-attempt.md"
     assert "completed with warnings" in markdown
     assert "semantic_scholar: rate_limited" in markdown
     assert "advanced-source-verified with PubMed/Semantic Scholar candidates" not in markdown
+
+
+def test_rate_limit_cooldown_is_shared_by_adapter(monkeypatch):
+    SOURCE_COOLDOWNS.clear()
+    clock = iter([100.0, 100.0, 101.0])
+    monkeypatch.setattr("claimlens.verification.time.monotonic", lambda: next(clock))
+
+    class RateLimited:
+        name = "semantic_scholar"
+        calls = 0
+
+        def search(self, query):
+            self.calls += 1
+            raise SourceRateLimitError("limited", retry_after_seconds=30)
+
+    adapter = RateLimited()
+    query = SourceQuery(
+        claim_id=1,
+        claim="Training strength gains",
+        video_id="video123",
+        max_results=5,
+        timeout_seconds=1,
+    )
+    first = _search_all([adapter], query)
+    second = _search_all([adapter], query)
+
+    assert adapter.calls == 1
+    assert first.outcomes[0]["status"] == "rate_limited"
+    assert second.outcomes[0]["status"] == "rate_limited"
+    SOURCE_COOLDOWNS.clear()
+
+
+def test_default_adapters_honor_source_switches():
+    assert [
+        adapter.name
+        for adapter in default_adapters(
+            semantic_scholar_key=None,
+            ncbi_key=None,
+            enable_pubmed=False,
+            enable_semantic_scholar=True,
+        )
+    ] == ["semantic_scholar"]
+    assert default_adapters(
+        semantic_scholar_key=None,
+        ncbi_key=None,
+        enable_pubmed=False,
+        enable_semantic_scholar=False,
+    ) == []
 
 
 def test_generate_verified_brief_includes_citations_and_status(tmp_path):

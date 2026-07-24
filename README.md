@@ -135,6 +135,9 @@ rate_limit_window_seconds = 300
 
 [sources]
 advanced_source_verification = false
+enable_pubmed = true
+enable_semantic_scholar = true
+enable_web_search = false
 ```
 
 The Process page polls active job state every two seconds through a run-scoped JSON endpoint and
@@ -145,9 +148,10 @@ The source verification keys are optional for local tests and some API usage, bu
 for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not
 persisted in SQLite, generated transcripts, generated briefs, or the local HTML output.
 PubMed and Semantic Scholar can run without keys; saved or environment keys only improve quota and
-reliability. Verification reports list each adapter outcome, including no candidates, timeouts, and
-rate limits. A run with warnings is not presented as fully source-verified; a Semantic Scholar HTTP
-429 is retried once with a bounded delay and then shown with remediation guidance.
+reliability. The source switches control which adapters are called. Verification reports list each
+adapter outcome, including no candidates, timeouts, and rate limits. A run with warnings is not
+presented as fully source-verified; a provider HTTP 429 activates a provider cooldown and is shown
+with remediation guidance instead of triggering repeated per-claim calls.
 
 ## Current Implementation
 
@@ -175,6 +179,9 @@ Implemented:
 - Optional Kapsule account login bridge for shared paulmondou.fr credentials.
 - Pasted transcript fallback for VPS/IP-blocked YouTube caption extraction.
 - SQLite WAL and `busy_timeout` pragmas for local concurrent web access.
+- SQLite-backed web action limits keyed by authenticated account or guest token, so Caddy's proxy IP
+  does not pool every user's action quota.
+- Orphaned in-process jobs are marked interrupted at application startup and can be retried.
 - Conservative source verification: adapter errors are logged and source verdicts no longer rely
   on title/snippet keyword polarity alone.
 
@@ -206,7 +213,9 @@ claimlens verify-sources "W7DVR9TlpOs" --database data/claimlens.sqlite3
 claimlens brief "W7DVR9TlpOs" --verified --database data/claimlens.sqlite3
 ```
 
-This writes `outputs/briefs/<video_id>.verified.md`. The verified brief includes a human-review
+This writes `outputs/briefs/<video_id>.verified.md` when usable candidates are retrieved, or
+`outputs/briefs/<video_id>.verification-attempt.md` when adapter warnings make the result incomplete.
+The verified brief includes a human-review
 disclaimer because PubMed/Semantic Scholar snippets are review aids, not final medical advice or
 scientific authority.
 

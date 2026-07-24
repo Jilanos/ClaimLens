@@ -6,7 +6,6 @@ import html
 import json
 import logging
 import secrets
-import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -25,7 +24,7 @@ from claimlens.auth import (
     verify_password,
 )
 from claimlens.briefs import generate_brief, generate_verified_brief
-from claimlens.config import AppConfig
+from claimlens.config import AppConfig, SourceConfig
 from claimlens.kapsule_auth import authenticate as authenticate_kapsule_account
 from claimlens.pipeline import (
     add_manual_transcript,
@@ -39,7 +38,6 @@ from claimlens.youtube import SupadataClient, SupadataError
 
 LOGGER = logging.getLogger(__name__)
 EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
-RATE_LIMITS: dict[str, list[float]] = {}
 
 LOGO_MARK = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
@@ -211,6 +209,7 @@ def _badge_class(status: str) -> str:
         "warning": "warn",
         "rate_limited": "warn",
         "no_candidates": "warn",
+        "interrupted": "warn",
         "failed": "bad",
         "invalid": "bad",
     }.get((status or "").lower(), "idle")
@@ -266,6 +265,9 @@ class WebContext:
 def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
     database_path = config.paths.database
     db.init_db(database_path)
+    recovered_jobs = db.recover_orphaned_jobs(database_path)
+    if recovered_jobs:
+        LOGGER.warning("Marked %s orphaned web jobs as interrupted", recovered_jobs)
     guest_csrf_token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -317,6 +319,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 user_id=context.user_id,
                 guest_token=context.guest_token,
                 context=context,
+                source_config=config.sources,
             )
             self._send_html(body)
 
@@ -332,6 +335,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     user_id=context.user_id,
                     guest_token=context.guest_token,
                     context=context,
+                    source_config=config.sources,
                 )
                 self._send_html(body, status=400)
                 return
@@ -343,13 +347,19 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     user_id=context.user_id,
                     guest_token=context.guest_token,
                     context=context,
+                    source_config=config.sources,
                 )
                 self._send_html(body, status=403)
                 return
             action = form.get("action", [""])[0]
             run_id: int | None = None
             try:
-                _check_rate_limit(self.client_address[0], config)
+                identity = (
+                    f"user:{context.user_id}"
+                    if context.user_id is not None
+                    else f"guest:{context.guest_token}"
+                )
+                _check_rate_limit(database_path, identity, config)
                 if action == "login":
                     self._handle_login(form)
                     return
@@ -416,6 +426,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     user_id=context.user_id,
                     guest_token=context.guest_token,
                     context=context,
+                    source_config=config.sources,
                 )
                 self._send_html(body, status=400)
                 return
@@ -471,6 +482,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 user_id=context.user_id,
                 guest_token=context.guest_token,
                 csrf_token=context.csrf_token,
+                source_config=config.sources,
             )
             if payload is None:
                 self._send_json({"error": "Run not found."}, status=404)
@@ -776,6 +788,7 @@ def render_process_page(
     user_id: int | None = None,
     guest_token: str | None = None,
     context: WebContext | None = None,
+    source_config: SourceConfig | None = None,
 ) -> str:
     selected_run = (
         db.get_visible_pipeline_run(
@@ -806,12 +819,15 @@ def render_process_page(
         stepper = _stepper(step_rows)
         pipeline_badge = _status_badge(selected_run["status"])
         next_step = next_eligible_step(database_path, selected_run["id"])
+        if source_config is not None and not source_config.advanced_source_verification:
+            next_step = None if next_step == "source_verification" else next_step
         controls = _controls(
             database_path,
             selected_run["id"],
             next_step,
             csrf_token=csrf_token,
             user_id=user_id,
+            source_config=source_config,
         )
         outputs = _outputs(database_path, selected_run["video_id"])
         jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
@@ -1040,6 +1056,8 @@ def _run_action(
         db.set_run_status(database_path, run_id=run_id, status="succeeded", current_step="brief")
         return path
     elif action == "source_verification":
+        if not config.sources.advanced_source_verification:
+            raise ValueError("Advanced source verification is disabled in configuration.")
         semantic_key = resolve_api_key(
             database_path,
             config,
@@ -1060,7 +1078,14 @@ def _run_action(
                 request_keys={"ncbi": form.get("ncbi_api_key", [""])[0]},
             ),
         )
-        adapters = default_adapters(semantic_scholar_key=semantic_key, ncbi_key=ncbi_key)
+        adapters = default_adapters(
+            semantic_scholar_key=semantic_key,
+            ncbi_key=ncbi_key,
+            enable_pubmed=config.sources.enable_pubmed,
+            enable_semantic_scholar=config.sources.enable_semantic_scholar,
+        )
+        if not adapters:
+            raise ValueError("No source-verification adapters are enabled in configuration.")
         db.set_step_status(
             database_path,
             run_id=run_id,
@@ -1117,6 +1142,7 @@ def _controls(
     *,
     csrf_token: str = "",
     user_id: int | None = None,
+    source_config: SourceConfig | None = None,
 ) -> str:
     if next_step is None:
         return ""
@@ -1135,13 +1161,16 @@ def _controls(
             )
     elif next_step == "source_verification":
         fields = []
-        if "semantic_scholar" not in saved_providers:
+        if (
+            (source_config is None or source_config.enable_semantic_scholar)
+            and "semantic_scholar" not in saved_providers
+        ):
             fields.append(
                 '<label class="field grow"><span>Semantic Scholar API key</span>'
                 '<input name="semantic_scholar_api_key" type="password" '
                 'placeholder="Semantic Scholar API key"></label>'
             )
-        if "ncbi" not in saved_providers:
+        if (source_config is None or source_config.enable_pubmed) and "ncbi" not in saved_providers:
             fields.append(
                 '<label class="field grow"><span>NCBI API key</span>'
                 '<input name="ncbi_api_key" type="password" placeholder="NCBI API key"></label>'
@@ -1184,6 +1213,7 @@ def run_status_payload(
     user_id: int | None,
     guest_token: str | None,
     csrf_token: str = "",
+    source_config: SourceConfig | None = None,
 ) -> dict | None:
     """Return the safe, renderable state needed by the live Process page."""
 
@@ -1198,6 +1228,8 @@ def run_status_payload(
     step_rows = db.list_run_steps(database_path, run_id)
     jobs = db.latest_jobs_for_run(database_path, run_id)
     next_step = next_eligible_step(database_path, run_id)
+    if source_config is not None and not source_config.advanced_source_verification:
+        next_step = None if next_step == "source_verification" else next_step
     outputs = _outputs(database_path, run["video_id"]) + _jobs_card(jobs)
     state = {
         "run": {
@@ -1240,6 +1272,7 @@ def run_status_payload(
             next_step,
             csrf_token=csrf_token,
             user_id=user_id,
+            source_config=source_config,
         ),
         "outputs_html": outputs,
     }
@@ -1735,14 +1768,14 @@ def _markdown_to_html(markdown: str) -> str:
     return "\n".join(lines)
 
 
-def _check_rate_limit(client: str, config: AppConfig) -> None:
-    now = time.monotonic()
-    window = config.web.rate_limit_window_seconds
-    events = [stamp for stamp in RATE_LIMITS.get(client, []) if now - stamp < window]
-    if len(events) >= config.web.rate_limit_actions:
+def _check_rate_limit(database_path: Path | str, identity: str, config: AppConfig) -> None:
+    if not db.record_rate_limit_event(
+        database_path,
+        identity=identity,
+        window_seconds=config.web.rate_limit_window_seconds,
+        max_actions=config.web.rate_limit_actions,
+    ):
         raise ValueError("Too many actions submitted recently. Wait and try again.")
-    events.append(now)
-    RATE_LIMITS[client] = events
 
 
 def _public_error(exc: Exception) -> str:

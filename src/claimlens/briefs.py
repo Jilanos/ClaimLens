@@ -120,10 +120,14 @@ def generate_verified_brief(
     details = json.loads(analysis["key_points_json"])
     claims = db.verified_claims_for_summary(database_path, analysis["id"])
     evidence = db.evidence_for_verification(database_path, verification_run["id"])
+    editorial_notes = details.get("editorial_notes", [])
 
     output_dir = Path(briefs_path)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"{video_id}.verified.md"
+    warning = verification_run["status"] == "completed_with_warnings"
+    output_path = output_dir / (
+        f"{video_id}.verification-attempt.md" if warning else f"{video_id}.verified.md"
+    )
     markdown = render_verified_markdown_brief(
         video_id=video_id,
         title=video["title"] if video is not None else None,
@@ -136,6 +140,7 @@ def generate_verified_brief(
         evidence=evidence,
         verification_status=verification_run["status"],
         adapter_results=_adapter_results(verification_run["source_adapters_json"]),
+        editorial_notes=editorial_notes,
     )
     output_path.write_text(markdown, encoding="utf-8")
     db.upsert_brief_artifact(
@@ -165,6 +170,7 @@ def render_verified_markdown_brief(
     evidence: list,
     verification_status: str = "succeeded",
     adapter_results: list[dict] | None = None,
+    editorial_notes: list[str] | None = None,
 ) -> str:
     evidence_by_claim: dict[int, list] = {}
     for item in evidence:
@@ -172,12 +178,17 @@ def render_verified_markdown_brief(
 
     warning = verification_status == "completed_with_warnings"
     verification_label = (
-        "Advanced-source verification completed with warnings."
+        "Source verification attempt completed with warnings; evidence is incomplete."
         if warning
         else "Advanced-source-verified with PubMed/Semantic Scholar candidates."
     )
+    title_prefix = (
+        "ClaimLens Source Verification Attempt"
+        if warning
+        else "ClaimLens Source-Verified Brief"
+    )
     sections = [
-        f"# ClaimLens Source-Verified Brief: {title or video_id}",
+        f"# {title_prefix}: {title or video_id}",
         "",
         f"- Video ID: {video_id}",
         f"- Video: {source_url}",
@@ -201,6 +212,9 @@ def render_verified_markdown_brief(
             "",
             "## Adapter outcomes",
             _adapter_outcome_bullets(adapter_results or []),
+            "",
+            "## Analysis coverage",
+            _bullets(editorial_notes or ["No transcript coverage limitations were recorded."]),
             "",
             "## Human Review Disclaimer",
             (
