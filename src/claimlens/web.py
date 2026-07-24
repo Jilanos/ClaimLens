@@ -39,6 +39,200 @@ LOGGER = logging.getLogger(__name__)
 EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
 RATE_LIMITS: dict[str, list[float]] = {}
 
+LOGO_MARK = (
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
+    'stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/>'
+    '<path d="m21 21-5.2-5.2"/><path d="M8 10.5h5M10.5 8v5" stroke-width="1.8"/></svg>'
+)
+
+STYLES = """
+:root {
+  --ink:#12181d; --ink-2:#38454e; --muted:#6a7a84;
+  --line:#e2e7eb; --line-2:#eef1f3; --surface:#fff; --surface-2:#f7f9fa; --ground:#eef2f4;
+  --accent:#0b7d8c; --accent-2:#0a6270; --accent-wash:#e2f2f4;
+  --ok:#1f8a53; --ok-wash:#e4f4ea; --warn:#a86a12; --warn-wash:#f8efdd;
+  --bad:#bd4126; --bad-wash:#f8e6df; --run:#2660d6; --run-wash:#e5edfb;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(18,24,29,.04), 0 6px 20px rgba(18,24,29,.06);
+  --shadow-sm:0 1px 2px rgba(18,24,29,.06);
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e7edf1; --ink-2:#aeb9c1; --muted:#7c8b94;
+    --line:#26313a; --line-2:#1e272e; --surface:#151d24; --surface-2:#111820; --ground:#0c1218;
+    --accent:#2ba7b6; --accent-2:#39b8c7; --accent-wash:#12303540;
+    --ok:#43b877; --ok-wash:#12291d; --warn:#d59a3f; --warn-wash:#2a2113;
+    --bad:#e26b4d; --bad-wash:#2c1712; --run:#5b8bf0; --run-wash:#141f34;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.35);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+  line-height:1.5; font-size:15px; -webkit-font-smoothing:antialiased; }
+h1,h2,h3 { margin:0; text-wrap:balance; letter-spacing:-.01em; }
+a { color:var(--accent-2); }
+nav.app { display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:0 24px; height:60px; background:var(--surface); border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:20; }
+.brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px;
+  letter-spacing:-.02em; color:var(--ink); text-decoration:none; }
+.brand .mark { width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; flex:none; }
+.brand .mark svg { width:17px; height:17px; }
+.navlinks { display:flex; align-items:center; gap:6px; }
+.navlinks a { color:var(--ink-2); text-decoration:none; font-weight:500; font-size:14px;
+  padding:7px 12px; border-radius:8px; }
+.navlinks a:hover { background:var(--surface-2); color:var(--ink); }
+.navlinks a.active { color:var(--accent-2); background:var(--accent-wash); }
+.navuser { display:flex; align-items:center; gap:12px; }
+.navuser .who { font-size:13px; color:var(--muted); }
+.avatar { width:30px; height:30px; border-radius:50%; background:var(--accent-wash);
+  color:var(--accent-2); display:grid; place-items:center; font-weight:700; font-size:13px; }
+main { max-width:1000px; margin:0 auto; padding:34px 24px 80px; }
+.page-head { margin-bottom:24px; }
+.page-head h1 { font-size:26px; }
+.page-head p { color:var(--muted); margin:6px 0 0; max-width:62ch; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:var(--shadow); }
+.card + .card { margin-top:20px; }
+.card-head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:16px 20px; border-bottom:1px solid var(--line-2); }
+.card-head h2 { font-size:15px; }
+.card-head .sub { font-size:12px; color:var(--muted); }
+.card-body { padding:20px; }
+.field { display:grid; gap:6px; }
+.field > span { font-size:13px; font-weight:600; color:var(--ink-2); }
+input, select, textarea { font:inherit; color:var(--ink); background:var(--surface); width:100%;
+  border:1px solid var(--line); border-radius:var(--radius-sm); padding:9px 11px; min-height:40px;
+  transition:border-color .12s, box-shadow .12s; }
+input::placeholder, textarea::placeholder { color:var(--muted); }
+input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-wash); }
+textarea { min-height:120px; resize:vertical; font-family:var(--mono); font-size:13px; }
+.btn { display:inline-flex; align-items:center; gap:8px; justify-content:center; font:inherit;
+  font-weight:600; font-size:14px; cursor:pointer; padding:9px 16px; min-height:40px;
+  border-radius:var(--radius-sm); border:1px solid transparent; white-space:nowrap;
+  transition:filter .12s, background .12s; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { filter:brightness(1.06); }
+.btn-ghost { background:var(--surface); color:var(--ink); border-color:var(--line); }
+.btn-ghost:hover { background:var(--surface-2); }
+.btn-danger { background:transparent; color:var(--bad);
+  border-color:color-mix(in srgb, var(--bad) 40%, transparent); }
+.btn-danger:hover { background:var(--bad-wash); }
+.btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.btn-sm { min-height:34px; padding:6px 12px; font-size:13px; }
+.badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  padding:3px 9px; border-radius:999px; text-transform:capitalize; }
+.badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.badge.ok { color:var(--ok); background:var(--ok-wash); }
+.badge.run { color:var(--run); background:var(--run-wash); }
+.badge.warn { color:var(--warn); background:var(--warn-wash); }
+.badge.bad { color:var(--bad); background:var(--bad-wash); }
+.badge.idle { color:var(--muted); background:var(--surface-2); }
+.stepper { display:grid; grid-template-columns:repeat(5,1fr); }
+.step { position:relative; padding:16px 14px; }
+.step:not(:last-child)::after { content:""; position:absolute; top:30px; right:-1px; width:1px;
+  height:calc(100% - 24px); background:var(--line-2); }
+.step .dot { width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+  font-size:12px; font-weight:700; margin-bottom:10px; border:2px solid var(--line);
+  color:var(--muted); background:var(--surface); }
+.step.done .dot { background:var(--ok); border-color:var(--ok); color:#fff; }
+.step.active .dot { background:var(--run); border-color:var(--run); color:#fff;
+  box-shadow:0 0 0 4px var(--run-wash); }
+.step.bad .dot { background:var(--bad); border-color:var(--bad); color:#fff; }
+.step .name { font-weight:600; font-size:13.5px; text-transform:capitalize; }
+.step .meta { font-size:12px; color:var(--muted); margin-top:3px; }
+table { width:100%; border-collapse:collapse; font-size:14px; background:transparent; }
+th { text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); font-weight:700; padding:10px 14px; border-bottom:1px solid var(--line); }
+td { padding:12px 14px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
+tr:last-child td { border-bottom:0; }
+.status { font-weight:600; }
+.row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+.row .field { flex:1 1 240px; }
+.grow { flex:1; }
+.notice { display:flex; gap:10px; align-items:flex-start; padding:12px 14px;
+  border-radius:var(--radius-sm); font-size:13.5px; border:1px solid; margin:0 0 20px;
+  color:var(--bad); background:var(--bad-wash);
+  border-color:color-mix(in srgb, var(--bad) 25%, transparent); }
+.preview { white-space:pre-wrap; max-height:240px; overflow:auto; font-family:var(--mono);
+  font-size:12.5px; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line-2);
+  border-radius:var(--radius-sm); padding:14px; }
+ul.out { list-style:none; padding:0; margin:0; }
+ul.out li { padding:11px 4px; border-bottom:1px solid var(--line-2); font-size:14px; }
+ul.out li:last-child { border-bottom:0; }
+.auth-wrap { min-height:calc(100vh - 60px); display:grid; place-items:center; padding:40px 20px; }
+.auth-card { width:100%; max-width:420px; }
+.auth-card .card-body { padding:28px; display:grid; gap:16px; }
+.auth-logo { display:grid; place-items:center; gap:12px; text-align:center; margin-bottom:4px; }
+.auth-logo .mark { width:46px; height:46px; border-radius:13px; display:grid; place-items:center;
+  background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; }
+.auth-logo .mark svg { width:25px; height:25px; }
+.auth-logo h1 { font-size:20px; }
+.divider { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; }
+.divider::before, .divider::after { content:""; height:1px; background:var(--line); flex:1; }
+.report { max-width:760px; margin:0 auto; }
+.report .card-body { padding:34px 40px; }
+.report h1 { font-size:24px; }
+.report h2 { font-size:17px; margin:24px 0 10px; padding-bottom:6px;
+  border-bottom:1px solid var(--line-2); }
+.report h3 { font-size:15px; margin:18px 0 8px; }
+.report p { color:var(--ink-2); margin:0 0 12px; }
+.report ul { margin:0 0 14px; padding-left:20px; color:var(--ink-2); }
+.report li { margin:5px 0; }
+.mono { font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+@media (max-width:720px) {
+  .stepper { grid-template-columns:1fr 1fr; }
+  .report .card-body { padding:24px; }
+  .navuser .who { display:none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+"""
+
+
+def _badge_class(status: str) -> str:
+    return {
+        "succeeded": "ok",
+        "completed": "ok",
+        "running": "run",
+        "failed": "bad",
+    }.get((status or "").lower(), "idle")
+
+
+def _status_badge(status: str, *, suffix: str = "") -> str:
+    label = html.escape((status or "").replace("_", " ")) + suffix
+    return f'<span class="badge {_badge_class(status)}">{label}</span>'
+
+
+def _page_shell(
+    title: str,
+    body: str,
+    *,
+    context: WebContext | None,
+    csrf_token: str = "",
+    active: str | None = None,
+    nav: bool = True,
+) -> str:
+    nav_html = _nav(context, csrf_token, active=active) if nav else ""
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)}</title>
+  <style>{STYLES}</style>
+</head>
+<body>
+{nav_html}
+{body}
+</body>
+</html>
+"""
+
 
 @dataclass(frozen=True)
 class WebContext:
@@ -454,9 +648,13 @@ def render_process_page(
     controls = ""
     outputs = ""
 
+    stepper = ""
+    pipeline_badge = ""
     if selected_run is not None:
         step_rows = db.list_run_steps(database_path, selected_run["id"])
         rows = "\n".join(_step_row(row) for row in step_rows)
+        stepper = _stepper(step_rows)
+        pipeline_badge = _status_badge(selected_run["status"])
         next_step = next_eligible_step(database_path, selected_run["id"])
         controls = _controls(selected_run["id"], next_step, csrf_token=csrf_token)
         outputs = _outputs(database_path, selected_run["video_id"])
@@ -464,9 +662,9 @@ def render_process_page(
         job_rows = "".join(_job_row(row) for row in jobs)
         if job_rows:
             outputs += (
-                "<section><h2>Jobs</h2><table>"
+                '<div class="card"><div class="card-head"><h2>Jobs</h2></div><table>'
                 "<thead><tr><th>Action</th><th>Status</th><th>Progress</th><th>Message</th></tr></thead>"
-                f"<tbody>{job_rows}</tbody></table></section>"
+                f"<tbody>{job_rows}</tbody></table></div>"
             )
 
     run_options = "\n".join(
@@ -474,85 +672,101 @@ def render_process_page(
         f' - {html.escape(row["status"])}</option>'
         for row in runs
     )
-    notice_html = f'<p class="notice">{html.escape(notice)}</p>' if notice else ""
+    notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
 
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ClaimLens Process</title>
-  <style>
-    body {{ margin: 0; font-family: system-ui, sans-serif; color: #172026; background: #f6f7f8; }}
-    nav {{ display: flex; gap: 16px; justify-content: space-between; align-items: center;
-      padding: 12px 28px; background: #172026; color: white; }}
-    nav a, nav button {{ color: white; background: transparent; border: 0; padding: 0; }}
-    main {{ max-width: 980px; margin: 0 auto; padding: 28px; }}
-    section {{ margin: 22px 0; }}
-    form {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
-    input, select {{
-      min-height: 36px; padding: 6px 8px; border: 1px solid #aab4bd; border-radius: 4px;
-    }}
-    input[type="url"], input[type="password"] {{ flex: 1 1 280px; }}
-    label {{ display: grid; gap: 4px; font-weight: 600; }}
-    textarea {{ width: 100%; min-height: 140px; }}
-    button {{
-      min-height: 36px; padding: 6px 12px; border: 1px solid #172026; border-radius: 4px;
-      background: #172026; color: white;
-    }}
-    table {{ width: 100%; border-collapse: collapse; background: white; }}
-    th, td {{
-      text-align: left; padding: 10px; border-bottom: 1px solid #d9dee2; vertical-align: top;
-    }}
-    .notice {{ padding: 10px; border: 1px solid #b8562f; background: #fff2ec; }}
-    .status {{ font-weight: 700; }}
-    .preview {{
-      white-space: pre-wrap; max-height: 240px; overflow: auto; background: white;
-      padding: 10px; border: 1px solid #d9dee2;
-    }}
-    a {{ color: #0a5c7a; }}
-  </style>
-</head>
-<body>
-{_nav(context, csrf_token)}
-<main>
-  <h1>ClaimLens Process</h1>
-  {notice_html}
-  <section>
-    <h2>Create Run</h2>
-    <form method="post">
-      <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
-      <input type="hidden" name="action" value="create">
-      <label>Video URL
-        <input name="video_url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
-      </label>
-      <label>Report language
-        <input name="report_language" value="en">
-      </label>
-      <button type="submit">Create</button>
-    </form>
-  </section>
-  <section>
-    <h2>Load Run</h2>
-    <form method="get">
-      <select name="run_id">{run_options}</select>
-      <button type="submit">Load</button>
-    </form>
-  </section>
-  <section>
-    <h2>Steps</h2>
+    pipeline_card = ""
+    if selected_run is not None:
+        video_label = html.escape(selected_run["video_id"] or "")
+        pipeline_card = f"""
+  <div class="card">
+    <div class="card-head">
+      <h2>Pipeline &middot; video <span class="mono">{video_label}</span></h2>
+      {pipeline_badge}
+    </div>
+    <div class="stepper">{stepper}</div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Steps</h2></div>
     <table>
       <thead><tr><th>Step</th><th>Status</th><th>Failure</th><th>Output</th></tr></thead>
       <tbody>{rows}</tbody>
     </table>
-    {controls}
-    {_manual_transcript_form(selected_run["id"], csrf_token) if selected_run is not None else ""}
-  </section>
+    <div class="card-body">
+      {controls}
+      {_manual_transcript_form(selected_run["id"], csrf_token)}
+    </div>
+  </div>
+"""
+
+    body = f"""
+<main>
+  <div class="page-head">
+    <h1>ClaimLens Process</h1>
+    <p>Extract the transcript, analyze the claims, then check them against scientific sources.</p>
+  </div>
+  {notice_html}
+  <div class="card">
+    <div class="card-head"><h2>Create Run</h2>
+      <span class="sub">One YouTube video per run</span></div>
+    <div class="card-body">
+      <form method="post" class="row">
+        <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
+        <input type="hidden" name="action" value="create">
+        <label class="field grow" style="flex:1 1 320px">
+          <span>Video URL</span>
+          <input name="video_url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
+        </label>
+        <label class="field" style="flex:0 0 160px">
+          <span>Report language</span>
+          <input name="report_language" value="en">
+        </label>
+        <button type="submit" class="btn btn-primary">Create</button>
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Load Run</h2></div>
+    <div class="card-body">
+      <form method="get" class="row">
+        <label class="field grow"><span>Existing run</span>
+          <select name="run_id">{run_options}</select>
+        </label>
+        <button type="submit" class="btn btn-ghost">Load</button>
+      </form>
+    </div>
+  </div>
+  {pipeline_card}
   {outputs}
 </main>
-</body>
-</html>
 """
+    return _page_shell(
+        "ClaimLens Process",
+        body,
+        context=context,
+        csrf_token=csrf_token,
+        active="process",
+    )
+
+
+def _stepper(step_rows) -> str:
+    cells = []
+    for index, row in enumerate(step_rows, start=1):
+        status = (row["status"] or "").lower()
+        if status == "succeeded":
+            cls, glyph = "done", "&check;"
+        elif status == "running":
+            cls, glyph = "active", str(index)
+        elif status == "failed":
+            cls, glyph = "bad", "&times;"
+        else:
+            cls, glyph = "", str(index)
+        name = html.escape(row["step"].replace("_", " "))
+        meta = html.escape(row["status"] or "pending")
+        cells.append(
+            f'<div class="step {cls}"><div class="dot">{glyph}</div>'
+            f'<div class="name">{name}</div><div class="meta">{meta}</div></div>'
+        )
+    return "".join(cells)
 
 
 def _run_job(
@@ -731,43 +945,44 @@ def _controls(run_id: int, next_step: str | None, *, csrf_token: str = "") -> st
     secret = ""
     if next_step == "analysis":
         secret = (
-            '<label>OpenAI API key'
+            '<label class="field grow"><span>OpenAI API key</span>'
             '<input name="openai_api_key" type="password" placeholder="OpenAI API key">'
             "</label>"
         )
     elif next_step == "source_verification":
         secret = (
-            '<label>Semantic Scholar API key'
+            '<label class="field grow"><span>Semantic Scholar API key</span>'
             '<input name="semantic_scholar_api_key" type="password" '
             'placeholder="Semantic Scholar API key"></label>'
-            '<label>NCBI API key'
+            '<label class="field grow"><span>NCBI API key</span>'
             '<input name="ncbi_api_key" type="password" placeholder="NCBI API key"></label>'
         )
     return f"""
-    <form method="post">
+    <form method="post" class="row" style="margin-top:16px">
       <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
       <input type="hidden" name="run_id" value="{run_id}">
       <input type="hidden" name="action" value="{html.escape(next_step)}">
       {secret}
-      <button type="submit">Run {html.escape(next_step.replace("_", " "))}</button>
+      <button type="submit" class="btn btn-primary">Run {
+          html.escape(next_step.replace("_", " "))}</button>
     </form>
     """
 
 
 def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
     return f"""
-    <form method="post">
+    <form method="post" style="margin-top:20px;display:grid;gap:12px">
       <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
       <input type="hidden" name="run_id" value="{run_id}">
       <input type="hidden" name="action" value="manual_transcript">
-      <label>Transcript language
+      <label class="field" style="max-width:220px"><span>Transcript language</span>
         <input name="transcript_language" value="unknown">
       </label>
-      <label>Paste transcript fallback
+      <label class="field"><span>Paste transcript fallback</span>
         <textarea name="transcript_text"
           placeholder="Paste .txt, .srt, or .vtt text here"></textarea>
       </label>
-      <button type="submit">Use pasted transcript</button>
+      <div><button type="submit" class="btn btn-ghost">Use pasted transcript</button></div>
     </form>
     """
 
@@ -805,53 +1020,82 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
         preview = f"<h3>Cleaned transcript preview</h3><div class=\"preview\">{preview_text}</div>"
     if not links and not preview:
         return ""
-    return f"<section><h2>Outputs</h2><ul>{''.join(links)}</ul>{preview}</section>"
+    return (
+        '<div class="card"><div class="card-head"><h2>Outputs</h2></div>'
+        f'<div class="card-body"><ul class="out">{"".join(links)}</ul>{preview}</div></div>'
+    )
 
 
-def _nav(context: WebContext | None, csrf_token: str) -> str:
-    if context is not None and context.user_id is not None:
-        auth = (
-            f"<span>{html.escape(context.email or '')}</span>"
-            '<a href="/options">Options</a>'
+def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = None) -> str:
+    logged_in = context is not None and context.user_id is not None
+    analyses_cls = ' class="active"' if active == "process" else ""
+    links = f'<a href="/"{analyses_cls}>Analyses</a>'
+    if logged_in:
+        options_cls = ' class="active"' if active == "options" else ""
+        links += f'<a href="/options"{options_cls}>Options</a>'
+        initial = html.escape((context.email or "?")[:1].upper())
+        user = (
+            f'<span class="who">{html.escape(context.email or "")}</span>'
             '<form method="post" style="display:inline">'
             f'<input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">'
             '<input type="hidden" name="action" value="logout">'
-            '<button type="submit">Logout</button></form>'
+            '<button type="submit" class="btn btn-ghost btn-sm">Logout</button></form>'
+            f'<span class="avatar">{initial}</span>'
         )
     else:
-        auth = '<a href="/login">Login</a>'
-    return f"<nav><a href=\"/\">ClaimLens</a><div>{auth}</div></nav>"
+        user = '<a href="/login" class="btn btn-ghost btn-sm">Login</a>'
+    return (
+        '<nav class="app">'
+        f'<a class="brand" href="/"><span class="mark">{LOGO_MARK}</span> ClaimLens</a>'
+        f'<div class="navlinks">{links}</div>'
+        f'<div class="navuser">{user}</div>'
+        "</nav>"
+    )
 
 
 def render_login_page(*, context: WebContext, notice: str | None = None) -> str:
-    notice_html = f'<p class="notice">{html.escape(notice)}</p>' if notice else ""
+    notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
     csrf = html.escape(context.csrf_token)
-    return f"""<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ClaimLens Login</title></head>
-<body>
-{_nav(context, context.csrf_token)}
-<main>
-  <h1>Login</h1>
-  {notice_html}
-  <form method="post">
-    <input type="hidden" name="csrf_token" value="{csrf}">
-    <input type="hidden" name="action" value="login">
-    <label>Email <input name="email" type="email" required></label>
-    <label>Password <input name="password" type="password" required></label>
-    <button type="submit">Login</button>
-  </form>
-  <h2>Create first account</h2>
-  <form method="post">
-    <input type="hidden" name="csrf_token" value="{csrf}">
-    <input type="hidden" name="action" value="register">
-    <label>Email <input name="email" type="email" required></label>
-    <label>Password <input name="password" type="password" required></label>
-    <button type="submit">Create account</button>
-  </form>
-</main>
-</body></html>"""
+    body = f"""
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <div class="card-body">
+      <div class="auth-logo">
+        <span class="mark">{LOGO_MARK}</span>
+        <div><h1>Login</h1>
+          <p class="mono" style="color:var(--muted)">Sign in to your ClaimLens analyses</p></div>
+      </div>
+      {notice_html}
+      <form method="post" style="display:grid;gap:14px">
+        <input type="hidden" name="csrf_token" value="{csrf}">
+        <input type="hidden" name="action" value="login">
+        <label class="field"><span>Email</span>
+          <input name="email" type="email" required></label>
+        <label class="field"><span>Password</span>
+          <input name="password" type="password" required></label>
+        <button type="submit" class="btn btn-primary" style="width:100%">Login</button>
+      </form>
+      <div class="divider">Create first account</div>
+      <form method="post" style="display:grid;gap:14px">
+        <input type="hidden" name="csrf_token" value="{csrf}">
+        <input type="hidden" name="action" value="register">
+        <label class="field"><span>Email</span>
+          <input name="email" type="email" required></label>
+        <label class="field"><span>Password</span>
+          <input name="password" type="password" required></label>
+        <button type="submit" class="btn btn-ghost" style="width:100%">Create account</button>
+      </form>
+    </div>
+  </div>
+</div>
+"""
+    return _page_shell(
+        "ClaimLens Login",
+        body,
+        context=context,
+        csrf_token=context.csrf_token,
+        active=None,
+    )
 
 
 def render_options_page(
@@ -861,8 +1105,12 @@ def render_options_page(
     context: WebContext,
 ) -> str:
     if context.user_id is None:
-        return """<!doctype html><html lang="en"><body><main>
-<p class="notice">Login is required.</p></main></body></html>"""
+        return _page_shell(
+            "ClaimLens Options",
+            '<main><div class="notice">Login is required.</div></main>',
+            context=context,
+            csrf_token=context.csrf_token,
+        )
     rows = db.list_user_api_keys(database_path, user_id=context.user_id)
     status = {row["provider"]: row for row in rows}
     sections = []
@@ -872,57 +1120,75 @@ def render_options_page(
         ("ncbi", "NCBI / PubMed"),
     ]:
         row = status.get(provider)
-        saved = (
-            f"Saved: {html.escape(row['masked_value'])}, updated {html.escape(row['updated_at'])}"
-            + (
-                f", tested {html.escape(row['tested_at'])}"
-                if row and row["tested_at"]
-                else ""
+        if row:
+            saved = (
+                f"Saved: <span class=\"mono\">{html.escape(row['masked_value'])}</span>, "
+                f"updated {html.escape(row['updated_at'])}"
+                + (
+                    f", tested {html.escape(row['tested_at'])}"
+                    if row["tested_at"]
+                    else ""
+                )
             )
-            if row
-            else "No saved key."
-        )
+            badge = _status_badge("succeeded" if row["tested_at"] else "saved")
+        else:
+            saved = "No saved key."
+            badge = _status_badge("idle")
+        csrf = html.escape(context.csrf_token)
         sections.append(
             f"""
-            <section>
-              <h2>{label}</h2>
-              <p>{saved}</p>
-              <form method="post">
-                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
-                <input type="hidden" name="action" value="save_api_key">
-                <input type="hidden" name="provider" value="{provider}">
-                <label>API key <input name="api_key" type="password" required></label>
-                <button type="submit">Save key</button>
-              </form>
-              <form method="post">
-                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
-                <input type="hidden" name="action" value="test_api_key">
-                <input type="hidden" name="provider" value="{provider}">
-                <button type="submit">Test saved key</button>
-              </form>
-              <form method="post">
-                <input type="hidden" name="csrf_token" value="{html.escape(context.csrf_token)}">
-                <input type="hidden" name="action" value="delete_api_key">
-                <input type="hidden" name="provider" value="{provider}">
-                <button type="submit">Delete key</button>
-              </form>
-            </section>
+            <div class="card">
+              <div class="card-head"><h2>{label}</h2>{badge}</div>
+              <div class="card-body">
+                <p style="margin:0 0 16px;color:var(--muted);font-size:13.5px">{saved}</p>
+                <form method="post" class="row">
+                  <input type="hidden" name="csrf_token" value="{csrf}">
+                  <input type="hidden" name="action" value="save_api_key">
+                  <input type="hidden" name="provider" value="{provider}">
+                  <label class="field grow"><span>API key</span>
+                    <input name="api_key" type="password" required></label>
+                  <button type="submit" class="btn btn-primary">Save key</button>
+                </form>
+                <div class="row" style="margin-top:12px">
+                  <form method="post" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{csrf}">
+                    <input type="hidden" name="action" value="test_api_key">
+                    <input type="hidden" name="provider" value="{provider}">
+                    <button type="submit" class="btn btn-ghost btn-sm">Test saved key</button>
+                  </form>
+                  <form method="post" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{csrf}">
+                    <input type="hidden" name="action" value="delete_api_key">
+                    <input type="hidden" name="provider" value="{provider}">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete key</button>
+                  </form>
+                </div>
+              </div>
+            </div>
             """
         )
     secret_notice = (
         ""
         if config.web.key_encryption_secret
-        else "<p class=\"notice\">Set CLAIMLENS_KEY_ENCRYPTION_SECRET before saving keys.</p>"
+        else '<div class="notice">Set CLAIMLENS_KEY_ENCRYPTION_SECRET before saving keys.</div>'
     )
-    return f"""<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ClaimLens Options</title></head>
-<body>{_nav(context, context.csrf_token)}<main>
-<h1>Options</h1>
-{secret_notice}
-{''.join(sections)}
-</main></body></html>"""
+    body = f"""
+<main>
+  <div class="page-head">
+    <h1>Options</h1>
+    <p>Your API keys are encrypted at rest and only power your own analyses.</p>
+  </div>
+  {secret_notice}
+  {''.join(sections)}
+</main>
+"""
+    return _page_shell(
+        "ClaimLens Options",
+        body,
+        context=context,
+        csrf_token=context.csrf_token,
+        active="options",
+    )
 
 
 def _verification_counts(database_path: Path | str, verification_run_id: int) -> str:
@@ -935,10 +1201,10 @@ def _verification_counts(database_path: Path | str, verification_run_id: int) ->
 def _step_row(row) -> str:
     return (
         "<tr>"
-        f"<td>{html.escape(row['step'].replace('_', ' '))}</td>"
-        f"<td class=\"status\">{html.escape(row['status'])}</td>"
+        f"<td class=\"name\">{html.escape(row['step'].replace('_', ' '))}</td>"
+        f"<td class=\"status\">{_status_badge(row['status'])}</td>"
         f"<td>{html.escape(row['failure_message'] or '')}</td>"
-        f"<td>{html.escape(row['output_path'] or '')}</td>"
+        f"<td class=\"mono\">{html.escape(row['output_path'] or '')}</td>"
         "</tr>"
     )
 
@@ -946,8 +1212,8 @@ def _step_row(row) -> str:
 def _job_row(row) -> str:
     return (
         "<tr>"
-        f"<td>{html.escape(row['action'].replace('_', ' '))}</td>"
-        f"<td class=\"status\">{html.escape(row['status'])}</td>"
+        f"<td class=\"name\">{html.escape(row['action'].replace('_', ' '))}</td>"
+        f"<td class=\"status\">{_status_badge(row['status'])}</td>"
         f"<td>{int(row['progress'])}%</td>"
         f"<td>{html.escape(row['message'] or '')}</td>"
         "</tr>"
@@ -977,15 +1243,32 @@ def render_brief_page(
         user_id=user_id,
         guest_token=guest_token,
     )
+    download = ""
     if path is None:
-        content = "<p class=\"notice\">No report is available for this run.</p>"
+        content = '<div class="notice">No report is available for this run.</div>'
     else:
         content = _markdown_to_html(path.read_text(encoding="utf-8"))
-    return f"""<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ClaimLens Report</title></head>
-<body>{_nav(context, context.csrf_token) if context else ''}<main>{content}</main></body></html>"""
+        if run_id is not None:
+            download = (
+                f'<a href="/brief/download?run_id={run_id}" '
+                'class="btn btn-ghost btn-sm">Download .md</a>'
+            )
+    body = f"""
+<main>
+  <div class="card report">
+    <div class="card-head"><h2>Verification brief</h2>{download}</div>
+    <div class="card-body">{content}</div>
+  </div>
+</main>
+"""
+    return _page_shell(
+        "ClaimLens Report",
+        body,
+        context=context,
+        csrf_token=context.csrf_token if context else "",
+        active="process",
+        nav=context is not None,
+    )
 
 
 def _brief_path_for_run(
