@@ -281,6 +281,7 @@ def test_process_page_shows_source_verification_state(tmp_path):
 
     html = render_process_page(database, run_id=run_id)
 
-    assert "source verification" in html
-    assert "supporting snippets" in html
-    assert "contradicting snippets" in html
+    assert "Source verification" in html
+    assert "Evidence snippets" in html
+    assert "Report status" in html
+    assert "Not available" in html

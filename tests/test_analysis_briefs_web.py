@@ -234,6 +234,7 @@ def test_render_process_page_shows_step_status_failure_and_controls(tmp_path):
     assert "captions" in html
     assert "failed" in html
     assert "Subtitles are unavailable." in html
+    assert "Paste a transcript fallback" in html
 
 
 def test_live_process_state_is_scoped_and_has_no_numeric_progress(tmp_path):
@@ -349,7 +350,11 @@ def test_render_process_page_shows_guest_navigation(tmp_path):
     )
 
     assert 'href="/login"' in rendered
-    assert "Paste transcript fallback" in rendered
+    assert "Paste transcript fallback" not in rendered
+    assert "Active analysis" in rendered
+    assert "New analysis" in rendered
+    assert "Execution details" in rendered
+    assert "Recent analyses" in rendered
 
 
 def test_render_options_page_masks_saved_keys(tmp_path):

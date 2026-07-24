@@ -1,0 +1,483 @@
+{
+  "budgets": {
+    "max_docs": 32,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_011_refine_the_claimlens_analysis_workspace_user_experience item_068_create_a_focused_active_analysis_workspace item_069_simplify_progress_and_diagnostic_presentation item_070_contextualize_transcript_recovery item_071_add_an_evidence_aware_results_summary item_072_separate_analysis_creation_from_analysis_history item_073_make_the_workflow_responsive_and_testable task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement --mode full --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_068_create_a_focused_active_analysis_workspace",
+          "item_069_simplify_progress_and_diagnostic_presentation",
+          "item_070_contextualize_transcript_recovery",
+          "item_071_add_an_evidence_aware_results_summary",
+          "item_072_separate_analysis_creation_from_analysis_history",
+          "item_073_make_the_workflow_responsive_and_testable"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/product/prod_015_focused_english_language_claimlens_analysis_workspace.md",
+      "ref": "prod_015_focused_english_language_claimlens_analysis_workspace",
+      "sections": {
+        "Goals": [
+          "- Make the active analysis the visual and interaction priority.",
+          "- Reduce scanning and duplicate status interpretation.",
+          "- Make exceptional recovery paths feel deliberate rather than permanently exposed.",
+          "- Make evidence limitations understandable before a report is opened.",
+          "- Keep the product fully English and accessible across desktop and mobile."
+        ],
+        "Key product decisions": [
+          "- Use structured input as the source of truth for generated docs.",
+          "- Keep generated write paths local and repo-bounded."
+        ],
+        "Overview": [
+          "The analysis interface should behave like a focused operational workspace: users immediately understand the active video's state, the next meaningful action, whether evidence was found, and where to return to previous work."
+        ],
+        "References": [
+          "- Product back-reference: `req_011_refine_the_claimlens_analysis_workspace_user_experience`",
+          "- Task back-reference: `task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement`"
+        ]
+      },
+      "status": "Proposed",
+      "title": "Focused English-language ClaimLens analysis workspace"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, refine the claimlens analysis workspace user experience, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Refine the ClaimLens analysis workspace user experience",
+        "use when": "You need to implement or review the scaffolded workflow for Refine the ClaimLens analysis workspace user experience."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_068_create_a_focused_active_analysis_workspace",
+          "item_069_simplify_progress_and_diagnostic_presentation",
+          "item_070_contextualize_transcript_recovery",
+          "item_071_add_an_evidence_aware_results_summary",
+          "item_072_separate_analysis_creation_from_analysis_history",
+          "item_073_make_the_workflow_responsive_and_testable"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ]
+      },
+      "path": "logics/request/req_011_refine_the_claimlens_analysis_workspace_user_experience.md",
+      "ref": "req_011_refine_the_claimlens_analysis_workspace_user_experience",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- A selected run has a clear primary workspace that identifies the video, current pipeline state, current provider/job message, and exactly one primary next action when user action is required.",
+          "- The primary workspace does not present the same progression state as competing stepper, table, and jobs views. Detailed execution history remains available without dominating the page.",
+          "- Internal action and status identifiers are rendered as concise English product labels, while technical details remain available in a dedicated diagnostic view.",
+          "- The pasted-transcript fallback is hidden during normal caption processing and becomes visible with a clear English explanation only after captions fail or are unavailable.",
+          "- Outputs contain a compact result summary that distinguishes a regular brief, evidence-backed verification, and an incomplete verification attempt, including claim/source counts and actionable warnings.",
+          "- Users can create a new analysis from a focused control and can browse, filter, reopen, and identify recent analyses separately from the active workspace."
+        ],
+        "Needs": [
+          "- Refocus the Analysis page around the selected run, its current state, and the single next action a user should take.",
+          "- Remove duplicated progression information while preserving accessible operational detail.",
+          "- Reveal the pasted-transcript fallback only when subtitle extraction needs it.",
+          "- Make reports and verification outcomes easier to assess at a glance before users open Markdown.",
+          "- Separate creating an analysis from finding and revisiting prior analyses.",
+          "- Improve the mobile and keyboard experience without changing the application language."
+        ]
+      },
+      "status": "Draft",
+      "title": "Refine the ClaimLens analysis workspace user experience"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, create a focused active-analysis workspace, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Create a focused active-analysis workspace",
+        "use when": "Implementing the scaffolded slice for Create a focused active-analysis workspace."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_068_create_a_focused_active_analysis_workspace"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_068_create_a_focused_active_analysis_workspace.md",
+      "ref": "item_068_create_a_focused_active_analysis_workspace",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- A user can identify the current video, state, and required next action without reading a table.",
+          "- Only one action is visually primary for a run at any given workflow state."
+        ],
+        "Problem": [
+          "- The Process page makes users scan through unrelated creation, selection, pipeline, job, and output cards before identifying what needs attention."
+        ]
+      },
+      "status": "Ready",
+      "title": "Create a focused active-analysis workspace"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, simplify progress and diagnostic presentation, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Simplify progress and diagnostic presentation",
+        "use when": "Implementing the scaffolded slice for Simplify progress and diagnostic presentation."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_069_simplify_progress_and_diagnostic_presentation"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_069_simplify_progress_and_diagnostic_presentation.md",
+      "ref": "item_069_simplify_progress_and_diagnostic_presentation",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Progress is understandable without comparing multiple widgets.",
+          "- Status remains understandable with color disabled or unavailable."
+        ],
+        "Problem": [
+          "- The stepper, step table, and jobs card repeat overlapping status information and surface implementation identifiers directly."
+        ]
+      },
+      "status": "Ready",
+      "title": "Simplify progress and diagnostic presentation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, contextualize transcript recovery, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Contextualize transcript recovery",
+        "use when": "Implementing the scaffolded slice for Contextualize transcript recovery."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_070_contextualize_transcript_recovery"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_070_contextualize_transcript_recovery.md",
+      "ref": "item_070_contextualize_transcript_recovery",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Normal runs do not display the pasted-transcript form.",
+          "- A failed captions run presents the fallback without requiring the user to infer the next recovery step."
+        ],
+        "Problem": [
+          "- The manual transcript fallback is permanently visible despite being relevant only when subtitles cannot be retrieved."
+        ]
+      },
+      "status": "Ready",
+      "title": "Contextualize transcript recovery"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate the ClaimLens analysis workspace UX refinement",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_068_create_a_focused_active_analysis_workspace",
+          "item_069_simplify_progress_and_diagnostic_presentation",
+          "item_070_contextualize_transcript_recovery",
+          "item_071_add_an_evidence_aware_results_summary",
+          "item_072_separate_analysis_creation_from_analysis_history",
+          "item_073_make_the_workflow_responsive_and_testable"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md",
+      "ref": "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- Run `python3 -m logics_manager lint --require-status`.",
+          "- Run scaffold command tests."
+        ]
+      },
+      "status": "Ready",
+      "title": "Orchestrate the ClaimLens analysis workspace UX refinement"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_068_create_a_focused_active_analysis_workspace",
+          "item_069_simplify_progress_and_diagnostic_presentation",
+          "item_070_contextualize_transcript_recovery",
+          "item_071_add_an_evidence_aware_results_summary",
+          "item_072_separate_analysis_creation_from_analysis_history",
+          "item_073_make_the_workflow_responsive_and_testable"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/product/prod_015_focused_english_language_claimlens_analysis_workspace.md",
+      "ref": "prod_015_focused_english_language_claimlens_analysis_workspace",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Focused English-language ClaimLens analysis workspace"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add an evidence-aware results summary, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add an evidence-aware results summary",
+        "use when": "Implementing the scaffolded slice for Add an evidence-aware results summary."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_071_add_an_evidence_aware_results_summary"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_071_add_an_evidence_aware_results_summary.md",
+      "ref": "item_071_add_an_evidence_aware_results_summary",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- A user can distinguish an evidence-backed report from an incomplete verification attempt before opening it.",
+          "- Warnings state the affected provider and a useful next action when one exists."
+        ],
+        "Problem": [
+          "- Output links and raw source counts do not quickly tell an editor whether a report is normal, evidence-backed, or an incomplete verification attempt."
+        ]
+      },
+      "status": "Ready",
+      "title": "Add an evidence-aware results summary"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, separate analysis creation from analysis history, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Separate analysis creation from analysis history",
+        "use when": "Implementing the scaffolded slice for Separate analysis creation from analysis history."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_072_separate_analysis_creation_from_analysis_history"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_072_separate_analysis_creation_from_analysis_history.md",
+      "ref": "item_072_separate_analysis_creation_from_analysis_history",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Recent analyses are scannable by video, status, and recency.",
+          "- Creating a new analysis remains a short, focused flow."
+        ],
+        "Problem": [
+          "- Creating a run and loading a prior run are peer cards, so neither new work nor history is optimized for repeated use."
+        ]
+      },
+      "status": "Ready",
+      "title": "Separate analysis creation from analysis history"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make the workflow responsive and testable, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make the workflow responsive and testable",
+        "use when": "Implementing the scaffolded slice for Make the workflow responsive and testable."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_073_make_the_workflow_responsive_and_testable"
+        ],
+        "prod": [
+          "prod_015_focused_english_language_claimlens_analysis_workspace"
+        ],
+        "req": [
+          "req_011_refine_the_claimlens_analysis_workspace_user_experience"
+        ],
+        "task": [
+          "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+        ]
+      },
+      "path": "logics/backlog/item_073_make_the_workflow_responsive_and_testable.md",
+      "ref": "item_073_make_the_workflow_responsive_and_testable",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The active workflow has no overlapping or clipped controls at supported mobile widths.",
+          "- Focused visual and interaction tests cover normal, failed-caption, and warning-verification states.",
+          "- All new interface copy is English."
+        ],
+        "Problem": [
+          "- The current two-column mobile stepper and table-first detail views make a five-step process harder to follow on small screens, and visual workflow behavior lacks browser-level coverage."
+        ]
+      },
+      "status": "Ready",
+      "title": "Make the workflow responsive and testable"
+    }
+  ],
+  "estimates": {
+    "char_count": 14720,
+    "companion_doc_count": 1,
+    "doc_count": 9
+  },
+  "generated_at": "2026-07-24T15:21:51Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_011_refine_the_claimlens_analysis_workspace_user_experience",
+      "item_068_create_a_focused_active_analysis_workspace",
+      "item_069_simplify_progress_and_diagnostic_presentation",
+      "item_070_contextualize_transcript_recovery",
+      "item_071_add_an_evidence_aware_results_summary",
+      "item_072_separate_analysis_creation_from_analysis_history",
+      "item_073_make_the_workflow_responsive_and_testable",
+      "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "full",
+  "profile": "normal",
+  "ref": "req_011_refine_the_claimlens_analysis_workspace_user_experience,item_068_create_a_focused_active_analysis_workspace,item_069_simplify_progress_and_diagnostic_presentation,item_070_contextualize_transcript_recovery,item_071_add_an_evidence_aware_results_summary,item_072_separate_analysis_creation_from_analysis_history,item_073_make_the_workflow_responsive_and_testable,task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement",
+  "refs": [
+    "req_011_refine_the_claimlens_analysis_workspace_user_experience",
+    "item_068_create_a_focused_active_analysis_workspace",
+    "item_069_simplify_progress_and_diagnostic_presentation",
+    "item_070_contextualize_transcript_recovery",
+    "item_071_add_an_evidence_aware_results_summary",
+    "item_072_separate_analysis_creation_from_analysis_history",
+    "item_073_make_the_workflow_responsive_and_testable",
+    "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md",
+      "ref": "task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement"
+    }
+  ]
+}

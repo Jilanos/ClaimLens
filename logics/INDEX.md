@@ -25,6 +25,7 @@
 | [prod_012_claimlens_supadata_first_transcript_deployment](product/prod_012_claimlens_supadata_first_transcript_deployment.md) | ClaimLens Supadata-first transcript deployment | Superseded |  |  | product/prod_012_claimlens_supadata_first_transcript_deployment.md |
 | [prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results](product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md) | Live ClaimLens process feedback and trustworthy verification results | Settled |  |  | product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md |
 | [prod_014_reliable_claimlens_jobs_and_evidence_aware_reports](product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md) | Reliable ClaimLens jobs and evidence-aware reports | Settled |  |  | product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md |
+| [prod_015_focused_english_language_claimlens_analysis_workspace](product/prod_015_focused_english_language_claimlens_analysis_workspace.md) | Focused English-language ClaimLens analysis workspace | Settled |  |  | product/prod_015_focused_english_language_claimlens_analysis_workspace.md |
 
 ## Roadmaps
 
@@ -45,6 +46,7 @@ _None_
 | [req_008_supadata_first_provider_order_fix](request/req_008_supadata_first_provider_order_fix.md) | Enable Supadata-first transcript provider order in deployment | Done |  |  | request/req_008_supadata_first_provider_order_fix.md |
 | [req_009_make_process_state_live_and_verification_outcomes_actionable](request/req_009_make_process_state_live_and_verification_outcomes_actionable.md) | Make process state live and verification outcomes actionable | Done |  |  | request/req_009_make_process_state_live_and_verification_outcomes_actionable.md |
 | [req_010_harden_claimlens_production_reliability_and_verification_integrity](request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md) | Harden ClaimLens production reliability and verification integrity | Done |  |  | request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md |
+| [req_011_refine_the_claimlens_analysis_workspace_user_experience](request/req_011_refine_the_claimlens_analysis_workspace_user_experience.md) | Refine the ClaimLens analysis workspace user experience | Done |  |  | request/req_011_refine_the_claimlens_analysis_workspace_user_experience.md |
 
 ## Backlog
 
@@ -117,6 +119,12 @@ _None_
 | [item_065_control_source_provider_quotas_and_report_verification_truthfully](backlog/item_065_control_source_provider_quotas_and_report_verification_truthfully.md) | Control source-provider quotas and report verification truthfully | Done |  | 100% | backlog/item_065_control_source_provider_quotas_and_report_verification_truthfully.md |
 | [item_066_improve_claim_retrieval_relevance_and_transcript_coverage](backlog/item_066_improve_claim_retrieval_relevance_and_transcript_coverage.md) | Improve claim retrieval relevance and transcript coverage | Done |  | 100% | backlog/item_066_improve_claim_retrieval_relevance_and_transcript_coverage.md |
 | [item_067_add_production_workflow_integration_coverage](backlog/item_067_add_production_workflow_integration_coverage.md) | Add production workflow integration coverage | Done |  | 100% | backlog/item_067_add_production_workflow_integration_coverage.md |
+| [item_068_create_a_focused_active_analysis_workspace](backlog/item_068_create_a_focused_active_analysis_workspace.md) | Create a focused active-analysis workspace | Done |  | 100% | backlog/item_068_create_a_focused_active_analysis_workspace.md |
+| [item_069_simplify_progress_and_diagnostic_presentation](backlog/item_069_simplify_progress_and_diagnostic_presentation.md) | Simplify progress and diagnostic presentation | Done |  | 100% | backlog/item_069_simplify_progress_and_diagnostic_presentation.md |
+| [item_070_contextualize_transcript_recovery](backlog/item_070_contextualize_transcript_recovery.md) | Contextualize transcript recovery | Done |  | 100% | backlog/item_070_contextualize_transcript_recovery.md |
+| [item_071_add_an_evidence_aware_results_summary](backlog/item_071_add_an_evidence_aware_results_summary.md) | Add an evidence-aware results summary | Done |  | 100% | backlog/item_071_add_an_evidence_aware_results_summary.md |
+| [item_072_separate_analysis_creation_from_analysis_history](backlog/item_072_separate_analysis_creation_from_analysis_history.md) | Separate analysis creation from analysis history | Done |  | 100% | backlog/item_072_separate_analysis_creation_from_analysis_history.md |
+| [item_073_make_the_workflow_responsive_and_testable](backlog/item_073_make_the_workflow_responsive_and_testable.md) | Make the workflow responsive and testable | Done |  | 100% | backlog/item_073_make_the_workflow_responsive_and_testable.md |
 
 ## Tasks
 
@@ -133,3 +141,4 @@ _None_
 | [task_009_orchestrate_supadata_first_deployment_provider_fix](tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md) | Orchestrate Supadata-first deployment provider fix | Done | codex | 100% | tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md |
 | [task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery](tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md) | Orchestrate live process feedback and verification reliability delivery | Done | codex | 100% | tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md |
 | [task_011_orchestrate_production_reliability_and_verification_integrity_hardening](tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md) | Orchestrate production reliability and verification integrity hardening | Done | codex | 100% | tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md |
+| [task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement](tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md) | Orchestrate the ClaimLens analysis workspace UX refinement | Done | codex | 100% | tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md |

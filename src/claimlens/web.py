@@ -38,6 +38,22 @@ from claimlens.youtube import SupadataClient, SupadataError
 
 LOGGER = logging.getLogger(__name__)
 EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
+STEP_LABELS = {
+    "captions": "Get captions",
+    "clean_transcript": "Prepare transcript",
+    "analysis": "Analyze claims",
+    "brief": "Create brief",
+    "source_verification": "Check sources",
+}
+STATUS_LABELS = {
+    "queued": "Queued",
+    "running": "In progress",
+    "succeeded": "Complete",
+    "completed_with_warnings": "Complete with limits",
+    "failed": "Needs attention",
+    "interrupted": "Interrupted",
+    "pending": "Waiting",
+}
 
 LOGO_MARK = (
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
@@ -137,8 +153,9 @@ textarea { min-height:120px; resize:vertical; font-family:var(--mono); font-size
 .badge.idle { color:var(--muted); background:var(--surface-2); }
 .stepper { display:grid; grid-template-columns:repeat(5,1fr); }
 .step { position:relative; padding:16px 14px; }
-.step:not(:last-child)::after { content:""; position:absolute; top:30px; right:-1px; width:1px;
-  height:calc(100% - 24px); background:var(--line-2); }
+.step:not(:last-child)::after { content:""; position:absolute; top:29px; right:-1px;
+  width:calc(100% - 28px);
+  height:1px; background:var(--line-2); }
 .step .dot { width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
   font-size:12px; font-weight:700; margin-bottom:10px; border:2px solid var(--line);
   color:var(--muted); background:var(--surface); }
@@ -187,8 +204,54 @@ ul.out li:last-child { border-bottom:0; }
 .report ul { margin:0 0 14px; padding-left:20px; color:var(--ink-2); }
 .report li { margin:5px 0; }
 .mono { font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+.workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,320px); gap:24px;
+  align-items:start; }
+.workspace-main { min-width:0; }
+.workspace-side { display:grid; gap:12px; }
+.workspace-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.workspace-title h2 { font-size:18px; }
+.workspace-url { margin:5px 0 0; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+.workspace-action { background:var(--accent-wash);
+  border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);
+  border-radius:var(--radius-sm); padding:16px; }
+.workspace-action h3 { font-size:14px; margin:0 0 4px; }
+.workspace-action p { color:var(--ink-2); margin:0 0 12px; font-size:13.5px; }
+.summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.summary-item { background:var(--surface-2); border:1px solid var(--line-2);
+  border-radius:var(--radius-sm); padding:12px; }
+.summary-item strong { display:block; font-size:19px; line-height:1.2; }
+.summary-item span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+.history-list { display:grid; gap:8px; }
+.history-row { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 4px;
+  border-bottom:1px solid var(--line-2); }
+.history-row:last-child { border-bottom:0; }
+.history-row a { font-weight:600; text-decoration:none; }
+.history-row small { display:block; color:var(--muted); margin-top:3px; }
+.history-filter { max-width:170px; min-height:34px; padding:6px 9px; font-size:13px; }
+.diagnostic { margin-top:16px; border-top:1px solid var(--line-2); padding-top:14px; }
+.diagnostic summary { cursor:pointer; color:var(--ink-2); font-weight:600; font-size:13px; }
+.diagnostic-body { margin-top:12px; overflow-x:auto; }
+.table-wrap { overflow-x:auto; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+  clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.recovery { border-color:color-mix(in srgb,var(--warn) 30%,transparent); color:var(--ink-2);
+  background:var(--warn-wash); }
+.recovery-panel { margin-top:16px; padding-top:14px;
+  border-top:1px solid color-mix(in srgb,var(--warn) 26%,transparent); }
+.recovery-panel h4 { margin:0 0 4px; font-size:14px; }
+.recovery-panel p { margin:0; color:var(--ink-2); font-size:13px; }
 @media (max-width:720px) {
-  .stepper { grid-template-columns:1fr 1fr; }
+  .workspace { grid-template-columns:1fr; gap:16px; }
+  .workspace-side { order:-1; }
+  .stepper { grid-template-columns:1fr; }
+  .step { padding:12px 14px 12px 42px; min-height:56px; }
+  .step:not(:last-child)::after { top:42px; left:26px; right:auto; width:2px;
+    height:calc(100% - 18px); }
+  .step .dot { position:absolute; left:14px; top:12px; margin:0; }
+  .summary-grid { grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  .summary-item { padding:9px; }
+  .summary-item strong { font-size:16px; }
   .report .card-body { padding:24px; }
   .navuser .who { display:none; }
 }
@@ -216,8 +279,18 @@ def _badge_class(status: str) -> str:
 
 
 def _status_badge(status: str, *, suffix: str = "") -> str:
-    label = html.escape((status or "").replace("_", " ")) + suffix
+    label = html.escape(_status_label(status)) + suffix
     return f'<span class="badge {_badge_class(status)}">{label}</span>'
+
+
+def _status_label(status: str | None) -> str:
+    normalized = (status or "").lower()
+    return STATUS_LABELS.get(normalized, normalized.replace("_", " ").title() or "Unknown")
+
+
+def _step_label(step: str | None) -> str:
+    normalized = (step or "").lower()
+    return STEP_LABELS.get(normalized, normalized.replace("_", " ").title() or "Step")
 
 
 def _int_form(form: dict[str, list[str]], name: str, default: int) -> int:
@@ -315,6 +388,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             body = render_process_page(
                 database_path,
                 run_id=run_id,
+                status_filter=query.get("status", [""])[0],
                 csrf_token=context.csrf_token,
                 user_id=context.user_id,
                 guest_token=context.guest_token,
@@ -779,7 +853,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
     server.serve_forever()
 
 
-def render_process_page(
+def _render_process_page_legacy(
     database_path: Path | str,
     *,
     run_id: int | None = None,
@@ -917,6 +991,235 @@ def render_process_page(
     )
 
 
+def render_process_page(
+    database_path: Path | str,
+    *,
+    run_id: int | None = None,
+    notice: str | None = None,
+    csrf_token: str = "",
+    user_id: int | None = None,
+    guest_token: str | None = None,
+    context: WebContext | None = None,
+    source_config: SourceConfig | None = None,
+    status_filter: str = "",
+) -> str:
+    runs = (
+        db.list_visible_pipeline_runs(database_path, user_id=user_id, guest_token=guest_token)
+        if user_id is not None or guest_token
+        else db.list_pipeline_runs(database_path)
+    )
+    allowed_filters = {"running", "succeeded", "failed", "completed_with_warnings"}
+    if status_filter in allowed_filters:
+        runs = [row for row in runs if row["status"] == status_filter]
+    selected_run = (
+        db.get_visible_pipeline_run(
+            database_path,
+            run_id,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        if run_id and (user_id is not None or guest_token)
+        else db.get_pipeline_run(database_path, run_id)
+        if run_id
+        else None
+    )
+    notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
+    create_card = f"""
+  <div class="card">
+    <div class="card-head"><h2>New analysis</h2>
+      <span class="sub">One YouTube video per analysis</span></div>
+    <div class="card-body">
+      <form method="post" class="row">
+        <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
+        <input type="hidden" name="action" value="create">
+        <label class="field grow" style="flex:1 1 320px">
+          <span>YouTube video URL</span>
+          <input name="video_url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
+        </label>
+        <label class="field" style="flex:0 0 160px">
+          <span>Report language</span>
+          <input name="report_language" value="en">
+        </label>
+        <button type="submit" class="btn btn-primary">Start analysis</button>
+      </form>
+    </div>
+  </div>
+"""
+    active_workspace = ""
+    if selected_run is not None:
+        step_rows = db.list_run_steps(database_path, selected_run["id"])
+        next_step = next_eligible_step(database_path, selected_run["id"])
+        if source_config is not None and not source_config.advanced_source_verification:
+            next_step = None if next_step == "source_verification" else next_step
+        active_workspace = _active_workspace(
+            database_path,
+            selected_run,
+            step_rows,
+            next_step,
+            csrf_token=csrf_token,
+            user_id=user_id,
+            source_config=source_config,
+        )
+    body = f"""
+<main>
+  <div class="page-head">
+    <h1>Analyses</h1>
+    <p>Track transcript extraction, claim analysis, and evidence review in one workspace.</p>
+  </div>
+  {notice_html}
+  {create_card}
+  {active_workspace}
+  {_history_card(runs, selected_run["id"] if selected_run is not None else None, status_filter)}
+</main>
+{_live_status_script(selected_run["id"])
+ if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
+ else ""}
+"""
+    return _page_shell(
+        "ClaimLens Analyses",
+        body,
+        context=context,
+        csrf_token=csrf_token,
+        active="process",
+    )
+
+
+def _active_workspace(
+    database_path: Path | str,
+    selected_run,
+    step_rows,
+    next_step: str | None,
+    *,
+    csrf_token: str,
+    user_id: int | None,
+    source_config: SourceConfig | None,
+) -> str:
+    step_by_name = {row["step"]: row for row in step_rows}
+    captions_row = step_by_name.get("captions")
+    failed_captions = captions_row is not None and captions_row["status"] == "failed"
+    controls = _controls(
+        database_path,
+        selected_run["id"],
+        next_step,
+        csrf_token=csrf_token,
+        user_id=user_id,
+        source_config=source_config,
+    )
+    recovery = _manual_transcript_form(selected_run["id"], csrf_token) if failed_captions else ""
+    active_label, active_message = _active_action(selected_run, next_step, failed_captions)
+    video_id = html.escape(selected_run["video_id"] or "")
+    video_url = html.escape(selected_run["source_url"] or selected_run["video_id"] or "")
+    step_rows_html = "\n".join(_step_row(row) for row in step_rows)
+    jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
+    jobs_html = ""
+    if jobs:
+        jobs_html = f"""
+        <h3>Background actions</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>
+          <tbody>{''.join(_job_row(row) for row in jobs)}</tbody>
+        </table></div>
+        """
+    diagnostics = f"""
+    <details class="diagnostic">
+      <summary>Execution details</summary>
+      <div class="diagnostic-body">
+        <div id="pipeline-stepper" class="stepper">{_stepper(step_rows)}</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Step</th><th>Status</th><th>Details</th><th>Output</th></tr></thead>
+            <tbody id="pipeline-steps">{step_rows_html}</tbody>
+          </table>
+        </div>
+        {jobs_html}
+      </div>
+    </details>
+"""
+    return f"""
+  <section class="workspace" aria-label="Active analysis workspace">
+    <div class="workspace-main">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="workspace-title"><h2>Active analysis</h2>
+              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_url}</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="workspace-action">
+            <h3>{html.escape(active_label)}</h3>
+            <p>{html.escape(active_message)}</p>
+            <div id="pipeline-controls">{controls}</div>
+            {recovery}
+          </div>
+          {diagnostics}
+        </div>
+      </div>
+      <div id="pipeline-outputs">{_outputs(database_path, selected_run["video_id"])}</div>
+    </div>
+  </section>
+"""
+
+
+def _active_action(selected_run, next_step: str | None, failed_captions: bool) -> tuple[str, str]:
+    if failed_captions:
+        return (
+            "Transcript recovery needed",
+            "Captions could not be retrieved. Paste a transcript to continue.",
+        )
+    if next_step:
+        label = _step_label(next_step)
+        return f"Next: {label}", f"Continue with {label.lower()} when you are ready."
+    if selected_run["status"] == "running":
+        return (
+            "Analysis in progress",
+            "ClaimLens is processing this analysis. This view updates automatically.",
+        )
+    if selected_run["status"] == "completed_with_warnings":
+        return (
+            "Review verification limits",
+            "The analysis completed, but one or more evidence providers returned warnings.",
+        )
+    if selected_run["status"] == "succeeded":
+        return "Analysis complete", "The brief and available evidence summary are ready to review."
+    return (
+        _status_label(selected_run["status"]),
+        "Review the execution details for the next available recovery action.",
+    )
+
+
+def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
+    options = "".join(
+        f'<option value="{value}"{" selected" if value == status_filter else ""}>{label}</option>'
+        for value, label in [
+            ("", "All statuses"),
+            ("running", "In progress"),
+            ("succeeded", "Complete"),
+            ("completed_with_warnings", "With limits"),
+            ("failed", "Needs attention"),
+        ]
+    )
+    rows = "".join(
+        f'<div class="history-row"><div><a href="/?run_id={row["id"]}">'
+        f'{html.escape(row["video_id"] or "Untitled analysis")}</a>'
+        f'<small>Analysis #{row["id"]} · {html.escape(row["started_at"] or "")}</small></div>'
+        f'{_status_badge(row["status"])}</div>'
+        for row in runs
+    )
+    empty = '<p class="mono">No analyses match this status.</p>' if not rows else rows
+    return f"""
+  <div class="card">
+    <div class="card-head"><h2>Recent analyses</h2>
+      <form method="get"><label class="sr-only" for="status-filter">Filter analyses</label>
+        <select id="status-filter" class="history-filter" name="status"
+          onchange="this.form.submit()">{options}</select></form>
+    </div>
+    <div class="card-body"><div class="history-list">{empty}</div></div>
+  </div>
+"""
+
+
 def _stepper(step_rows) -> str:
     cells = []
     for index, row in enumerate(step_rows, start=1):
@@ -931,8 +1234,8 @@ def _stepper(step_rows) -> str:
             cls, glyph = "bad", "&times;"
         else:
             cls, glyph = "", str(index)
-        name = html.escape(row["step"].replace("_", " "))
-        meta = html.escape(row["status"] or "pending")
+        name = html.escape(_step_label(row["step"]))
+        meta = html.escape(_status_label(row["status"] or "pending"))
         cells.append(
             f'<div class="step {cls}"><div class="dot">{glyph}</div>'
             f'<div class="name">{name}</div><div class="meta">{meta}</div></div>'
@@ -1324,7 +1627,10 @@ def _live_status_script(run_id: int) -> str:
 
 def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
     return f"""
-    <form method="post" style="margin-top:20px;display:grid;gap:12px">
+    <div class="recovery-panel">
+      <h4>Paste a transcript fallback</h4>
+      <p>Use this recovery path when captions are unavailable for the video.</p>
+    <form method="post" style="margin-top:14px;display:grid;gap:12px">
       <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
       <input type="hidden" name="run_id" value="{run_id}">
       <input type="hidden" name="action" value="manual_transcript">
@@ -1337,6 +1643,7 @@ def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
       </label>
       <div><button type="submit" class="btn btn-ghost">Use pasted transcript</button></div>
     </form>
+    </div>
     """
 
 
@@ -1345,6 +1652,22 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
     brief = db.latest_brief_artifact(database_path, video_id)
     verification = db.latest_verification_run(database_path, video_id)
     video = db.get_video(database_path, video_id)
+    analysis = db.latest_analysis(database_path, video_id)
+    claims = db.claims_for_summary(database_path, analysis["id"]) if analysis else []
+    evidence = (
+        db.evidence_for_verification(database_path, verification["id"])
+        if verification
+        else []
+    )
+    brief_status = brief["source_verification_status"] if brief else "not_available"
+    if brief_status == "advanced_source_verified":
+        report_label = "Evidence-backed brief"
+    elif brief_status == "advanced_source_verified_with_warnings":
+        report_label = "Verification attempt with limits"
+    elif brief:
+        report_label = "Analysis brief"
+    else:
+        report_label = "Not available"
     links = []
     if video is not None and video["url"]:
         links.append(
@@ -1373,9 +1696,24 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
         preview = f"<h3>Cleaned transcript preview</h3><div class=\"preview\">{preview_text}</div>"
     if not links and not preview:
         return ""
+    result_status = (
+        "completed_with_warnings"
+        if verification and verification["status"] == "completed_with_warnings"
+        else "succeeded"
+        if brief
+        else "pending"
+    )
     return (
-        '<div class="card"><div class="card-head"><h2>Outputs</h2></div>'
-        f'<div class="card-body"><ul class="out">{"".join(links)}</ul>{preview}</div></div>'
+        '<div class="card"><div class="card-head"><h2>Results</h2>'
+        f'{_status_badge(result_status)}</div><div class="card-body">'
+        f'<div class="summary-grid">'
+        f'<div class="summary-item"><strong>{len(claims)}</strong>'
+        f'<span>Claims reviewed</span></div>'
+        f'<div class="summary-item"><strong>{len(evidence)}</strong>'
+        f'<span>Evidence snippets</span></div>'
+        f'<div class="summary-item"><strong>{html.escape(report_label)}</strong>'
+        f'<span>Report status</span></div></div>'
+        f'<ul class="out">{"".join(links)}</ul>{preview}</div></div>'
     )
 
 
@@ -1634,7 +1972,7 @@ def _verification_counts(database_path: Path | str, verification_run_id: int) ->
 def _step_row(row) -> str:
     return (
         "<tr>"
-        f"<td class=\"name\">{html.escape(row['step'].replace('_', ' '))}</td>"
+        f"<td class=\"name\">{html.escape(_step_label(row['step']))}</td>"
         f"<td class=\"status\">{_status_badge(row['status'])}</td>"
         f"<td>{html.escape(row['failure_message'] or '')}</td>"
         f"<td class=\"mono\">{html.escape(row['output_path'] or '')}</td>"
@@ -1645,7 +1983,7 @@ def _step_row(row) -> str:
 def _job_row(row) -> str:
     return (
         "<tr>"
-        f"<td class=\"name\">{html.escape(row['action'].replace('_', ' '))}</td>"
+        f"<td class=\"name\">{html.escape(_step_label(row['action']))}</td>"
         f"<td class=\"status\">{_status_badge(row['status'])}</td>"
         f"<td>{html.escape(row['message'] or '')}</td>"
         "</tr>"

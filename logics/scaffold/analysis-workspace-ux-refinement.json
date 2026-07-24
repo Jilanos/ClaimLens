@@ -1,0 +1,209 @@
+{
+  "title": "Refine the ClaimLens analysis workspace user experience",
+  "references": [
+    "src/claimlens/web.py",
+    "src/claimlens/briefs.py",
+    "src/claimlens/verification.py",
+    "tests/test_analysis_briefs_web.py",
+    "tests/test_verification.py"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Operational UX refinement",
+    "needs": [
+      "Refocus the Analysis page around the selected run, its current state, and the single next action a user should take.",
+      "Remove duplicated progression information while preserving accessible operational detail.",
+      "Reveal the pasted-transcript fallback only when subtitle extraction needs it.",
+      "Make reports and verification outcomes easier to assess at a glance before users open Markdown.",
+      "Separate creating an analysis from finding and revisiting prior analyses.",
+      "Improve the mobile and keyboard experience without changing the application language."
+    ],
+    "context": [
+      "The current Process page combines creation, run selection, pipeline status, a five-step stepper, a step table, job history, outputs, and a manual transcript form into one vertical sequence.",
+      "The application already has live job-state polling and semantic status messages, but its presentation still exposes several implementation-oriented labels such as clean_transcript and completed_with_warnings.",
+      "The manual pasted-transcript form is always visible, although it is an exception path after captions cannot be obtained.",
+      "Outputs are currently presented as links and raw counts rather than as a concise editorial or evidence summary.",
+      "At narrow widths the five-step progression becomes a two-column grid, and table-heavy sections remain the primary representation.",
+      "The product must remain fully English. This request does not introduce translation, locale selection, or French UI copy."
+    ],
+    "acceptance_criteria": [
+      "A selected run has a clear primary workspace that identifies the video, current pipeline state, current provider/job message, and exactly one primary next action when user action is required.",
+      "The primary workspace does not present the same progression state as competing stepper, table, and jobs views. Detailed execution history remains available without dominating the page.",
+      "Internal action and status identifiers are rendered as concise English product labels, while technical details remain available in a dedicated diagnostic view.",
+      "The pasted-transcript fallback is hidden during normal caption processing and becomes visible with a clear English explanation only after captions fail or are unavailable.",
+      "Outputs contain a compact result summary that distinguishes a regular brief, evidence-backed verification, and an incomplete verification attempt, including claim/source counts and actionable warnings.",
+      "Users can create a new analysis from a focused control and can browse, filter, reopen, and identify recent analyses separately from the active workspace.",
+      "At mobile widths, pipeline progress uses a readable vertical or otherwise linear sequence; data tables have an accessible compact representation without horizontal workflow ambiguity.",
+      "Keyboard focus, status text, and non-color indicators communicate state without relying on color alone.",
+      "All newly introduced user-facing text is English. Ruff, pytest, browser or HTTP integration coverage for the affected workflow, Logics lint, and Logics audit pass before closeout."
+    ]
+  },
+  "product": {
+    "title": "Focused English-language ClaimLens analysis workspace",
+    "overview": "The analysis interface should behave like a focused operational workspace: users immediately understand the active video's state, the next meaningful action, whether evidence was found, and where to return to previous work.",
+    "goals": [
+      "Make the active analysis the visual and interaction priority.",
+      "Reduce scanning and duplicate status interpretation.",
+      "Make exceptional recovery paths feel deliberate rather than permanently exposed.",
+      "Make evidence limitations understandable before a report is opened.",
+      "Keep the product fully English and accessible across desktop and mobile."
+    ],
+    "non_goals": [
+      "Change the analysis, transcript, or verification domain logic.",
+      "Introduce internationalization, locale selection, or non-English UI copy.",
+      "Replace the existing lightweight server with a frontend framework.",
+      "Build a marketing landing page."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Create a focused active-analysis workspace",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Primary workflow",
+      "request_acs": ["AC1", "AC2"],
+      "problem": [
+        "The Process page makes users scan through unrelated creation, selection, pipeline, job, and output cards before identifying what needs attention."
+      ],
+      "scope_in": [
+        "Introduce a selected-run workspace header and action area.",
+        "Expose video identity, current state, live provider message, and one next action.",
+        "Move detailed operational information below the primary workspace."
+      ],
+      "scope_out": [
+        "Changing background job execution semantics.",
+        "Adding realtime transport beyond existing polling."
+      ],
+      "acceptance_criteria": [
+        "A user can identify the current video, state, and required next action without reading a table.",
+        "Only one action is visually primary for a run at any given workflow state."
+      ]
+    },
+    {
+      "title": "Simplify progress and diagnostic presentation",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Status clarity",
+      "request_acs": ["AC2", "AC3", "AC8"],
+      "problem": [
+        "The stepper, step table, and jobs card repeat overlapping status information and surface implementation identifiers directly."
+      ],
+      "scope_in": [
+        "Choose one primary progression representation.",
+        "Provide a collapsible or secondary diagnostic history.",
+        "Map pipeline identifiers to concise English product labels and accessible state text."
+      ],
+      "scope_out": [
+        "Removing diagnostic data needed for support or troubleshooting."
+      ],
+      "acceptance_criteria": [
+        "Progress is understandable without comparing multiple widgets.",
+        "Status remains understandable with color disabled or unavailable."
+      ]
+    },
+    {
+      "title": "Contextualize transcript recovery",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Exception handling",
+      "request_acs": ["AC4"],
+      "problem": [
+        "The manual transcript fallback is permanently visible despite being relevant only when subtitles cannot be retrieved."
+      ],
+      "scope_in": [
+        "Show the fallback after caption failure or unavailability.",
+        "Provide clear English recovery copy and preserve the existing pasted transcript path.",
+        "Allow a user to return to normal workflow controls after recovery."
+      ],
+      "scope_out": [
+        "Changing transcript providers or enabling generated captions."
+      ],
+      "acceptance_criteria": [
+        "Normal runs do not display the pasted-transcript form.",
+        "A failed captions run presents the fallback without requiring the user to infer the next recovery step."
+      ]
+    },
+    {
+      "title": "Add an evidence-aware results summary",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Result comprehension",
+      "request_acs": ["AC5"],
+      "problem": [
+        "Output links and raw source counts do not quickly tell an editor whether a report is normal, evidence-backed, or an incomplete verification attempt."
+      ],
+      "scope_in": [
+        "Summarize brief availability, claims, evidence counts, adapter warnings, and report type.",
+        "Use explicit English labels for verification attempts and warnings.",
+        "Keep report view and download actions available."
+      ],
+      "scope_out": [
+        "Changing source-verification verdict logic or presenting medical advice."
+      ],
+      "acceptance_criteria": [
+        "A user can distinguish an evidence-backed report from an incomplete verification attempt before opening it.",
+        "Warnings state the affected provider and a useful next action when one exists."
+      ]
+    },
+    {
+      "title": "Separate analysis creation from analysis history",
+      "priority": "Medium",
+      "complexity": "High",
+      "theme": "Information architecture",
+      "request_acs": ["AC6"],
+      "problem": [
+        "Creating a run and loading a prior run are peer cards, so neither new work nor history is optimized for repeated use."
+      ],
+      "scope_in": [
+        "Create a focused new-analysis entry point.",
+        "Provide recent analysis history with status and filtering or grouping.",
+        "Allow reopening an analysis without a raw select-only control."
+      ],
+      "scope_out": [
+        "Team collaboration, sharing, or multi-user administration."
+      ],
+      "acceptance_criteria": [
+        "Recent analyses are scannable by video, status, and recency.",
+        "Creating a new analysis remains a short, focused flow."
+      ]
+    },
+    {
+      "title": "Make the workflow responsive and testable",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Accessibility and validation",
+      "request_acs": ["AC7", "AC8", "AC9"],
+      "problem": [
+        "The current two-column mobile stepper and table-first detail views make a five-step process harder to follow on small screens, and visual workflow behavior lacks browser-level coverage."
+      ],
+      "scope_in": [
+        "Implement linear mobile pipeline progression and compact status/detail views.",
+        "Check keyboard focus, semantic status text, and responsive overflow behavior.",
+        "Add focused HTTP or browser tests for the active workspace, fallback state, and verification summary."
+      ],
+      "scope_out": [
+        "A full design-system migration.",
+        "Translation or locale support."
+      ],
+      "acceptance_criteria": [
+        "The active workflow has no overlapping or clipped controls at supported mobile widths.",
+        "Focused visual and interaction tests cover normal, failed-caption, and warning-verification states.",
+        "All new interface copy is English."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate the ClaimLens analysis workspace UX refinement",
+    "plan": [
+      "Establish the active-analysis information hierarchy and component states before moving individual controls.",
+      "Implement progress simplification and contextual transcript recovery together so workflow state has one clear source of truth.",
+      "Deliver results summary and history navigation without weakening access controls.",
+      "Verify responsive, keyboard, live polling, failure, and warning states before closeout."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/analysis-workspace-ux-refinement.json",
+    "mode": "full",
+    "profile": "normal"
+  }
+}
