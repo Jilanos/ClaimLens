@@ -61,6 +61,7 @@ CLAIMLENS_BRIEFS=outputs/briefs
 CLAIMLENS_CONFIG=config/claimlens.example.toml
 CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
+CLAIMLENS_KAPSULE_DB=
 CLAIMLENS_KEY_ENCRYPTION_SECRET=
 CLAIMLENS_SECURE_COOKIES=false
 CLAIMLENS_REGISTRATION_ENABLED=false
@@ -78,6 +79,11 @@ Authenticated web users can save OpenAI, Semantic Scholar, and NCBI/PubMed keys 
 page. Saved keys are encrypted in SQLite with `CLAIMLENS_KEY_ENCRYPTION_SECRET`; keep that secret
 outside Git and back it up separately. Guest users can still enter keys per process, and those keys
 are used only for the submitted job/action.
+
+When `CLAIMLENS_KAPSULE_DB` points to a readable Kapsule SQLite database, ClaimLens also accepts
+existing Kapsule email/password credentials. The Kapsule database is read-only from ClaimLens; the
+first successful Kapsule login provisions a local ClaimLens user row so ClaimLens-owned API keys,
+runs, and sessions remain isolated in the ClaimLens database.
 
 Advanced source verification is disabled by default:
 
@@ -125,6 +131,7 @@ Implemented:
   download, and next-step controls.
 - Login/logout, secure session storage, top navigation, and an Options page for encrypted per-user
   API key management.
+- Optional Kapsule account login bridge for shared paulmondou.fr credentials.
 - Pasted transcript fallback for VPS/IP-blocked YouTube caption extraction.
 - SQLite WAL and `busy_timeout` pragmas for local concurrent web access.
 - Conservative source verification: adapter errors are logged and source verdicts no longer rely

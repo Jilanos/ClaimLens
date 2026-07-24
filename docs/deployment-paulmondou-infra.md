@@ -13,6 +13,7 @@ CLAIMLENS_KEY_ENCRYPTION_SECRET=<openssl rand -hex 32>
 CLAIMLENS_SECURE_COOKIES=true
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=false
+CLAIMLENS_KAPSULE_DB=/kapsule-data/kapsule.sqlite
 ```
 
 Add to `docker-compose.yml`:
@@ -35,8 +36,10 @@ Add to `docker-compose.yml`:
       CLAIMLENS_SECURE_COOKIES: ${CLAIMLENS_SECURE_COOKIES:-true}
       CLAIMLENS_REGISTRATION_ENABLED: ${CLAIMLENS_REGISTRATION_ENABLED:-false}
       CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK: ${CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK:-false}
+      CLAIMLENS_KAPSULE_DB: /kapsule-data/kapsule.sqlite
     volumes:
       - claimlens-data:/data
+      - kapsule-data:/kapsule-data:ro
     expose:
       - "8765"
     security_opt:
@@ -86,6 +89,8 @@ DEPLOY_APP_REPOS="ClaimLens:../ClaimLens:ClaimLens" \
 - Use Caddy HTTPS only. Do not publish the ClaimLens container port directly.
 - Keep `CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=false` for BYO-key deployments.
 - PubMed and Semantic Scholar can run without keys; saved user keys only improve quotas.
+- `CLAIMLENS_KAPSULE_DB` lets ClaimLens verify existing Kapsule accounts against the Kapsule
+  SQLite database mounted read-only. ClaimLens creates only its own local user/session rows.
 
 ## VPS transcript fallback
 

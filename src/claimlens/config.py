@@ -37,6 +37,7 @@ class WebConfig:
     registration_enabled: bool
     allow_server_api_key_fallback: bool
     key_encryption_secret: str | None
+    kapsule_database: Path | None
 
 
 @dataclass(frozen=True)
@@ -164,6 +165,7 @@ def load_config(
                 True,
             ),
             key_encryption_secret=environ.get("CLAIMLENS_KEY_ENCRYPTION_SECRET"),
+            kapsule_database=_optional_env_path(environ, "CLAIMLENS_KAPSULE_DB"),
         ),
         sources=SourceConfig(
             advanced_source_verification=bool(sources.get("advanced_source_verification", False)),

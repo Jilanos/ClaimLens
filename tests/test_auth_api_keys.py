@@ -1,9 +1,13 @@
+import hashlib
+import sqlite3
+
 import pytest
 
 from claimlens import db
 from claimlens.api_keys import KeyContext, resolve_api_key, save_user_api_key
 from claimlens.auth import hash_password, token_digest, verify_password
 from claimlens.config import load_config
+from claimlens.kapsule_auth import authenticate, verify_kapsule_password
 from claimlens.secrets import SecretError, decrypt_secret, encrypt_secret, mask_secret
 
 
@@ -111,3 +115,77 @@ def test_sessions_store_hashed_token(tmp_path):
 
     assert session["email"] == "user@example.test"
     assert db.get_session(database, "session-token") is None
+
+
+def test_kapsule_scrypt_password_verification():
+    stored = kapsule_hash("correct horse battery")
+
+    assert verify_kapsule_password("correct horse battery", stored)
+    assert not verify_kapsule_password("wrong horse battery", stored)
+
+
+def test_kapsule_account_authenticates_from_readonly_database(tmp_path):
+    kapsule_database = tmp_path / "kapsule.sqlite"
+    with sqlite3.connect(kapsule_database) as connection:
+        connection.execute(
+            """
+            CREATE TABLE users (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL UNIQUE,
+                role TEXT NOT NULL,
+                password_hash TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO users (id, email, role, password_hash) VALUES (?, ?, ?, ?)",
+            ("kapsule-user-id", "shared@example.test", "guest", kapsule_hash("kapsulepass")),
+        )
+
+    account = authenticate(kapsule_database, "shared@example.test", "kapsulepass")
+
+    assert account is not None
+    assert account.id == "kapsule-user-id"
+    assert account.email == "shared@example.test"
+    assert authenticate(kapsule_database, "shared@example.test", "bad-password") is None
+
+
+def test_get_or_create_user_provisions_kapsule_account_once(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    first = db.get_or_create_user(
+        database,
+        email="shared@example.test",
+        password_hash="kapsule:kapsule-user-id",
+        display_name="shared@example.test",
+    )
+    second = db.get_or_create_user(
+        database,
+        email="shared@example.test",
+        password_hash="kapsule:kapsule-user-id",
+        display_name="shared@example.test",
+    )
+
+    assert first == second
+    assert db.user_count(database) == 1
+
+
+def test_config_loads_kapsule_database_path():
+    config = load_config(env={"CLAIMLENS_KAPSULE_DB": "/kapsule-data/kapsule.sqlite"})
+
+    assert str(config.web.kapsule_database) == "/kapsule-data/kapsule.sqlite"
+
+
+def kapsule_hash(password: str) -> str:
+    salt = bytes.fromhex("00112233445566778899aabbccddeeff")
+    digest = hashlib.scrypt(
+        password.encode("utf-8"),
+        salt=salt,
+        n=16384,
+        r=8,
+        p=1,
+        dklen=64,
+        maxmem=64 * 1024 * 1024,
+    )
+    return f"scrypt:{salt.hex()}:{digest.hex()}"

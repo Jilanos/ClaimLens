@@ -1180,6 +1180,25 @@ def create_user(
     return int(cursor.lastrowid)
 
 
+def get_or_create_user(
+    database_path: Path | str,
+    *,
+    email: str,
+    password_hash: str,
+    display_name: str | None = None,
+) -> int:
+    normalized = email.strip().lower()
+    existing = get_user_by_email(database_path, normalized)
+    if existing is not None:
+        return int(existing["id"])
+    return create_user(
+        database_path,
+        email=normalized,
+        password_hash=password_hash,
+        display_name=display_name,
+    )
+
+
 def user_count(database_path: Path | str) -> int:
     with closing(connect(database_path)) as connection:
         return int(connection.execute("SELECT COUNT(*) FROM users").fetchone()[0])

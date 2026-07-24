@@ -25,6 +25,7 @@ from claimlens.auth import (
 )
 from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import AppConfig
+from claimlens.kapsule_auth import authenticate as authenticate_kapsule_account
 from claimlens.pipeline import (
     add_manual_transcript,
     clean_run_transcript,
@@ -287,6 +288,25 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             email = form.get("email", [""])[0]
             password = form.get("password", [""])[0]
             user = db.get_user_by_email(database_path, email)
+            if user is not None and verify_password(password, user["password_hash"]):
+                self._create_login_session(int(user["id"]))
+                return
+
+            kapsule_account = authenticate_kapsule_account(
+                config.web.kapsule_database,
+                email,
+                password,
+            )
+            if kapsule_account is not None:
+                user_id = db.get_or_create_user(
+                    database_path,
+                    email=kapsule_account.email,
+                    password_hash=f"kapsule:{kapsule_account.id}",
+                    display_name=kapsule_account.email,
+                )
+                self._create_login_session(user_id)
+                return
+
             if user is None or not verify_password(password, user["password_hash"]):
                 self._send_html(
                     render_login_page(
@@ -302,7 +322,6 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     status=403,
                 )
                 return
-            self._create_login_session(int(user["id"]))
 
         def _handle_register(self, form: dict[str, list[str]]) -> None:
             if not config.web.registration_enabled and db.user_count(database_path) > 0:
