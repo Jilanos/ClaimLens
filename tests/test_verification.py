@@ -59,6 +59,7 @@ class Adapter:
                 abstract_or_snippet="Vitamin D is associated with improved bone health.",
                 adapter=self.name,
                 external_id="support",
+                metadata={"assessment_polarity": "supports"},
             ),
             SourceCandidate(
                 title="Contradicting paper",
@@ -68,6 +69,7 @@ class Adapter:
                 abstract_or_snippet="There is no evidence that vitamin D improves bone health.",
                 adapter=self.name,
                 external_id="against",
+                metadata={"assessment_polarity": "contradicts"},
             ),
         ]
 
@@ -113,6 +115,7 @@ def test_assess_claim_evidence_returns_mixed_with_supporting_and_contradicting_s
                 published_at="2024",
                 abstract_or_snippet="Vitamin D is associated with improved bone health.",
                 adapter="test",
+                metadata={"assessment_polarity": "supports"},
             ),
             SourceCandidate(
                 title="Against",
@@ -121,6 +124,7 @@ def test_assess_claim_evidence_returns_mixed_with_supporting_and_contradicting_s
                 published_at="2024",
                 abstract_or_snippet="No evidence shows vitamin D improves bone health.",
                 adapter="test",
+                metadata={"assessment_polarity": "contradicts"},
             ),
         ],
     )

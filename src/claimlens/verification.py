@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -19,6 +22,7 @@ HUMAN_REVIEW_DISCLAIMER = (
     "human expert judgment, clinical guidance, diagnosis, or medical advice."
 )
 DEFAULT_ADAPTERS = ("pubmed", "semantic_scholar")
+LOGGER = logging.getLogger(__name__)
 
 
 class VerificationError(RuntimeError):
@@ -60,6 +64,12 @@ class ClaimAssessment:
     rationale: str
     confidence: float | None
     evidence: list[EvidenceSnippet]
+
+
+@dataclass(frozen=True)
+class AdapterSearchResult:
+    candidates: list[SourceCandidate]
+    errors: list[str]
 
 
 class SourceAdapter(Protocol):
@@ -113,20 +123,25 @@ class PubMedAdapter:
         )
         summary_body = _read_json(summary_url, timeout=query.timeout_seconds)
         result = summary_body.get("result", {})
+        abstracts = _pubmed_abstracts(ids, api_key=self.api_key, timeout=query.timeout_seconds)
         candidates: list[SourceCandidate] = []
         for pubmed_id in ids:
             item = result.get(pubmed_id, {})
             title = item.get("title") or f"PubMed article {pubmed_id}"
+            abstract = abstracts.get(str(pubmed_id))
             candidates.append(
                 SourceCandidate(
                     title=title,
                     url=f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/",
                     publisher=item.get("source") or "PubMed",
                     published_at=item.get("pubdate"),
-                    abstract_or_snippet=title,
+                    abstract_or_snippet=abstract or title,
                     adapter=self.name,
                     external_id=str(pubmed_id),
-                    metadata={"uid": pubmed_id},
+                    metadata={
+                        "uid": pubmed_id,
+                        "evidence_text_source": "abstract" if abstract else "title_fallback",
+                    },
                 )
             )
         return candidates
@@ -174,7 +189,7 @@ def assess_claim_evidence(
     evidence: list[EvidenceSnippet] = []
     for candidate in candidates:
         snippet = candidate.abstract_or_snippet or candidate.title
-        polarity = _snippet_polarity(claim, snippet)
+        polarity = _candidate_polarity(candidate)
         if polarity == "context":
             continue
         evidence.append(
@@ -182,7 +197,7 @@ def assess_claim_evidence(
                 source_url=candidate.url,
                 polarity=polarity,
                 snippet=_trim(snippet),
-                rationale=f"{candidate.adapter} candidate matched claim terms.",
+                rationale=f"{candidate.adapter} candidate supplied explicit evidence polarity.",
             )
         )
 
@@ -191,21 +206,22 @@ def assess_claim_evidence(
     if supports and contradicts:
         verdict = "mixed"
         rationale = "Available snippets include both supporting and contradicting evidence."
-        confidence = 0.55
+        confidence = None
     elif supports:
         verdict = "supported"
-        rationale = "Available snippets primarily support the claim."
-        confidence = 0.65
+        rationale = "Available evidence was marked as supporting by the assessment boundary."
+        confidence = None
     elif contradicts:
         verdict = "contradicted"
-        rationale = "Available snippets primarily contradict the claim."
-        confidence = 0.65
+        rationale = "Available evidence was marked as contradicting by the assessment boundary."
+        confidence = None
     elif candidates:
         verdict = "unclear"
         rationale = (
-            "Sources were found, but snippets did not clearly support or contradict the claim."
+            "Sources were found, but this conservative review-aid boundary did not classify "
+            "them as clearly supporting or contradicting the claim."
         )
-        confidence = 0.35
+        confidence = None
     else:
         verdict = "not_checked"
         rationale = "No candidate sources were returned by the configured adapters."
@@ -250,7 +266,8 @@ def verify_sources(
                 max_results=max_results,
                 timeout_seconds=timeout_seconds,
             )
-            candidates = _search_all(adapters, query)
+            search_result = _search_all(adapters, query)
+            candidates = search_result.candidates
             source_ids_by_url: dict[str, int] = {}
             for candidate in candidates:
                 source_id = db.upsert_source(
@@ -274,11 +291,17 @@ def verify_sources(
                 )
 
             assessment = assess_claim_evidence(claim=claim["claim"], candidates=candidates)
+            rationale = assessment.rationale
+            if search_result.errors:
+                rationale = (
+                    f"{rationale} Adapter errors: "
+                    f"{'; '.join(search_result.errors)}"
+                )
             db.update_claim_verdict(
                 database_path,
                 claim_id=claim["id"],
                 verdict=assessment.verdict,
-                rationale=assessment.rationale,
+                rationale=rationale,
                 confidence=assessment.confidence,
             )
             for snippet in assessment.evidence:
@@ -321,50 +344,70 @@ def default_adapters(
     ]
 
 
-def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> list[SourceCandidate]:
+def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSearchResult:
     candidates: list[SourceCandidate] = []
+    errors: list[str] = []
     for adapter in adapters:
         try:
             candidates.extend(adapter.search(query))
-        except Exception:
+        except Exception as exc:
+            message = f"{adapter.name}: {exc}"
+            LOGGER.warning("Source adapter failed for claim %s: %s", query.claim_id, message)
+            errors.append(message)
             continue
-    return candidates
+    return AdapterSearchResult(candidates=candidates, errors=errors)
 
 
-def _snippet_polarity(claim: str, snippet: str) -> str:
-    lower = snippet.lower()
-    contradict_markers = [
-        "does not",
-        "did not",
-        "no evidence",
-        "not associated",
-        "reduced risk",
-        "contradict",
-        "unrelated",
-    ]
-    support_markers = [
-        "associated with",
-        "increased risk",
-        "supports",
-        "improves",
-        "reduces",
-        "effective",
-        "significant",
-    ]
-    if any(marker in lower for marker in contradict_markers):
-        return "contradicts"
-    if any(marker in lower for marker in support_markers):
-        return "supports"
-
-    claim_terms = set(build_claim_query(claim).split())
-    snippet_terms = set(build_claim_query(snippet).split())
-    return "supports" if len(claim_terms & snippet_terms) >= 3 else "context"
+def _candidate_polarity(candidate: SourceCandidate) -> str:
+    polarity = str(candidate.metadata.get("assessment_polarity", "context"))
+    return polarity if polarity in POLARITIES else "context"
 
 
 def _read_json(url: str, *, timeout: int, headers: dict[str, str] | None = None) -> dict:
     request = Request(url, headers=headers or {})
-    with urlopen(request, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise VerificationError(f"Source request failed with HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError) as exc:
+        raise VerificationError(
+            "Source request failed because the network request timed out or could not connect."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise VerificationError("Source response was not valid JSON.") from exc
+
+
+def _pubmed_abstracts(
+    ids: list[str],
+    *,
+    api_key: str | None,
+    timeout: int,
+) -> dict[str, str]:
+    if not ids:
+        return {}
+    params = {"db": "pubmed", "id": ",".join(ids), "retmode": "xml"}
+    if api_key:
+        params["api_key"] = api_key
+    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?{urlencode(params)}"
+    request = Request(url)
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            root = ET.fromstring(response.read())
+    except Exception as exc:
+        LOGGER.warning("PubMed abstract fetch failed: %s", exc)
+        return {}
+    abstracts: dict[str, str] = {}
+    for article in root.findall(".//PubmedArticle"):
+        pmid = article.findtext(".//PMID")
+        parts = [
+            "".join(text.itertext()).strip()
+            for text in article.findall(".//AbstractText")
+            if "".join(text.itertext()).strip()
+        ]
+        if pmid and parts:
+            abstracts[pmid] = " ".join(parts)
+    return abstracts
 
 
 def _semantic_scholar_fallback_url(paper: dict) -> str:

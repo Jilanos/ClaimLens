@@ -23,6 +23,9 @@ capabilities can return later as batch inputs once the one-video workflow is rel
 - The system generates a reviewable Markdown brief directly after LLM analysis.
 - The generated brief clearly states that advanced source verification has not been run.
 - A local HTML process page shows each step, output, failure cause, and next eligible action.
+- The local HTML process page guards mutating actions, submits long-running work as jobs, and
+  exposes generated reports for viewing and Markdown download.
+- The final report language can be configured independently of subtitle language.
 - The implementation remains local-first and can later be hosted on a VPS without a rewrite.
 
 ## Base MVP Pipeline
@@ -84,6 +87,9 @@ Deliverable: a timestamp-free cleaned transcript is available for analysis.
 Scope:
 
 - Use OpenAI with a mockable client boundary.
+- Bound long transcripts before LLM submission.
+- Request deterministic analysis settings where supported.
+- Ground notable claims with transcript excerpts where possible.
 - Generate structured output:
   - concise summary
   - key points
@@ -101,6 +107,7 @@ Scope:
 
 - Generate one Markdown brief per processed video.
 - Include video URL and metadata available locally.
+- Include configured report language.
 - Include transcript status and analysis summary.
 - Include notable claims and caveats.
 - Clearly label source status as `not advanced-source-verified`.
@@ -114,9 +121,13 @@ Scope:
 
 - Provide a local web page for entering one video URL and an OpenAI API key at run start.
 - Show pipeline steps with statuses: `pending`, `running`, `succeeded`, `failed`, `skipped`.
+- Use CSRF protection, request-size limits, controlled error messages, and local rate limits for
+  costly actions.
+- Submit long-running actions to a local async job model and show queued/running/failed/succeeded
+  progress.
 - Show failure causes and block ineligible downstream steps.
 - Let the user launch the next eligible step.
-- Link to generated local outputs.
+- Link to generated local outputs, render reports in the browser, and allow Markdown download.
 - Keep host, port, database path, and output paths configurable for later VPS hosting.
 
 Deliverable: a local-first HTML process page can drive and inspect one run.
@@ -135,7 +146,10 @@ Scope:
   - curated web search for reputable non-academic sources
 - Compare claims against sources.
 - Add verdicts: `supported`, `contradicted`, `mixed`, `unclear`, or `not_checked`.
-- Store source links, rationale, confidence, and short supporting notes.
+- Store source links, rationale, and evidence snippets; avoid false-precision confidence unless it
+  comes from documented rules.
+- Treat source verification as conservative review aid and distinguish adapter errors from no
+  source results.
 - Update brief rendering to include citations and verdicts when the option has run.
 
 Deliverable later: source-verified briefs remain compatible with the base brief format.
@@ -161,6 +175,7 @@ CLAIMLENS_DB=data/claimlens.sqlite3
 CLAIMLENS_OUTPUTS=outputs
 CLAIMLENS_TRANSCRIPTS=outputs/transcripts
 CLAIMLENS_BRIEFS=outputs/briefs
+CLAIMLENS_CONFIG=config/claimlens.example.toml
 CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
 OPENAI_API_KEY=
@@ -222,7 +237,9 @@ and the first transcript implementation uses public caption availability.
 - LLM analysis can overstate certainty; briefs must remain review-first and label source status.
 - API costs and failures need clear handling.
 - Local web UI must not leak API keys into persisted artifacts.
-- VPS hosting later will need explicit auth/reverse-proxy decisions before exposure beyond private use.
+- VPS hosting later still needs explicit OpenAI key ownership, auth, TLS, and reverse-proxy
+  decisions before exposure beyond private use. These remain standby deployment decisions.
+- YouTube datacenter blocking remains a live hosting risk and must be tested from the target VPS.
 
 ## MVP Principle
 

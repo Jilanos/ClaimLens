@@ -18,19 +18,26 @@ class BriefError(RuntimeError):
 def render_markdown_brief(
     *,
     video_id: str,
+    title: str | None = None,
     source_url: str,
+    report_language: str = "en",
+    metadata: dict[str, str | int | None] | None = None,
     summary: str,
     key_points: list[str],
     notable_claims: list[str],
     caveats: list[str],
     editorial_notes: list[str],
 ) -> str:
+    display_title = title or video_id
     sections = [
-        f"# ClaimLens Brief: {video_id}",
+        f"# ClaimLens Brief: {display_title}",
         "",
+        f"- Video ID: {video_id}",
         f"- Video: {source_url}",
+        f"- Report language: {report_language}",
         "- Source verification: Not advanced-source-verified.",
         "- Claim verdicts: Not checked in the base MVP.",
+        *_metadata_lines(metadata or {}),
         "",
         "## Summary",
         summary,
@@ -58,6 +65,8 @@ def generate_brief(database_path: Path | str, *, video_id: str, briefs_path: Pat
 
     run = db.latest_pipeline_run_for_video(database_path, video_id)
     source_url = run["source_url"] if run is not None and run["source_url"] else video_id
+    report_language = _report_language(run)
+    video = db.get_video(database_path, video_id)
     claims = [row["claim"] for row in db.claims_for_summary(database_path, analysis["id"])]
     details = json.loads(analysis["key_points_json"])
 
@@ -66,7 +75,10 @@ def generate_brief(database_path: Path | str, *, video_id: str, briefs_path: Pat
     output_path = output_dir / f"{video_id}.md"
     markdown = render_markdown_brief(
         video_id=video_id,
+        title=video["title"] if video is not None else None,
         source_url=source_url,
+        report_language=report_language,
+        metadata=_video_metadata(video),
         summary=analysis["summary"],
         key_points=details.get("key_points", []),
         notable_claims=claims,
@@ -99,6 +111,8 @@ def generate_verified_brief(
 
     run = db.latest_pipeline_run_for_video(database_path, video_id)
     source_url = run["source_url"] if run is not None and run["source_url"] else video_id
+    report_language = _report_language(run)
+    video = db.get_video(database_path, video_id)
     details = json.loads(analysis["key_points_json"])
     claims = db.verified_claims_for_summary(database_path, analysis["id"])
     evidence = db.evidence_for_verification(database_path, verification_run["id"])
@@ -108,7 +122,10 @@ def generate_verified_brief(
     output_path = output_dir / f"{video_id}.verified.md"
     markdown = render_verified_markdown_brief(
         video_id=video_id,
+        title=video["title"] if video is not None else None,
         source_url=source_url,
+        report_language=report_language,
+        metadata=_video_metadata(video),
         summary=analysis["summary"],
         key_points=details.get("key_points", []),
         claims=claims,
@@ -128,7 +145,10 @@ def generate_verified_brief(
 def render_verified_markdown_brief(
     *,
     video_id: str,
+    title: str | None = None,
     source_url: str,
+    report_language: str = "en",
+    metadata: dict[str, str | int | None] | None = None,
     summary: str,
     key_points: list[str],
     claims: list,
@@ -139,11 +159,14 @@ def render_verified_markdown_brief(
         evidence_by_claim.setdefault(item["claim_id"], []).append(item)
 
     sections = [
-        f"# ClaimLens Source-Verified Brief: {video_id}",
+        f"# ClaimLens Source-Verified Brief: {title or video_id}",
         "",
+        f"- Video ID: {video_id}",
         f"- Video: {source_url}",
+        f"- Report language: {report_language}",
         "- Source verification: Advanced-source-verified with PubMed/Semantic Scholar candidates.",
         "- Review status: Human review required for health/science claims.",
+        *_metadata_lines(metadata or {}),
         "",
         "## Summary",
         summary,
@@ -174,6 +197,31 @@ def _bullets(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
+def _video_metadata(video) -> dict[str, str | int | None]:
+    if video is None:
+        return {}
+    return {
+        "Channel": video["channel_title"],
+        "Published": video["published_at"],
+        "Duration seconds": video["duration_seconds"],
+        "Views": video["view_count"],
+    }
+
+
+def _report_language(run) -> str:
+    if run is None or "report_language" not in run.keys() or not run["report_language"]:
+        return "en"
+    return str(run["report_language"])
+
+
+def _metadata_lines(metadata: dict[str, str | int | None]) -> list[str]:
+    lines = []
+    for label, value in metadata.items():
+        if value is not None and value != "":
+            lines.append(f"- {label}: {value}")
+    return lines
+
+
 def _claim_section(claim, evidence: list) -> list[str]:
     supporting = [item for item in evidence if item["polarity"] == "supports"]
     contradicting = [item for item in evidence if item["polarity"] == "contradicts"]
@@ -181,6 +229,7 @@ def _claim_section(claim, evidence: list) -> list[str]:
         "",
         f"### {claim['claim']}",
         f"- Verdict: {claim['verdict']}",
+        f"- Transcript excerpt: {claim['transcript_excerpt'] or 'No excerpt stored.'}",
         f"- Rationale: {claim['rationale'] or 'No rationale stored.'}",
         "",
         "Supporting evidence:",

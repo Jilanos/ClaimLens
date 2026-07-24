@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS videos (
     duration_seconds INTEGER,
     view_count INTEGER,
     like_count INTEGER,
+    author TEXT,
     processing_status TEXT NOT NULL DEFAULT 'new',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -118,6 +119,7 @@ CREATE TABLE IF NOT EXISTS claims (
     video_id TEXT NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
     summary_id INTEGER REFERENCES summaries(id) ON DELETE SET NULL,
     claim TEXT NOT NULL,
+    transcript_excerpt TEXT,
     domain TEXT NOT NULL DEFAULT 'general',
     verifiability TEXT NOT NULL DEFAULT 'unknown',
     verdict TEXT NOT NULL DEFAULT 'not_checked',
@@ -198,8 +200,24 @@ CREATE TABLE IF NOT EXISTS brief_artifacts (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL REFERENCES pipeline_runs(id) ON DELETE CASCADE,
+    action TEXT NOT NULL,
+    status TEXT NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    message TEXT,
+    output_path TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_run_action ON jobs(run_id, action);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '3')
+VALUES ('schema_version', '4')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -224,9 +242,12 @@ class TranscriptLike(Protocol):
 def connect(database_path: Path | str) -> sqlite3.Connection:
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(path)
+    connection = sqlite3.connect(path, timeout=5)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON;")
+    connection.execute("PRAGMA busy_timeout = 5000;")
+    if path.name != ":memory:":
+        connection.execute("PRAGMA journal_mode = WAL;")
     return connection
 
 
@@ -251,6 +272,25 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         "sources",
         "metadata_json",
         "TEXT NOT NULL DEFAULT '{}'",
+    )
+    _add_column_if_missing(connection, "videos", "author", "TEXT")
+    _add_column_if_missing(connection, "claims", "transcript_excerpt", "TEXT")
+    _add_column_if_missing(connection, "pipeline_runs", "report_language", "TEXT")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id INTEGER NOT NULL REFERENCES pipeline_runs(id) ON DELETE CASCADE,
+            action TEXT NOT NULL,
+            status TEXT NOT NULL,
+            progress INTEGER NOT NULL DEFAULT 0,
+            message TEXT,
+            output_path TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            finished_at TEXT
+        )
+        """
     )
 
 
@@ -303,16 +343,27 @@ def upsert_video(database_path: Path | str, *, channel_id: str, video: VideoLike
         with connection:
             connection.execute(
                 """
-                INSERT INTO videos (id, channel_id, title, url, published_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO videos
+                    (id, channel_id, title, url, published_at, duration_seconds, view_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     channel_id = excluded.channel_id,
                     title = excluded.title,
                     url = excluded.url,
                     published_at = COALESCE(excluded.published_at, videos.published_at),
+                    duration_seconds = COALESCE(excluded.duration_seconds, videos.duration_seconds),
+                    view_count = COALESCE(excluded.view_count, videos.view_count),
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (video.id, channel_id, video.title, video.url, video.published_text),
+                (
+                    video.id,
+                    channel_id,
+                    video.title,
+                    video.url,
+                    video.published_text,
+                    _duration_seconds(getattr(video, "duration_text", None)),
+                    _count_value(getattr(video, "view_count_text", None)),
+                ),
             )
 
 
@@ -366,6 +417,7 @@ def create_pipeline_run(
     *,
     video_id: str,
     source_url: str,
+    report_language: str = "en",
     command: str = "run-video",
 ) -> int:
     steps = ["captions", "clean_transcript", "analysis", "brief", "source_verification"]
@@ -374,14 +426,21 @@ def create_pipeline_run(
             cursor = connection.execute(
                 """
                 INSERT INTO pipeline_runs
-                    (command, status, video_id, source_url, current_step, details)
-                VALUES (?, 'created', ?, ?, 'captions', ?)
+                    (command, status, video_id, source_url, current_step, report_language, details)
+                VALUES (?, 'created', ?, ?, 'captions', ?, ?)
                 """,
                 (
                     command,
                     video_id,
                     source_url,
-                    json.dumps({"video_id": video_id, "source_url": source_url}),
+                    report_language,
+                    json.dumps(
+                        {
+                            "video_id": video_id,
+                            "source_url": source_url,
+                            "report_language": report_language,
+                        }
+                    ),
                 ),
             )
             run_id = int(cursor.lastrowid)
@@ -470,8 +529,21 @@ def latest_pipeline_run_for_video(database_path: Path | str, video_id: str) -> s
 def list_pipeline_runs(database_path: Path | str) -> list[sqlite3.Row]:
     with closing(connect(database_path)) as connection:
         return connection.execute(
-            "SELECT * FROM pipeline_runs ORDER BY id DESC",
+            "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT 100",
         ).fetchall()
+
+
+def get_video(database_path: Path | str, video_id: str) -> sqlite3.Row | None:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT videos.*, channels.title AS channel_title, channels.url AS channel_url
+            FROM videos
+            LEFT JOIN channels ON channels.id = videos.channel_id
+            WHERE videos.id = ?
+            """,
+            (video_id,),
+        ).fetchone()
 
 
 def list_run_steps(database_path: Path | str, run_id: int) -> list[sqlite3.Row]:
@@ -558,6 +630,7 @@ def upsert_analysis(
     summary: str,
     key_points: list[str],
     notable_claims: list[str],
+    claim_excerpts: dict[str, str] | None = None,
     caveats: list[str] | None = None,
     editorial_notes: list[str] | None = None,
 ) -> int:
@@ -577,16 +650,22 @@ def upsert_analysis(
                 (video_id, model, summary, json.dumps(details)),
             )
             summary_id = int(cursor.lastrowid)
-            connection.execute(
-                "DELETE FROM claims WHERE video_id = ? AND verdict = 'not_checked'",
-                (video_id,),
-            )
+            connection.execute("DELETE FROM claims WHERE video_id = ?", (video_id,))
             connection.executemany(
                 """
-                INSERT INTO claims (video_id, summary_id, claim, verdict, rationale)
-                VALUES (?, ?, ?, 'not_checked', 'Advanced source verification has not run.')
+                INSERT INTO claims
+                    (video_id, summary_id, claim, transcript_excerpt, verdict, rationale)
+                VALUES (?, ?, ?, ?, 'not_checked', 'Advanced source verification has not run.')
                 """,
-                [(video_id, summary_id, claim) for claim in notable_claims],
+                [
+                    (
+                        video_id,
+                        summary_id,
+                        claim,
+                        (claim_excerpts or {}).get(claim),
+                    )
+                    for claim in notable_claims
+                ],
             )
     return summary_id
 
@@ -868,3 +947,98 @@ def verified_claims_for_summary(
             """,
             (summary_id,),
         ).fetchall()
+
+
+def create_job(database_path: Path | str, *, run_id: int, action: str) -> int | None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            existing = connection.execute(
+                """
+                SELECT id FROM jobs
+                WHERE run_id = ? AND action = ? AND status IN ('queued', 'running')
+                ORDER BY id DESC LIMIT 1
+                """,
+                (run_id, action),
+            ).fetchone()
+            if existing is not None:
+                return None
+            cursor = connection.execute(
+                """
+                INSERT INTO jobs (run_id, action, status, progress, message)
+                VALUES (?, ?, 'queued', 0, 'Queued')
+                """,
+                (run_id, action),
+            )
+    return int(cursor.lastrowid)
+
+
+def update_job(
+    database_path: Path | str,
+    *,
+    job_id: int,
+    status: str,
+    progress: int | None = None,
+    message: str | None = None,
+    output_path: str | None = None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE jobs
+                SET status = ?,
+                    progress = COALESCE(?, progress),
+                    message = COALESCE(?, message),
+                    output_path = COALESCE(?, output_path),
+                    updated_at = CURRENT_TIMESTAMP,
+                    finished_at = CASE
+                        WHEN ? IN ('failed', 'succeeded', 'rejected') THEN CURRENT_TIMESTAMP
+                        ELSE finished_at
+                    END
+                WHERE id = ?
+                """,
+                (status, progress, message, output_path, status, job_id),
+            )
+
+
+def latest_jobs_for_run(database_path: Path | str, run_id: int) -> list[sqlite3.Row]:
+    with closing(connect(database_path)) as connection:
+        return connection.execute(
+            """
+            SELECT *
+            FROM jobs
+            WHERE run_id = ?
+            ORDER BY id DESC
+            LIMIT 20
+            """,
+            (run_id,),
+        ).fetchall()
+
+
+def _duration_seconds(value: str | None) -> int | None:
+    if not value:
+        return None
+    parts = value.strip().split(":")
+    if not all(part.isdigit() for part in parts):
+        return None
+    seconds = 0
+    for part in parts:
+        seconds = seconds * 60 + int(part)
+    return seconds
+
+
+def _count_value(value: str | None) -> int | None:
+    if not value:
+        return None
+    lowered = value.lower().replace(",", "").replace(" views", "").replace(" view", "").strip()
+    multiplier = 1
+    if lowered.endswith("k"):
+        multiplier = 1_000
+        lowered = lowered[:-1]
+    elif lowered.endswith("m"):
+        multiplier = 1_000_000
+        lowered = lowered[:-1]
+    try:
+        return int(float(lowered) * multiplier)
+    except ValueError:
+        return None

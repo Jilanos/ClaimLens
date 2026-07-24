@@ -9,6 +9,13 @@ max_videos_per_channel = 10
 candidate_min_duration_seconds = 480
 source_verification_max_results = 5
 source_verification_timeout_seconds = 20
+analysis_max_chars = 60000
+report_language = "en"
+
+[web]
+max_request_bytes = 16384
+rate_limit_actions = 12
+rate_limit_window_seconds = 300
 
 [sources]
 advanced_source_verification = false

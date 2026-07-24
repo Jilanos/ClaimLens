@@ -45,6 +45,7 @@ EXPECTED_TABLES = {
     "brief_artifacts",
     "verification_runs",
     "evidence_snippets",
+    "jobs",
 }
 
 
@@ -68,7 +69,19 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "3"
+    assert schema_version == "4"
+
+
+def test_connect_applies_sqlite_concurrency_pragmas(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    init_db(database)
+
+    with db.connect(database) as connection:
+        busy_timeout = connection.execute("PRAGMA busy_timeout").fetchone()[0]
+        journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
+
+    assert busy_timeout == 5000
+    assert journal_mode == "wal"
 
 
 def test_init_db_closes_connection(monkeypatch, tmp_path):
@@ -125,3 +138,32 @@ def test_upsert_transcript_stores_text_and_segments(tmp_path):
 
     assert transcript_count == 1
     assert segment_count == 2
+
+
+def test_create_job_rejects_duplicate_running_action(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    init_db(database)
+    db.upsert_channel(database, channel_id="manual")
+    db.upsert_video(
+        database,
+        channel_id="manual",
+        video=Video(
+            id="video123",
+            title="Video",
+            url="https://www.youtube.com/watch?v=video123",
+        ),
+    )
+    run_id = db.create_pipeline_run(
+        database,
+        video_id="video123",
+        source_url="https://www.youtube.com/watch?v=video123",
+    )
+
+    first = db.create_job(database, run_id=run_id, action="analysis")
+    second = db.create_job(database, run_id=run_id, action="analysis")
+    db.update_job(database, job_id=first, status="succeeded", progress=100)
+    third = db.create_job(database, run_id=run_id, action="analysis")
+
+    assert first is not None
+    assert second is None
+    assert third is not None

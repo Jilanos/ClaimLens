@@ -8,7 +8,13 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
-from claimlens.youtube import TranscriptResult, YouTubeError, YouTubeVideo, fetch_transcript
+from claimlens.youtube import (
+    TranscriptResult,
+    YouTubeError,
+    YouTubeVideo,
+    fetch_transcript,
+    fetch_video_metadata,
+)
 
 MANUAL_CHANNEL_ID = "manual"
 TIMESTAMP_RE = re.compile(
@@ -56,14 +62,22 @@ def parse_youtube_video_url(target: str) -> ParsedVideoUrl:
     )
 
 
-def create_run(database_path: Path | str, video_url: str) -> int:
+def create_run(
+    database_path: Path | str,
+    video_url: str,
+    *,
+    report_language: str = "en",
+    fetch_metadata: bool = False,
+) -> int:
     parsed = parse_youtube_video_url(video_url)
     db.init_db(database_path)
     db.upsert_channel(database_path, channel_id=MANUAL_CHANNEL_ID, title="Manual videos")
+    metadata = fetch_video_metadata(parsed.canonical_url) if fetch_metadata else None
     db.upsert_video(
         database_path,
         channel_id=MANUAL_CHANNEL_ID,
-        video=YouTubeVideo(
+        video=metadata
+        or YouTubeVideo(
             id=parsed.video_id,
             title=parsed.video_id,
             url=parsed.canonical_url,
@@ -73,6 +87,7 @@ def create_run(database_path: Path | str, video_url: str) -> int:
         database_path,
         video_id=parsed.video_id,
         source_url=parsed.canonical_url,
+        report_language=report_language,
     )
 
 

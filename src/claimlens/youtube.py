@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 USER_AGENT = "Mozilla/5.0 (compatible; ClaimLens/0.1)"
@@ -38,6 +39,27 @@ class TranscriptResult:
 
 class YouTubeError(RuntimeError):
     """Raised when YouTube discovery or transcript extraction fails."""
+
+
+def fetch_video_metadata(video_url: str, *, timeout: int = 5) -> YouTubeVideo | None:
+    """Return bounded public metadata for a single YouTube URL when oEmbed is available."""
+
+    url = f"https://www.youtube.com/oembed?{urlencode({'url': video_url, 'format': 'json'})}"
+    try:
+        body = json.loads(_read_url(url, timeout=timeout))
+    except Exception:
+        return None
+    video_id = _video_id_from_url(video_url)
+    if not video_id:
+        return None
+    return YouTubeVideo(
+        id=video_id,
+        title=body.get("title") or video_id,
+        url=video_url,
+        published_text=None,
+        duration_text=None,
+        view_count_text=None,
+    )
 
 
 def latest_channel_videos(channel_url: str, *, limit: int) -> list[YouTubeVideo]:
@@ -85,7 +107,7 @@ def _videos_url(channel_url: str) -> str:
     return base_url if base_url.endswith("/videos") else f"{base_url}/videos"
 
 
-def _read_url(url: str) -> str:
+def _read_url(url: str, *, timeout: int = 30) -> str:
     request = Request(
         url,
         headers={
@@ -93,8 +115,14 @@ def _read_url(url: str) -> str:
             "Accept-Language": "en-US,en;q=0.9",
         },
     )
-    with urlopen(request, timeout=30) as response:
+    with urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8", "ignore")
+
+
+def _video_id_from_url(video_url: str) -> str | None:
+    if "v=" in video_url:
+        return video_url.split("v=", 1)[1].split("&", 1)[0]
+    return None
 
 
 def _extract_json_object(html: str, marker: str) -> dict[str, Any]:

@@ -23,6 +23,15 @@ class PipelineConfig:
     candidate_min_duration_seconds: int
     source_verification_max_results: int
     source_verification_timeout_seconds: int
+    analysis_max_chars: int
+    report_language: str
+
+
+@dataclass(frozen=True)
+class WebConfig:
+    max_request_bytes: int
+    rate_limit_actions: int
+    rate_limit_window_seconds: int
 
 
 @dataclass(frozen=True)
@@ -46,11 +55,13 @@ class AppConfig:
     repo_root: Path
     paths: PathsConfig
     pipeline: PipelineConfig
+    web: WebConfig
     sources: SourceConfig
     api_keys: ApiKeys
 
 
 DEFAULT_CONFIG_PATH = Path("config/claimlens.example.toml")
+CONFIG_ENV = "CLAIMLENS_CONFIG"
 
 
 class ConfigError(ValueError):
@@ -65,21 +76,36 @@ def load_config(
     """Load config from TOML plus environment variables."""
 
     environ = os.environ if env is None else env
+    explicit_config = Path(config_path) if config_path else _optional_env_path(environ, CONFIG_ENV)
     repo_root = Path.cwd()
-    raw = _read_toml(Path(config_path) if config_path else repo_root / DEFAULT_CONFIG_PATH)
+    raw = _read_toml(explicit_config or repo_root / DEFAULT_CONFIG_PATH)
+    config_base = explicit_config.expanduser().parent if explicit_config else None
 
     paths = raw.get("paths", {})
     pipeline = raw.get("pipeline", {})
+    web = raw.get("web", {})
     sources = raw.get("sources", {})
 
-    database = _env_path(environ, "CLAIMLENS_DB", paths.get("database", "data/claimlens.sqlite3"))
-    outputs = _env_path(environ, "CLAIMLENS_OUTPUTS", paths.get("outputs", "outputs"))
+    database = _env_path(
+        environ,
+        "CLAIMLENS_DB",
+        _config_path(paths.get("database", "data/claimlens.sqlite3"), base=config_base),
+    )
+    outputs = _env_path(
+        environ,
+        "CLAIMLENS_OUTPUTS",
+        _config_path(paths.get("outputs", "outputs"), base=config_base),
+    )
     transcripts = _env_path(
         environ,
         "CLAIMLENS_TRANSCRIPTS",
-        paths.get("transcripts", "outputs/transcripts"),
+        _config_path(paths.get("transcripts", "outputs/transcripts"), base=config_base),
     )
-    briefs = _env_path(environ, "CLAIMLENS_BRIEFS", paths.get("briefs", "outputs/briefs"))
+    briefs = _env_path(
+        environ,
+        "CLAIMLENS_BRIEFS",
+        _config_path(paths.get("briefs", "outputs/briefs"), base=config_base),
+    )
 
     return AppConfig(
         repo_root=repo_root,
@@ -110,6 +136,13 @@ def load_config(
                 "source_verification_timeout_seconds",
                 20,
             ),
+            analysis_max_chars=_int_setting(pipeline, "analysis_max_chars", 60000),
+            report_language=str(pipeline.get("report_language", "en")).strip() or "en",
+        ),
+        web=WebConfig(
+            max_request_bytes=_int_setting(web, "max_request_bytes", 16_384),
+            rate_limit_actions=_int_setting(web, "rate_limit_actions", 12),
+            rate_limit_window_seconds=_int_setting(web, "rate_limit_window_seconds", 300),
         ),
         sources=SourceConfig(
             advanced_source_verification=bool(sources.get("advanced_source_verification", False)),
@@ -133,12 +166,24 @@ def _read_toml(path: Path) -> dict[str, Any]:
         return tomllib.load(file)
 
 
+def _optional_env_path(env: dict[str, str], key: str) -> Path | None:
+    value = env.get(key)
+    return Path(value).expanduser() if value else None
+
+
 def _env_path(env: dict[str, str], key: str, fallback: str | Path) -> Path:
     return _path(env.get(key, fallback))
 
 
 def _path(value: str | Path) -> Path:
     return Path(value).expanduser()
+
+
+def _config_path(value: str | Path, *, base: Path | None) -> Path:
+    path = _path(value)
+    if base is not None and not path.is_absolute():
+        return base / path
+    return path
 
 
 def _int_setting(values: dict[str, Any], key: str, default: int) -> int:

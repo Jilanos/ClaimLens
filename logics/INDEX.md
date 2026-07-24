@@ -5,6 +5,7 @@
 | Doc | Title | Status | Owner | Progress | Path |
 |---|---|---|---|---|---|
 | [adr_001_single_video_local_first_pipeline](architecture/adr_001_single_video_local_first_pipeline.md) | Single Video Local First Pipeline | Proposed |  |  | architecture/adr_001_single_video_local_first_pipeline.md |
+| [adr_002_advanced_source_verification_architecture](architecture/adr_002_advanced_source_verification_architecture.md) | Advanced Source Verification Architecture | Proposed |  |  | architecture/adr_002_advanced_source_verification_architecture.md |
 
 ## Product briefs
 
@@ -14,7 +15,8 @@
 | [prod_002_claimlens_metadata_ingestion](product/prod_002_claimlens_metadata_ingestion.md) | ClaimLens Metadata Ingestion | Superseded |  |  | product/prod_002_claimlens_metadata_ingestion.md |
 | [prod_003_claimlens_audit_remediation_and_hardening](product/prod_003_claimlens_audit_remediation_and_hardening.md) | ClaimLens Audit Remediation and Hardening | Settled |  |  | product/prod_003_claimlens_audit_remediation_and_hardening.md |
 | [prod_004_claimlens_single_video_local_first_mvp](product/prod_004_claimlens_single_video_local_first_mvp.md) | ClaimLens Single Video Local First MVP | Proposed |  |  | product/prod_004_claimlens_single_video_local_first_mvp.md |
-| [prod_005_claimlens_advanced_source_verification_mode](product/prod_005_claimlens_advanced_source_verification_mode.md) | ClaimLens Advanced Source Verification Mode | Proposed |  |  | product/prod_005_claimlens_advanced_source_verification_mode.md |
+| [prod_005_claimlens_advanced_source_verification_mode](product/prod_005_claimlens_advanced_source_verification_mode.md) | ClaimLens Advanced Source Verification Mode | Settled |  |  | product/prod_005_claimlens_advanced_source_verification_mode.md |
+| [prod_006_claimlens_online_readiness_audit_implementation](product/prod_006_claimlens_online_readiness_audit_implementation.md) | ClaimLens Online Readiness Audit Implementation | Settled |  |  | product/prod_006_claimlens_online_readiness_audit_implementation.md |
 
 ## Roadmaps
 
@@ -28,7 +30,8 @@ _None_
 | [req_001_milestone_2_metadata_ingestion](request/req_001_milestone_2_metadata_ingestion.md) | Milestone 2: Metadata Ingestion | Obsolete |  |  | request/req_001_milestone_2_metadata_ingestion.md |
 | [req_002_audit_remediation_and_hardening](request/req_002_audit_remediation_and_hardening.md) | Audit Remediation and Hardening | Done |  |  | request/req_002_audit_remediation_and_hardening.md |
 | [req_003_mvp_single_video_local_first_pipeline](request/req_003_mvp_single_video_local_first_pipeline.md) | MVP: Single Video Local First Pipeline | Done |  |  | request/req_003_mvp_single_video_local_first_pipeline.md |
-| [req_004_advanced_source_verification_mode](request/req_004_advanced_source_verification_mode.md) | Advanced Source Verification Mode | Draft |  |  | request/req_004_advanced_source_verification_mode.md |
+| [req_004_advanced_source_verification_mode](request/req_004_advanced_source_verification_mode.md) | Advanced Source Verification Mode | Done |  |  | request/req_004_advanced_source_verification_mode.md |
+| [req_005_online_readiness_audit_implementation](request/req_005_online_readiness_audit_implementation.md) | Online Readiness Audit Implementation | Done |  |  | request/req_005_online_readiness_audit_implementation.md |
 
 ## Backlog
 
@@ -54,15 +57,26 @@ _None_
 | [item_018_design_optional_advanced_source_verification_mode](backlog/item_018_design_optional_advanced_source_verification_mode.md) | Design optional advanced source verification mode | Done |  | 100% | backlog/item_018_design_optional_advanced_source_verification_mode.md |
 | [item_019_build_local_html_process_page](backlog/item_019_build_local_html_process_page.md) | Build local HTML process page | Done |  | 100% | backlog/item_019_build_local_html_process_page.md |
 | [item_020_add_end_to_end_local_mvp_validation](backlog/item_020_add_end_to_end_local_mvp_validation.md) | Add end-to-end local MVP validation | Done |  | 100% | backlog/item_020_add_end_to_end_local_mvp_validation.md |
-| [item_021_add_optional_verification_mode_controls](backlog/item_021_add_optional_verification_mode_controls.md) | Add optional verification mode controls | Ready |  | 0% | backlog/item_021_add_optional_verification_mode_controls.md |
-| [item_022_define_source_adapter_interfaces](backlog/item_022_define_source_adapter_interfaces.md) | Define source adapter interfaces | Ready |  | 0% | backlog/item_022_define_source_adapter_interfaces.md |
-| [item_023_implement_pubmed_source_adapter](backlog/item_023_implement_pubmed_source_adapter.md) | Implement PubMed source adapter | Ready |  | 0% | backlog/item_023_implement_pubmed_source_adapter.md |
-| [item_024_implement_semantic_scholar_source_adapter](backlog/item_024_implement_semantic_scholar_source_adapter.md) | Implement Semantic Scholar source adapter | Ready |  | 0% | backlog/item_024_implement_semantic_scholar_source_adapter.md |
-| [item_025_persist_verification_evidence_and_verdict_state](backlog/item_025_persist_verification_evidence_and_verdict_state.md) | Persist verification evidence and verdict state | Ready |  | 0% | backlog/item_025_persist_verification_evidence_and_verdict_state.md |
-| [item_026_assess_evidence_into_non_binary_verdicts](backlog/item_026_assess_evidence_into_non_binary_verdicts.md) | Assess evidence into non-binary verdicts | Ready |  | 0% | backlog/item_026_assess_evidence_into_non_binary_verdicts.md |
-| [item_027_render_source_verified_markdown_briefs](backlog/item_027_render_source_verified_markdown_briefs.md) | Render source-verified Markdown briefs | Ready |  | 0% | backlog/item_027_render_source_verified_markdown_briefs.md |
-| [item_028_expose_verification_state_in_local_html_page](backlog/item_028_expose_verification_state_in_local_html_page.md) | Expose verification state in local HTML page | Ready |  | 0% | backlog/item_028_expose_verification_state_in_local_html_page.md |
-| [item_029_add_source_verification_validation_and_documentation](backlog/item_029_add_source_verification_validation_and_documentation.md) | Add source verification validation and documentation | Ready |  | 0% | backlog/item_029_add_source_verification_validation_and_documentation.md |
+| [item_021_add_optional_verification_mode_controls](backlog/item_021_add_optional_verification_mode_controls.md) | Add optional verification mode controls | Done |  | 100% | backlog/item_021_add_optional_verification_mode_controls.md |
+| [item_022_define_source_adapter_interfaces](backlog/item_022_define_source_adapter_interfaces.md) | Define source adapter interfaces | Done |  | 100% | backlog/item_022_define_source_adapter_interfaces.md |
+| [item_023_implement_pubmed_source_adapter](backlog/item_023_implement_pubmed_source_adapter.md) | Implement PubMed source adapter | Done |  | 100% | backlog/item_023_implement_pubmed_source_adapter.md |
+| [item_024_implement_semantic_scholar_source_adapter](backlog/item_024_implement_semantic_scholar_source_adapter.md) | Implement Semantic Scholar source adapter | Done |  | 100% | backlog/item_024_implement_semantic_scholar_source_adapter.md |
+| [item_025_persist_verification_evidence_and_verdict_state](backlog/item_025_persist_verification_evidence_and_verdict_state.md) | Persist verification evidence and verdict state | Done |  | 100% | backlog/item_025_persist_verification_evidence_and_verdict_state.md |
+| [item_026_assess_evidence_into_non_binary_verdicts](backlog/item_026_assess_evidence_into_non_binary_verdicts.md) | Assess evidence into non-binary verdicts | Done |  | 100% | backlog/item_026_assess_evidence_into_non_binary_verdicts.md |
+| [item_027_render_source_verified_markdown_briefs](backlog/item_027_render_source_verified_markdown_briefs.md) | Render source-verified Markdown briefs | Done |  | 100% | backlog/item_027_render_source_verified_markdown_briefs.md |
+| [item_028_expose_verification_state_in_local_html_page](backlog/item_028_expose_verification_state_in_local_html_page.md) | Expose verification state in local HTML page | Done |  | 100% | backlog/item_028_expose_verification_state_in_local_html_page.md |
+| [item_029_add_source_verification_validation_and_documentation](backlog/item_029_add_source_verification_validation_and_documentation.md) | Add source verification validation and documentation | Done |  | 100% | backlog/item_029_add_source_verification_validation_and_documentation.md |
+| [item_030_harden_web_mutation_safety_controls](backlog/item_030_harden_web_mutation_safety_controls.md) | Harden web mutation safety controls | Done |  | 100% | backlog/item_030_harden_web_mutation_safety_controls.md |
+| [item_031_serve_final_reports_in_the_web_ui](backlog/item_031_serve_final_reports_in_the_web_ui.md) | Serve final reports in the web UI | Done |  | 100% | backlog/item_031_serve_final_reports_in_the_web_ui.md |
+| [item_032_configure_report_language_and_enrich_video_metadata](backlog/item_032_configure_report_language_and_enrich_video_metadata.md) | Configure report language and enrich video metadata | Done |  | 100% | backlog/item_032_configure_report_language_and_enrich_video_metadata.md |
+| [item_033_bound_and_ground_llm_transcript_analysis](backlog/item_033_bound_and_ground_llm_transcript_analysis.md) | Bound and ground LLM transcript analysis | Done |  | 100% | backlog/item_033_bound_and_ground_llm_transcript_analysis.md |
+| [item_034_improve_source_verification_evidence_quality](backlog/item_034_improve_source_verification_evidence_quality.md) | Improve source verification evidence quality | Done |  | 100% | backlog/item_034_improve_source_verification_evidence_quality.md |
+| [item_035_build_asynchronous_process_ux](backlog/item_035_build_asynchronous_process_ux.md) | Build asynchronous process UX | Done |  | 100% | backlog/item_035_build_asynchronous_process_ux.md |
+| [item_036_refine_process_page_accessibility_and_run_navigation](backlog/item_036_refine_process_page_accessibility_and_run_navigation.md) | Refine process page accessibility and run navigation | Done |  | 100% | backlog/item_036_refine_process_page_accessibility_and_run_navigation.md |
+| [item_037_harden_sqlite_concurrency_and_schema_migrations](backlog/item_037_harden_sqlite_concurrency_and_schema_migrations.md) | Harden SQLite concurrency and schema migrations | Done |  | 100% | backlog/item_037_harden_sqlite_concurrency_and_schema_migrations.md |
+| [item_038_stabilize_production_configuration_and_observability](backlog/item_038_stabilize_production_configuration_and_observability.md) | Stabilize production configuration and observability | Done |  | 100% | backlog/item_038_stabilize_production_configuration_and_observability.md |
+| [item_039_add_local_abuse_controls_for_costly_actions](backlog/item_039_add_local_abuse_controls_for_costly_actions.md) | Add local abuse controls for costly actions | Done |  | 100% | backlog/item_039_add_local_abuse_controls_for_costly_actions.md |
+| [item_040_validate_and_document_online_readiness_closeout](backlog/item_040_validate_and_document_online_readiness_closeout.md) | Validate and document online readiness closeout | Done |  | 100% | backlog/item_040_validate_and_document_online_readiness_closeout.md |
 
 ## Tasks
 
@@ -72,4 +86,5 @@ _None_
 | [task_002_orchestrate_milestone_2_metadata_ingestion](tasks/task_002_orchestrate_milestone_2_metadata_ingestion.md) | Orchestrate Milestone 2 Metadata Ingestion | Obsolete |  | 0% | tasks/task_002_orchestrate_milestone_2_metadata_ingestion.md |
 | [task_003_orchestrate_audit_remediation_and_hardening](tasks/task_003_orchestrate_audit_remediation_and_hardening.md) | Orchestrate Audit Remediation and Hardening | Done | codex | 100% | tasks/task_003_orchestrate_audit_remediation_and_hardening.md |
 | [task_004_orchestrate_single_video_local_first_mvp](tasks/task_004_orchestrate_single_video_local_first_mvp.md) | Orchestrate Single Video Local First MVP | Done |  | 100% | tasks/task_004_orchestrate_single_video_local_first_mvp.md |
-| [task_005_orchestrate_advanced_source_verification_mode](tasks/task_005_orchestrate_advanced_source_verification_mode.md) | Orchestrate Advanced Source Verification Mode | Ready |  | 0% | tasks/task_005_orchestrate_advanced_source_verification_mode.md |
+| [task_005_orchestrate_advanced_source_verification_mode](tasks/task_005_orchestrate_advanced_source_verification_mode.md) | Orchestrate Advanced Source Verification Mode | Done |  | 100% | tasks/task_005_orchestrate_advanced_source_verification_mode.md |
+| [task_006_orchestrate_online_readiness_audit_implementation](tasks/task_006_orchestrate_online_readiness_audit_implementation.md) | Orchestrate Online Readiness Audit Implementation | Done | codex | 100% | tasks/task_006_orchestrate_online_readiness_audit_implementation.md |

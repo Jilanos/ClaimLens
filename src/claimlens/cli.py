@@ -32,7 +32,6 @@ from claimlens.youtube import (
     YouTubeError,
     YouTubeVideo,
     fetch_transcript,
-    latest_channel_videos,
 )
 
 PLACEHOLDER_MESSAGES = {
@@ -109,6 +108,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Override Markdown brief output directory.",
     )
+    run_video_parser.add_argument(
+        "--report-language",
+        help="Language code or label for the final report rendering.",
+    )
     run_video_parser.set_defaults(func=_run_video)
 
     analyze_parser = subparsers.add_parser(
@@ -118,6 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("video_id", help="YouTube video ID to process.")
     analyze_parser.add_argument("--database", type=Path, help="Override SQLite database path.")
     analyze_parser.add_argument("--openai-api-key", help="OpenAI API key. Not persisted.")
+    analyze_parser.add_argument("--max-chars", type=int, help="Override analysis transcript bound.")
     analyze_parser.set_defaults(func=_analyze)
 
     brief_parser = subparsers.add_parser(
@@ -186,13 +190,11 @@ def _transcribe(args: argparse.Namespace) -> int:
     channel_url = target if _is_channel_url(target) else None
     channel_id = channel_url or "manual"
     if channel_url:
-        videos = latest_channel_videos(channel_url, limit=args.limit)
-        upsert_channel(
-            database_path,
-            channel_id=channel_id,
-            title=channel_url,
-            url=channel_url,
+        print(
+            "Channel page scraping is disabled for the online-readiness MVP; "
+            "provide a single YouTube video URL or ID."
         )
+        return 1
     else:
         video_id = _video_id(target)
         videos = [
@@ -231,7 +233,12 @@ def _run_video(args: argparse.Namespace) -> int:
     api_key = args.openai_api_key or config.api_keys.openai
 
     try:
-        run_id = create_run(database_path, args.video_url)
+        run_id = create_run(
+            database_path,
+            args.video_url,
+            report_language=args.report_language or config.pipeline.report_language,
+            fetch_metadata=True,
+        )
     except PipelineError as exc:
         print(str(exc))
         return 1
@@ -256,6 +263,7 @@ def _run_video(args: argparse.Namespace) -> int:
             database_path,
             video_id=run["video_id"],
             client=client,
+            max_chars=config.pipeline.analysis_max_chars,
         )
         set_step_status(
             database_path,
@@ -297,7 +305,12 @@ def _analyze(args: argparse.Namespace) -> int:
         return 1
 
     client = OpenAIAnalysisClient(api_key=api_key)
-    summary_id = analyze_cleaned_transcript(database_path, video_id=args.video_id, client=client)
+    summary_id = analyze_cleaned_transcript(
+        database_path,
+        video_id=args.video_id,
+        client=client,
+        max_chars=args.max_chars or config.pipeline.analysis_max_chars,
+    )
     print(f"Stored analysis for {args.video_id}: summary {summary_id}")
     return 0
 

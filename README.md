@@ -11,7 +11,8 @@ The refined MVP is local-first:
 5. Use OpenAI to generate a structured analysis.
 6. Generate a Markdown brief.
 7. Optionally verify notable claims against PubMed and Semantic Scholar.
-8. Inspect and launch steps from a local HTML process page.
+8. Inspect and launch steps from a local HTML process page with guarded POST actions, async job
+   status, and report viewing/download.
 
 Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
 verification is optional and disabled by default; when launched, it checks stored notable claims
@@ -45,8 +46,9 @@ pytest
 ## Configuration
 
 ClaimLens reads local configuration from `config/claimlens.example.toml` by default, resolved from
-the current working directory. Run the CLI from the repository root for the default local workflow,
-or pass an explicit config path in code when embedding the package.
+the current working directory. Run the CLI from the repository root for the default local workflow.
+For deployed execution, set `CLAIMLENS_CONFIG` or pass `--config`; relative paths inside an
+explicit config file resolve from that file's directory.
 
 Relevant environment variables:
 
@@ -55,6 +57,7 @@ CLAIMLENS_DB=data/claimlens.sqlite3
 CLAIMLENS_OUTPUTS=outputs
 CLAIMLENS_TRANSCRIPTS=outputs/transcripts
 CLAIMLENS_BRIEFS=outputs/briefs
+CLAIMLENS_CONFIG=config/claimlens.example.toml
 CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
 OPENAI_API_KEY=
@@ -72,6 +75,13 @@ Advanced source verification is disabled by default:
 [pipeline]
 source_verification_max_results = 5
 source_verification_timeout_seconds = 20
+analysis_max_chars = 60000
+report_language = "en"
+
+[web]
+max_request_bytes = 16384
+rate_limit_actions = 12
+rate_limit_window_seconds = 300
 
 [sources]
 advanced_source_verification = false
@@ -98,7 +108,12 @@ Implemented:
 - Optional PubMed/Semantic Scholar source verification for stored notable claims.
 - Non-binary claim verdicts: supported, contradicted, mixed, unclear, and not_checked.
 - Source-verified Markdown brief generation with supporting/contradicting evidence snippets.
-- Local HTML process page with step statuses, failure details, outputs, and next-step controls.
+- Local HTML process page with CSRF-protected actions, bounded request bodies, step statuses,
+  async job state, failure details, transcript preview, source links, report viewing, report
+  download, and next-step controls.
+- SQLite WAL and `busy_timeout` pragmas for local concurrent web access.
+- Conservative source verification: adapter errors are logged and source verdicts no longer rely
+  on title/snippet keyword polarity alone.
 
 Manual smoke test:
 
@@ -139,11 +154,27 @@ claimlens serve
 ```
 
 Open `http://127.0.0.1:8765`, load a run, and launch `source verification` after analysis exists.
-The page shows verification status, failure details, source counts, and output paths.
+The page shows job status, verification status, failure details, source counts, transcript preview,
+and links to view or download the generated Markdown report.
+
+Online-readiness smoke checks:
+
+- Oversized or stale form submissions should be rejected with controlled messages.
+- Repeated costly actions should be rejected while the same action is queued or running.
+- Report links must only serve files from the configured briefs directory.
+- Channel page scraping is disabled in the exposed CLI workflow; use one direct video URL.
+
+Deployment standbys:
+
+- OpenAI key ownership is not decided here. Before public exposure, choose server-owned key with
+  quotas or a BYO-key model with explicit trust warnings.
+- HTTPS, login, and reverse-proxy configuration are not implemented here. If hosted, keep the app
+  bound to `127.0.0.1` behind a hardened proxy until that work is explicitly completed.
 
 ## SQLite Schema
 
-Schema version 1 creates the base tables for pipeline state and later analysis:
+Schema version 4 creates and migrates the local tables for pipeline state, analysis, verification,
+brief artifacts, and async jobs:
 
 - `channels`
 - `videos`
@@ -159,9 +190,10 @@ Schema version 1 creates the base tables for pipeline state and later analysis:
 - `verification_runs`
 - `evidence_snippets`
 - `brief_artifacts`
+- `jobs`
 
-Before introducing schema version 4, any additive or destructive production schema change must
-include a tested migration path.
+Before introducing the next schema version, any additive or destructive production schema change
+must include a tested migration path against an older schema/database fixture.
 
 ## Refined Command Surface
 

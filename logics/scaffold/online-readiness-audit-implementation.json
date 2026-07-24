@@ -1,0 +1,453 @@
+{
+  "title": "Online Readiness Audit Implementation",
+  "references": [
+    "audit_before_online_deployement.md",
+    "src/claimlens/web.py",
+    "src/claimlens/analysis.py",
+    "src/claimlens/verification.py",
+    "src/claimlens/youtube.py",
+    "src/claimlens/db.py",
+    "src/claimlens/config.py",
+    "src/claimlens/briefs.py",
+    "README.md",
+    "ROADMAP.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Online readiness",
+    "needs": [
+      "Turn the selected 2026-07-24 pre-deployment audit findings into implementation-ready Logics work.",
+      "Prepare the local-first MVP for controlled online exposure without implementing the OpenAI key model or reverse-proxy hosting decision yet.",
+      "Add web safety controls, report viewing and download, async UX, robust analysis boundaries, stronger source verification, and production runtime hardening.",
+      "Make the final report rendering language configurable; transcript language selection can be explored later and must not block report-language configuration."
+    ],
+    "context": [
+      "The operator accepted B3 through B6, F2 through F5, S1 through S5, U1 through U6, and T1 through T8 from audit_before_online_deployement.md.",
+      "B1 OpenAI key model and B2 reverse-proxy HTTPS/login are explicitly standby and must be documented but not implemented in this chain.",
+      "F6 was rejected: do not add new work solely to make the human-review disclaimer more prominent beyond preserving existing disclaimers where already required.",
+      "F1 is partially accepted only as configurable final report language; configurable subtitle language remains a later product decision unless needed to support report language.",
+      "The current web server is a simple local HTTP process page; this chain should harden it enough for guarded use behind future deployment controls without turning it into a full multi-user SaaS.",
+      "The implementation must stay deterministic and testable without live OpenAI, YouTube, PubMed, or Semantic Scholar calls in CI."
+    ],
+    "acceptance_criteria": [
+      "AC1: Web POST handlers validate Content-Length, enforce a small configurable maximum request size, reject malformed bodies with controlled responses, and require CSRF protection for mutating actions.",
+      "AC2: The web UI can display the generated Markdown brief as safe HTML and download it as Markdown through routes that resolve reports by validated run/video identifiers and prevent path traversal.",
+      "AC3: Final report rendering language is configurable from CLI/config/web flow, persisted or passed through the run as appropriate, and covered by tests without requiring configurable subtitle language.",
+      "AC4: Single-video reports include real available video metadata such as title, source URL, author/channel, date, and duration when retrievable, while preserving graceful fallback behavior.",
+      "AC5: The analysis step bounds or chunks long transcripts, uses deterministic OpenAI settings where supported, and grounds each extracted notable claim with a transcript excerpt.",
+      "AC6: YouTube channel-page scraping helpers that are outside the single-video MVP are isolated, disabled, or removed from exposed flows before online use.",
+      "AC7: Source verification no longer relies on simple keyword polarity heuristics for supports/contradicts decisions and uses a review-aid vocabulary when evidence quality is insufficient.",
+      "AC8: PubMed verification retrieves and stores real abstract/snippet evidence when available instead of treating titles as abstracts, and tests cover no-abstract fallback behavior.",
+      "AC9: Verification confidence values are either removed or computed from documented evidence rules, and adapter/search errors are logged and surfaced distinctly from no-source results.",
+      "AC10: Long-running analyze/verify/report actions run through an asynchronous job model with persisted status, retry-safe/idempotent behavior, polling or equivalent UI updates, and user-visible progress states.",
+      "AC11: The process page has accessible labels, responsive layout improvements, controlled user-facing error messages, source video links, cleaned-transcript preview, and paginated or bounded run selection.",
+      "AC12: SQLite connections use WAL and busy_timeout for concurrent web access, while migration behavior is formalized with versioned, tested migration steps before the next schema change.",
+      "AC13: Network and OpenAI failures including URLError, timeouts, malformed API responses, and adapter failures return controlled errors and structured logs without leaking internals to the UI.",
+      "AC14: Runtime configuration does not depend on Path.cwd() in production paths and documents explicit environment/config-file precedence for deployed execution.",
+      "AC15: Rate limiting or quota enforcement exists for costly/outbound actions at the application boundary, with documentation of any remaining reverse-proxy dependency.",
+      "AC16: Re-analysis avoids unbounded duplicate summaries/claims and prevents duplicate concurrent paid calls for the same run/action.",
+      "AC17: Structured application/access logging is available for online diagnostics without persisting secrets, and Python version expectations are aligned across local docs and CI.",
+      "AC18: Validation passes with ruff, pytest, compileall where applicable, logics-manager lint --require-status, and logics-manager audit before closeout."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens Online Readiness Audit Implementation",
+    "overview": "A focused implementation program that converts the accepted pre-deployment audit findings into guarded web operation, report delivery, stronger evidence handling, and production robustness.",
+    "goals": [
+      "Make the existing local process page safer and more usable for future guarded online access.",
+      "Deliver in-browser final report viewing and Markdown download.",
+      "Improve transcript analysis determinism, grounding, and cost bounds.",
+      "Make source verification evidence handling more honest, inspectable, and failure-aware.",
+      "Harden SQLite, configuration, logging, migration policy, and abuse controls for online operation."
+    ],
+    "non_goals": [
+      "Do not decide or implement the OpenAI key ownership model in this chain; keep B1 in standby.",
+      "Do not implement HTTPS, login, reverse-proxy, or hosting deployment in this chain; keep B2 in standby.",
+      "Do not add new prominence work for the human-review disclaimer beyond preserving current disclaimer behavior.",
+      "Do not build a full multi-user SaaS account system unless required by the selected rate-limiting or quota implementation.",
+      "Do not add live external API tests to CI."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Harden web mutation safety controls",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Web security",
+      "request_acs": [
+        "AC1",
+        "AC13",
+        "AC18"
+      ],
+      "problem": [
+        "The current web POST handling accepts arbitrary Content-Length values, reads the full request body into memory, and has no CSRF control.",
+        "Raw exceptions can currently reach the user-facing page."
+      ],
+      "scope_in": [
+        "Validate Content-Length parsing and cap body size with configurable defaults.",
+        "Add CSRF tokens for mutating web forms and reject missing or invalid tokens.",
+        "Return controlled HTTP errors and UI messages for malformed, oversized, or unauthorized mutation attempts.",
+        "Add unit tests or integration tests for malformed length, oversized body, and CSRF rejection/acceptance."
+      ],
+      "scope_out": [
+        "HTTPS, login, sessions backed by a user account store, and reverse-proxy setup.",
+        "OpenAI key ownership decisions."
+      ],
+      "acceptance_criteria": [
+        "AC1: Oversized or malformed POST bodies are rejected before unbounded reads.",
+        "AC2: Mutating web forms require valid CSRF tokens.",
+        "AC3: User-facing errors are controlled and do not expose tracebacks or internal paths.",
+        "AC4: Tests cover success and failure paths."
+      ]
+    },
+    {
+      "title": "Serve final reports in the web UI",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Report delivery",
+      "request_acs": [
+        "AC2",
+        "AC11",
+        "AC18"
+      ],
+      "problem": [
+        "The web UI only displays a filesystem path for generated briefs.",
+        "There is no route to view or download the final report, and serving files incorrectly would create path traversal risk."
+      ],
+      "scope_in": [
+        "Add a route to render the generated Markdown brief as escaped/sanitized HTML.",
+        "Add a Markdown download route with safe Content-Disposition.",
+        "Resolve reports by validated run or video identifiers and verify resolved paths stay within the briefs directory.",
+        "Add clear empty, missing, and stale-report states in the web UI."
+      ],
+      "scope_out": [
+        "PDF export unless a lightweight local dependency already exists and can be validated.",
+        "Public unauthenticated report sharing."
+      ],
+      "acceptance_criteria": [
+        "AC1: A completed run exposes a browser-viewable final report.",
+        "AC2: A completed run exposes a Markdown download.",
+        "AC3: Path traversal attempts cannot read files outside outputs/briefs.",
+        "AC4: Tests cover existing, missing, and invalid report references."
+      ]
+    },
+    {
+      "title": "Configure report language and enrich video metadata",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Report content",
+      "request_acs": [
+        "AC3",
+        "AC4",
+        "AC6",
+        "AC18"
+      ],
+      "problem": [
+        "Final reports currently do not have an explicit output-language contract.",
+        "Single-video reports use the video id as title and lack source metadata.",
+        "Out-of-scope channel scraping helpers remain present around exposed flows."
+      ],
+      "scope_in": [
+        "Add a configurable final report language option in config, CLI, and web flow where appropriate.",
+        "Pass report language into LLM analysis and/or brief rendering with deterministic tests.",
+        "Retrieve or persist available video title, source URL, author/channel, publication date, and duration for single-video runs when a bounded metadata source is available.",
+        "Keep graceful fallback behavior when metadata cannot be retrieved.",
+        "Disable, isolate, or remove channel-page scraping from online-facing flows."
+      ],
+      "scope_out": [
+        "Configurable transcript language as a required deliverable.",
+        "A broad YouTube channel ingestion product.",
+        "Live YouTube integration tests in CI."
+      ],
+      "acceptance_criteria": [
+        "AC1: The final report language can be configured and is visible in generated output behavior.",
+        "AC2: Reports show real metadata when available and safe fallbacks otherwise.",
+        "AC3: Channel scraping is not exposed as part of the online MVP flow.",
+        "AC4: Tests cover report-language propagation, metadata fallback, and exposed-flow boundaries."
+      ]
+    },
+    {
+      "title": "Bound and ground LLM transcript analysis",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "LLM reliability",
+      "request_acs": [
+        "AC5",
+        "AC13",
+        "AC16",
+        "AC18"
+      ],
+      "problem": [
+        "Transcript length sent to OpenAI is unbounded.",
+        "The analysis call does not explicitly request deterministic settings and extracted claims are not required to cite transcript evidence.",
+        "Malformed OpenAI responses and network failures can surface as raw exceptions."
+      ],
+      "scope_in": [
+        "Add transcript token/character bounds or chunking before analysis.",
+        "Set deterministic model parameters such as temperature=0 where supported by the API.",
+        "Require each notable claim to include an excerpt from the transcript or mark it ungrounded.",
+        "Handle OpenAI HTTP, URL, timeout, malformed JSON, empty choices, and schema mismatch errors with ClaimLens-level errors.",
+        "Avoid duplicate concurrent paid analysis calls for the same run/action."
+      ],
+      "scope_out": [
+        "Changing the selected OpenAI model unless needed for compatibility.",
+        "Adding a second LLM provider."
+      ],
+      "acceptance_criteria": [
+        "AC1: Long transcripts are bounded or chunked before LLM submission.",
+        "AC2: Notable claims are grounded with transcript excerpts in persisted analysis data.",
+        "AC3: OpenAI/network malformed responses produce controlled errors and logs.",
+        "AC4: Tests cover long transcript handling, claim grounding, and failure mapping."
+      ]
+    },
+    {
+      "title": "Improve source verification evidence quality",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Source verification",
+      "request_acs": [
+        "AC7",
+        "AC8",
+        "AC9",
+        "AC13",
+        "AC18"
+      ],
+      "problem": [
+        "Verification polarity currently relies on fragile keyword matching.",
+        "PubMed evidence can degrade to title-only snippets while still being treated like source evidence.",
+        "Hard-coded confidence scores create false precision, and adapter errors are indistinguishable from no results."
+      ],
+      "scope_in": [
+        "Replace simple keyword polarity with a more reliable evidence assessment boundary, preferably grounded on retrieved abstracts/snippets and mockable in tests.",
+        "Retrieve PubMed abstracts or structured snippets where available and store fallback provenance when abstracts are unavailable.",
+        "Remove confidence scores or compute them from documented evidence rules.",
+        "Use review-aid vocabulary when evidence is incomplete or heuristic.",
+        "Log adapter failures and surface adapter-error state separately from no-source state."
+      ],
+      "scope_out": [
+        "Claiming automated scientific or medical authority.",
+        "Live PubMed or Semantic Scholar calls in CI.",
+        "Adding unrelated source providers."
+      ],
+      "acceptance_criteria": [
+        "AC1: Verification decisions no longer depend on raw keyword polarity alone.",
+        "AC2: PubMed evidence uses abstracts/snippets when available and records fallback state otherwise.",
+        "AC3: Confidence output is removed or backed by documented rules.",
+        "AC4: Adapter errors are logged and visible as errors, not silent no-source outcomes.",
+        "AC5: Tests cover supported, contradicted, mixed, unclear, no-source, no-abstract, and adapter-error paths."
+      ]
+    },
+    {
+      "title": "Build asynchronous process UX",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Web UX",
+      "request_acs": [
+        "AC10",
+        "AC11",
+        "AC16",
+        "AC18"
+      ],
+      "problem": [
+        "Long-running actions execute inside the HTTP request thread and leave the user without meaningful progress feedback.",
+        "Concurrent duplicate actions can trigger duplicate paid or outbound work."
+      ],
+      "scope_in": [
+        "Introduce a local asynchronous job model for analyze, verify, and report generation actions.",
+        "Persist job state, progress, failure causes, and output references.",
+        "Expose polling or equivalent web updates with loading, queued, running, failed, and completed states.",
+        "Make action submission idempotent enough to prevent duplicate concurrent paid calls for the same run/action.",
+        "Document recovery behavior for failed or interrupted jobs."
+      ],
+      "scope_out": [
+        "Distributed queue infrastructure.",
+        "Multi-node deployment.",
+        "User-account-specific job dashboards."
+      ],
+      "acceptance_criteria": [
+        "AC1: Analyze, verify, and report actions can run outside the request thread.",
+        "AC2: The UI shows useful progress and terminal states.",
+        "AC3: Duplicate concurrent action submissions do not duplicate paid/outbound work.",
+        "AC4: Tests cover job creation, status transitions, polling rendering, and failure display."
+      ]
+    },
+    {
+      "title": "Refine process page accessibility and run navigation",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Web UI",
+      "request_acs": [
+        "AC11",
+        "AC18"
+      ],
+      "problem": [
+        "The current process page is minimal HTML with placeholders instead of labels, limited responsive behavior, raw error text, no transcript preview, and an unbounded run selector."
+      ],
+      "scope_in": [
+        "Add accessible labels and predictable form structure.",
+        "Improve responsive layout without starting the planned full visual redesign.",
+        "Show source video links and a bounded cleaned-transcript preview.",
+        "Paginate, search, or bound the run selection list.",
+        "Ensure long text and button labels fit on mobile and desktop viewports."
+      ],
+      "scope_out": [
+        "Full visual redesign.",
+        "A marketing landing page.",
+        "Dark/light theme if the broader redesign will own it, unless cheap and compatible."
+      ],
+      "acceptance_criteria": [
+        "AC1: Inputs have accessible labels and controlled descriptions.",
+        "AC2: The page remains usable on mobile and desktop widths.",
+        "AC3: Source video links and transcript preview are visible when available.",
+        "AC4: Run selection is bounded, searchable, or paginated."
+      ]
+    },
+    {
+      "title": "Harden SQLite concurrency and schema migrations",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Persistence",
+      "request_acs": [
+        "AC12",
+        "AC16",
+        "AC18"
+      ],
+      "problem": [
+        "SQLite is not configured with WAL or busy_timeout for concurrent web writes.",
+        "Schema migration behavior is ad hoc and future schema changes need a versioned tested path.",
+        "Re-analysis can accumulate duplicate summaries and claims."
+      ],
+      "scope_in": [
+        "Enable WAL and busy_timeout on SQLite connections where safe.",
+        "Introduce or document versioned migration steps before the next schema change.",
+        "Add migration tests for existing database upgrades.",
+        "Make analysis summary/claim persistence idempotent or prune superseded records according to a documented policy."
+      ],
+      "scope_out": [
+        "Replacing SQLite with another database.",
+        "Destructive migrations without explicit operator migration guidance."
+      ],
+      "acceptance_criteria": [
+        "AC1: SQLite connections apply WAL and busy_timeout in normal operation.",
+        "AC2: Schema migrations are versioned and tested against an older schema fixture or equivalent setup.",
+        "AC3: Re-analysis does not grow summaries/claims without bound.",
+        "AC4: Tests cover concurrency-relevant pragmas and migration paths."
+      ]
+    },
+    {
+      "title": "Stabilize production configuration and observability",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Operations",
+      "request_acs": [
+        "AC13",
+        "AC14",
+        "AC17",
+        "AC18"
+      ],
+      "problem": [
+        "Configuration loading depends on the current working directory.",
+        "Production diagnostics are limited because access logging is disabled and errors are not structured.",
+        "Python versions differ between local environment and CI expectations."
+      ],
+      "scope_in": [
+        "Define explicit config-file discovery and environment override precedence for deployed execution.",
+        "Stop relying on Path.cwd() for production config paths.",
+        "Add structured application and access logs while ensuring secrets are redacted.",
+        "Align documented supported Python versions with CI and local development expectations."
+      ],
+      "scope_out": [
+        "Host provisioning, systemd unit creation, or reverse-proxy config.",
+        "External log aggregation services."
+      ],
+      "acceptance_criteria": [
+        "AC1: Config loading works from a non-repository current working directory when an explicit config path or environment is provided.",
+        "AC2: Logs include request/action diagnostics and exclude secrets.",
+        "AC3: Python version support is documented and CI-aligned.",
+        "AC4: Tests cover config precedence and secret redaction where applicable."
+      ]
+    },
+    {
+      "title": "Add local abuse controls for costly actions",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Abuse prevention",
+      "request_acs": [
+        "AC10",
+        "AC15",
+        "AC16",
+        "AC18"
+      ],
+      "problem": [
+        "A single authenticated or local user could repeatedly trigger outbound YouTube and OpenAI work.",
+        "The future B1/B2 deployment decisions may add stronger perimeter controls, but the app still needs local guardrails."
+      ],
+      "scope_in": [
+        "Add application-level rate limiting or quota checks for expensive actions.",
+        "Make limits configurable and document their relationship to future reverse-proxy controls.",
+        "Integrate limits with asynchronous jobs so rejected or queued work is explicit.",
+        "Ensure repeated submissions cannot bypass idempotence controls."
+      ],
+      "scope_out": [
+        "Full billing, account management, or per-seat SaaS quotas.",
+        "Replacing future reverse-proxy or login controls."
+      ],
+      "acceptance_criteria": [
+        "AC1: Expensive actions are rate-limited or quota-guarded by configurable application rules.",
+        "AC2: Rejected actions return controlled user-facing messages.",
+        "AC3: Logs record rate-limit decisions without secrets.",
+        "AC4: Tests cover allowed, rejected, and duplicate-submission paths."
+      ]
+    },
+    {
+      "title": "Validate and document online readiness closeout",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Validation",
+      "request_acs": [
+        "AC18"
+      ],
+      "problem": [
+        "The accepted audit findings touch security, UI, persistence, external APIs, and operations; closeout needs a clear proof bundle."
+      ],
+      "scope_in": [
+        "Update README, ROADMAP, and any deployment/operator notes affected by the implementation.",
+        "Record standby decisions for B1 OpenAI key model and B2 reverse-proxy HTTPS/login.",
+        "Run ruff, pytest, compileall where applicable, logics-manager lint --require-status, and logics-manager audit.",
+        "Add a manual smoke-test checklist for report view/download, async progress, verification errors, and rate limits."
+      ],
+      "scope_out": [
+        "Actually deploying to the VPS.",
+        "Closing B1 or B2."
+      ],
+      "acceptance_criteria": [
+        "AC1: Operator-facing documentation reflects the implemented behavior and remaining deployment standbys.",
+        "AC2: Automated validation commands pass before closeout.",
+        "AC3: Manual smoke-test steps are documented for the online-readiness path.",
+        "AC4: Logics request, backlog, task, and context pack pass validation."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate Online Readiness Audit Implementation",
+    "plan": [
+      "Confirm accepted and rejected audit findings are reflected in the request scope, including B1/B2 standby, F6 rejected, and report-language configuration for F1.",
+      "Implement web mutation safety first: request-size limits, Content-Length validation, CSRF, and controlled errors.",
+      "Add final report view/download routes with path traversal protection.",
+      "Introduce report language configuration, metadata enrichment, and isolate out-of-scope YouTube channel scraping.",
+      "Bound and ground LLM transcript analysis, then harden OpenAI/network failure handling.",
+      "Improve source verification evidence retrieval, verdict vocabulary, confidence handling, and adapter error reporting.",
+      "Add asynchronous job execution and progress UI for long-running actions.",
+      "Refine process page accessibility, responsive behavior, transcript preview, source links, and run navigation.",
+      "Harden SQLite concurrency, schema migrations, re-analysis idempotence, configuration loading, logging, Python version alignment, and local abuse controls.",
+      "Update operator documentation and manual smoke-test guidance.",
+      "Validate with ruff, pytest, compileall where applicable, logics-manager lint --require-status, and logics-manager audit before closeout.",
+      "ADR 009 checkpoint: update affected Logics docs during each meaningful wave and leave the repo commit-ready; commit creation remains under operator control."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/online-readiness-audit-implementation.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

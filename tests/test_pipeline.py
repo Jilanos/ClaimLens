@@ -11,7 +11,7 @@ from claimlens.pipeline import (
     extract_required_subtitles,
     parse_youtube_video_url,
 )
-from claimlens.youtube import TranscriptResult, TranscriptSegment, YouTubeError
+from claimlens.youtube import TranscriptResult, TranscriptSegment, YouTubeError, YouTubeVideo
 
 
 def test_parse_youtube_video_url_formats():
@@ -45,6 +45,25 @@ def test_create_run_records_video_and_steps(tmp_path):
         "brief",
         "source_verification",
     ]
+
+
+def test_create_run_can_fetch_video_metadata(monkeypatch, tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    monkeypatch.setattr(
+        "claimlens.pipeline.fetch_video_metadata",
+        lambda url: YouTubeVideo(id="abc123XYZ_", title="Real title", url=url),
+    )
+
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        fetch_metadata=True,
+    )
+    run = db.get_pipeline_run(database, run_id)
+    video = db.get_video(database, run["video_id"])
+
+    assert video["title"] == "Real title"
 
 
 def test_extract_required_subtitles_persists_failure(monkeypatch, tmp_path):

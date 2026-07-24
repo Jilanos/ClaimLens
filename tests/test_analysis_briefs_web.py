@@ -4,7 +4,7 @@ from claimlens import db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, parse_analysis_json
 from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.pipeline import create_run
-from claimlens.web import render_process_page
+from claimlens.web import render_brief_page, render_process_page
 
 
 @dataclass(frozen=True)
@@ -87,6 +87,51 @@ def test_analyze_cleaned_transcript_stores_summary_and_claims(tmp_path):
     assert summary["summary"] == "Concise summary."
     assert claims[0]["claim"] == "Claim one"
     assert claims[0]["verdict"] == "not_checked"
+    assert claims[0]["transcript_excerpt"]
+
+
+def test_analyze_cleaned_transcript_bounds_long_transcripts(tmp_path):
+    @dataclass(frozen=True)
+    class BoundedClient:
+        model: str = "test-model"
+
+        def analyze(self, transcript_text: str) -> TranscriptAnalysis:
+            assert len(transcript_text) < 1300
+            assert "omitted middle transcript content" in transcript_text
+            return TranscriptAnalysis(
+                summary="Summary.",
+                key_points=[],
+                notable_claims=["opening claim"],
+                caveats=[],
+                editorial_notes=[],
+            )
+
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    run = db.get_pipeline_run(database, run_id)
+    transcript_id = db.upsert_transcript(
+        database,
+        Transcript(
+            video_id=run["video_id"],
+            source="youtube",
+            language="en",
+            text="opening claim " + ("middle " * 1000) + "closing claim",
+            segments=[],
+        ),
+    )
+    db.upsert_cleaned_transcript(
+        database,
+        video_id=run["video_id"],
+        transcript_id=transcript_id,
+        text="opening claim " + ("middle " * 1000) + "closing claim",
+    )
+
+    analyze_cleaned_transcript(
+        database,
+        video_id=run["video_id"],
+        client=BoundedClient(),
+        max_chars=1200,
+    )
 
 
 def test_render_markdown_brief_labels_source_verification():
@@ -117,6 +162,44 @@ def test_generate_brief_is_idempotent(tmp_path):
     assert first == second
     assert first.read_text(encoding="utf-8").startswith("# ClaimLens Brief")
     assert db.latest_brief_artifact(database, run["video_id"])["path"] == str(first)
+
+
+def test_render_brief_page_renders_generated_markdown(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        report_language="fr",
+    )
+    run = db.get_pipeline_run(database, run_id)
+    store_cleaned_fixture(database, run["video_id"])
+    analyze_cleaned_transcript(database, video_id=run["video_id"], client=Client())
+    generate_brief(database, video_id=run["video_id"], briefs_path=tmp_path / "briefs")
+
+    rendered = render_brief_page(database, tmp_path / "briefs", run_id=run_id)
+
+    assert "<h1>ClaimLens Brief: abc123XYZ_</h1>" in rendered
+    assert "Report language: fr" in rendered
+
+
+def test_render_brief_page_rejects_artifact_outside_briefs_dir(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    run = db.get_pipeline_run(database, run_id)
+    store_cleaned_fixture(database, run["video_id"])
+    summary_id = analyze_cleaned_transcript(database, video_id=run["video_id"], client=Client())
+    outside = tmp_path / "outside.md"
+    outside.write_text("# Outside", encoding="utf-8")
+    db.upsert_brief_artifact(
+        database,
+        video_id=run["video_id"],
+        summary_id=summary_id,
+        path=outside,
+    )
+
+    rendered = render_brief_page(database, tmp_path / "briefs", run_id=run_id)
+
+    assert "No report is available" in rendered
 
 
 def test_render_process_page_shows_step_status_failure_and_controls(tmp_path):

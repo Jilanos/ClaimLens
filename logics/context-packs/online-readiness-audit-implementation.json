@@ -1,0 +1,550 @@
+{
+  "budgets": {
+    "max_docs": 52,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_005_online_readiness_audit_implementation item_030_harden_web_mutation_safety_controls item_031_serve_final_reports_in_the_web_ui item_032_configure_report_language_and_enrich_video_metadata item_033_bound_and_ground_llm_transcript_analysis item_034_improve_source_verification_evidence_quality item_035_build_asynchronous_process_ux item_036_refine_process_page_accessibility_and_run_navigation item_037_harden_sqlite_concurrency_and_schema_migrations item_038_stabilize_production_configuration_and_observability item_039_add_local_abuse_controls_for_costly_actions item_040_validate_and_document_online_readiness_closeout task_006_orchestrate_online_readiness_audit_implementation --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_030_harden_web_mutation_safety_controls",
+          "item_031_serve_final_reports_in_the_web_ui",
+          "item_032_configure_report_language_and_enrich_video_metadata",
+          "item_033_bound_and_ground_llm_transcript_analysis",
+          "item_034_improve_source_verification_evidence_quality",
+          "item_035_build_asynchronous_process_ux",
+          "item_036_refine_process_page_accessibility_and_run_navigation",
+          "item_037_harden_sqlite_concurrency_and_schema_migrations",
+          "item_038_stabilize_production_configuration_and_observability",
+          "item_039_add_local_abuse_controls_for_costly_actions",
+          "item_040_validate_and_document_online_readiness_closeout"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/product/prod_006_claimlens_online_readiness_audit_implementation.md",
+      "ref": "prod_006_claimlens_online_readiness_audit_implementation",
+      "status": "Proposed",
+      "title": "ClaimLens Online Readiness Audit Implementation"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, online readiness audit implementation, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Online Readiness Audit Implementation",
+        "use when": "You need to implement or review the scaffolded workflow for Online Readiness Audit Implementation."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_030_harden_web_mutation_safety_controls",
+          "item_031_serve_final_reports_in_the_web_ui",
+          "item_032_configure_report_language_and_enrich_video_metadata",
+          "item_033_bound_and_ground_llm_transcript_analysis",
+          "item_034_improve_source_verification_evidence_quality",
+          "item_035_build_asynchronous_process_ux",
+          "item_036_refine_process_page_accessibility_and_run_navigation",
+          "item_037_harden_sqlite_concurrency_and_schema_migrations",
+          "item_038_stabilize_production_configuration_and_observability",
+          "item_039_add_local_abuse_controls_for_costly_actions",
+          "item_040_validate_and_document_online_readiness_closeout"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/request/req_005_online_readiness_audit_implementation.md",
+      "ref": "req_005_online_readiness_audit_implementation",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Online Readiness Audit Implementation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, harden web mutation safety controls, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Harden web mutation safety controls",
+        "use when": "Implementing the scaffolded slice for Harden web mutation safety controls."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_030_harden_web_mutation_safety_controls"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_030_harden_web_mutation_safety_controls.md",
+      "ref": "item_030_harden_web_mutation_safety_controls",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Harden web mutation safety controls"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, serve final reports in the web ui, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Serve final reports in the web UI",
+        "use when": "Implementing the scaffolded slice for Serve final reports in the web UI."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_031_serve_final_reports_in_the_web_ui"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_031_serve_final_reports_in_the_web_ui.md",
+      "ref": "item_031_serve_final_reports_in_the_web_ui",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Serve final reports in the web UI"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, configure report language and enrich video metadata, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Configure report language and enrich video metadata",
+        "use when": "Implementing the scaffolded slice for Configure report language and enrich video metadata."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_032_configure_report_language_and_enrich_video_metadata"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_032_configure_report_language_and_enrich_video_metadata.md",
+      "ref": "item_032_configure_report_language_and_enrich_video_metadata",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Configure report language and enrich video metadata"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate Online Readiness Audit Implementation",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_030_harden_web_mutation_safety_controls",
+          "item_031_serve_final_reports_in_the_web_ui",
+          "item_032_configure_report_language_and_enrich_video_metadata",
+          "item_033_bound_and_ground_llm_transcript_analysis",
+          "item_034_improve_source_verification_evidence_quality",
+          "item_035_build_asynchronous_process_ux",
+          "item_036_refine_process_page_accessibility_and_run_navigation",
+          "item_037_harden_sqlite_concurrency_and_schema_migrations",
+          "item_038_stabilize_production_configuration_and_observability",
+          "item_039_add_local_abuse_controls_for_costly_actions",
+          "item_040_validate_and_document_online_readiness_closeout"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/tasks/task_006_orchestrate_online_readiness_audit_implementation.md",
+      "ref": "task_006_orchestrate_online_readiness_audit_implementation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate Online Readiness Audit Implementation"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_030_harden_web_mutation_safety_controls",
+          "item_031_serve_final_reports_in_the_web_ui",
+          "item_032_configure_report_language_and_enrich_video_metadata",
+          "item_033_bound_and_ground_llm_transcript_analysis",
+          "item_034_improve_source_verification_evidence_quality",
+          "item_035_build_asynchronous_process_ux",
+          "item_036_refine_process_page_accessibility_and_run_navigation",
+          "item_037_harden_sqlite_concurrency_and_schema_migrations",
+          "item_038_stabilize_production_configuration_and_observability",
+          "item_039_add_local_abuse_controls_for_costly_actions",
+          "item_040_validate_and_document_online_readiness_closeout"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/product/prod_006_claimlens_online_readiness_audit_implementation.md",
+      "ref": "prod_006_claimlens_online_readiness_audit_implementation",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "ClaimLens Online Readiness Audit Implementation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, bound and ground llm transcript analysis, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Bound and ground LLM transcript analysis",
+        "use when": "Implementing the scaffolded slice for Bound and ground LLM transcript analysis."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_033_bound_and_ground_llm_transcript_analysis"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_033_bound_and_ground_llm_transcript_analysis.md",
+      "ref": "item_033_bound_and_ground_llm_transcript_analysis",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Bound and ground LLM transcript analysis"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, improve source verification evidence quality, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Improve source verification evidence quality",
+        "use when": "Implementing the scaffolded slice for Improve source verification evidence quality."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_034_improve_source_verification_evidence_quality"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_034_improve_source_verification_evidence_quality.md",
+      "ref": "item_034_improve_source_verification_evidence_quality",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Improve source verification evidence quality"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, build asynchronous process ux, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Build asynchronous process UX",
+        "use when": "Implementing the scaffolded slice for Build asynchronous process UX."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_035_build_asynchronous_process_ux"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_035_build_asynchronous_process_ux.md",
+      "ref": "item_035_build_asynchronous_process_ux",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Build asynchronous process UX"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, refine process page accessibility and run navigation, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Refine process page accessibility and run navigation",
+        "use when": "Implementing the scaffolded slice for Refine process page accessibility and run navigation."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_036_refine_process_page_accessibility_and_run_navigation"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_036_refine_process_page_accessibility_and_run_navigation.md",
+      "ref": "item_036_refine_process_page_accessibility_and_run_navigation",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Refine process page accessibility and run navigation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, harden sqlite concurrency and schema migrations, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Harden SQLite concurrency and schema migrations",
+        "use when": "Implementing the scaffolded slice for Harden SQLite concurrency and schema migrations."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_037_harden_sqlite_concurrency_and_schema_migrations"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_037_harden_sqlite_concurrency_and_schema_migrations.md",
+      "ref": "item_037_harden_sqlite_concurrency_and_schema_migrations",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Harden SQLite concurrency and schema migrations"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, stabilize production configuration and observability, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Stabilize production configuration and observability",
+        "use when": "Implementing the scaffolded slice for Stabilize production configuration and observability."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_038_stabilize_production_configuration_and_observability"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_038_stabilize_production_configuration_and_observability.md",
+      "ref": "item_038_stabilize_production_configuration_and_observability",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Stabilize production configuration and observability"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add local abuse controls for costly actions, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add local abuse controls for costly actions",
+        "use when": "Implementing the scaffolded slice for Add local abuse controls for costly actions."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_039_add_local_abuse_controls_for_costly_actions"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_039_add_local_abuse_controls_for_costly_actions.md",
+      "ref": "item_039_add_local_abuse_controls_for_costly_actions",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Add local abuse controls for costly actions"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, validate and document online readiness closeout, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Validate and document online readiness closeout",
+        "use when": "Implementing the scaffolded slice for Validate and document online readiness closeout."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_040_validate_and_document_online_readiness_closeout"
+        ],
+        "prod": [
+          "prod_006_claimlens_online_readiness_audit_implementation"
+        ],
+        "req": [
+          "req_005_online_readiness_audit_implementation"
+        ],
+        "task": [
+          "task_006_orchestrate_online_readiness_audit_implementation"
+        ]
+      },
+      "path": "logics/backlog/item_040_validate_and_document_online_readiness_closeout.md",
+      "ref": "item_040_validate_and_document_online_readiness_closeout",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Validate and document online readiness closeout"
+    }
+  ],
+  "estimates": {
+    "char_count": 14694,
+    "companion_doc_count": 1,
+    "doc_count": 14
+  },
+  "generated_at": "2026-07-24T07:53:29Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_005_online_readiness_audit_implementation",
+      "item_030_harden_web_mutation_safety_controls",
+      "item_031_serve_final_reports_in_the_web_ui",
+      "item_032_configure_report_language_and_enrich_video_metadata",
+      "item_033_bound_and_ground_llm_transcript_analysis",
+      "item_034_improve_source_verification_evidence_quality",
+      "item_035_build_asynchronous_process_ux",
+      "item_036_refine_process_page_accessibility_and_run_navigation",
+      "item_037_harden_sqlite_concurrency_and_schema_migrations",
+      "item_038_stabilize_production_configuration_and_observability",
+      "item_039_add_local_abuse_controls_for_costly_actions",
+      "item_040_validate_and_document_online_readiness_closeout",
+      "task_006_orchestrate_online_readiness_audit_implementation"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_005_online_readiness_audit_implementation,item_030_harden_web_mutation_safety_controls,item_031_serve_final_reports_in_the_web_ui,item_032_configure_report_language_and_enrich_video_metadata,item_033_bound_and_ground_llm_transcript_analysis,item_034_improve_source_verification_evidence_quality,item_035_build_asynchronous_process_ux,item_036_refine_process_page_accessibility_and_run_navigation,item_037_harden_sqlite_concurrency_and_schema_migrations,item_038_stabilize_production_configuration_and_observability,item_039_add_local_abuse_controls_for_costly_actions,item_040_validate_and_document_online_readiness_closeout,task_006_orchestrate_online_readiness_audit_implementation",
+  "refs": [
+    "req_005_online_readiness_audit_implementation",
+    "item_030_harden_web_mutation_safety_controls",
+    "item_031_serve_final_reports_in_the_web_ui",
+    "item_032_configure_report_language_and_enrich_video_metadata",
+    "item_033_bound_and_ground_llm_transcript_analysis",
+    "item_034_improve_source_verification_evidence_quality",
+    "item_035_build_asynchronous_process_ux",
+    "item_036_refine_process_page_accessibility_and_run_navigation",
+    "item_037_harden_sqlite_concurrency_and_schema_migrations",
+    "item_038_stabilize_production_configuration_and_observability",
+    "item_039_add_local_abuse_controls_for_costly_actions",
+    "item_040_validate_and_document_online_readiness_closeout",
+    "task_006_orchestrate_online_readiness_audit_implementation"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_006_orchestrate_online_readiness_audit_implementation.md",
+      "ref": "task_006_orchestrate_online_readiness_audit_implementation"
+    }
+  ]
+}

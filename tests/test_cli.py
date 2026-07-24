@@ -1,5 +1,5 @@
 from claimlens.cli import main
-from claimlens.youtube import TranscriptResult, TranscriptSegment, YouTubeVideo
+from claimlens.youtube import TranscriptResult, TranscriptSegment
 
 
 def test_cli_help_lists_mvp_commands(capsys):
@@ -75,20 +75,27 @@ def test_source_check_requires_analysis(tmp_path, capsys):
     assert "Cannot verify sources before analysis exists" in capsys.readouterr().out
 
 
-def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path, capsys):
+def test_transcribe_channel_is_disabled_for_online_readiness(tmp_path, capsys):
     database = tmp_path / "claimlens.sqlite3"
 
-    monkeypatch.setattr(
-        "claimlens.cli.latest_channel_videos",
-        lambda channel_url, *, limit: [
-            YouTubeVideo(
-                id="video123",
-                title="Test Video",
-                url="https://www.youtube.com/watch?v=video123",
-                published_text="1 day ago",
-            )
-        ],
+    exit_code = main(
+        [
+            "transcribe",
+            "https://www.youtube.com/@example/videos",
+            "--limit",
+            "1",
+            "--database",
+            str(database),
+        ]
     )
+
+    assert exit_code == 1
+    assert "Channel page scraping is disabled" in capsys.readouterr().out
+
+
+def test_transcribe_video_extracts_and_stores_transcript(monkeypatch, tmp_path, capsys):
+    database = tmp_path / "claimlens.sqlite3"
+
     monkeypatch.setattr(
         "claimlens.cli.fetch_transcript",
         lambda video_id: TranscriptResult(
@@ -103,9 +110,7 @@ def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path
     exit_code = main(
         [
             "transcribe",
-            "https://www.youtube.com/@example/videos",
-            "--limit",
-            "1",
+            "https://www.youtube.com/watch?v=video123",
             "--database",
             str(database),
         ]
@@ -113,5 +118,5 @@ def test_transcribe_channel_extracts_and_stores_transcript(monkeypatch, tmp_path
 
     output = capsys.readouterr().out
     assert exit_code == 0
-    assert "Extracted subtitles: video123 | Test Video | 1 segments" in output
+    assert "Extracted subtitles: video123 | video123 | 1 segments" in output
     assert f"Stored 1 transcript(s) in {database}" in output
