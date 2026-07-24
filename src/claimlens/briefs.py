@@ -9,6 +9,7 @@ from claimlens import db
 
 SOURCE_STATUS = "not_advanced_source_verified"
 VERIFIED_SOURCE_STATUS = "advanced_source_verified"
+VERIFICATION_WARNING_STATUS = "advanced_source_verified_with_warnings"
 
 
 class BriefError(RuntimeError):
@@ -106,8 +107,11 @@ def generate_verified_brief(
     if analysis is None:
         raise BriefError("Cannot generate a verified brief before analysis exists.")
     verification_run = db.latest_verification_run(database_path, video_id)
-    if verification_run is None or verification_run["status"] != "succeeded":
-        raise BriefError("Cannot generate a verified brief before source verification succeeds.")
+    if verification_run is None or verification_run["status"] not in {
+        "succeeded",
+        "completed_with_warnings",
+    }:
+        raise BriefError("Cannot generate a verified brief before source verification completes.")
 
     run = db.latest_pipeline_run_for_video(database_path, video_id)
     source_url = run["source_url"] if run is not None and run["source_url"] else video_id
@@ -130,6 +134,8 @@ def generate_verified_brief(
         key_points=details.get("key_points", []),
         claims=claims,
         evidence=evidence,
+        verification_status=verification_run["status"],
+        adapter_results=_adapter_results(verification_run["source_adapters_json"]),
     )
     output_path.write_text(markdown, encoding="utf-8")
     db.upsert_brief_artifact(
@@ -137,7 +143,11 @@ def generate_verified_brief(
         video_id=video_id,
         summary_id=analysis["id"],
         path=output_path,
-        source_verification_status=VERIFIED_SOURCE_STATUS,
+        source_verification_status=(
+            VERIFIED_SOURCE_STATUS
+            if verification_run["status"] == "succeeded"
+            else VERIFICATION_WARNING_STATUS
+        ),
     )
     return output_path
 
@@ -153,18 +163,26 @@ def render_verified_markdown_brief(
     key_points: list[str],
     claims: list,
     evidence: list,
+    verification_status: str = "succeeded",
+    adapter_results: list[dict] | None = None,
 ) -> str:
     evidence_by_claim: dict[int, list] = {}
     for item in evidence:
         evidence_by_claim.setdefault(item["claim_id"], []).append(item)
 
+    warning = verification_status == "completed_with_warnings"
+    verification_label = (
+        "Advanced-source verification completed with warnings."
+        if warning
+        else "Advanced-source-verified with PubMed/Semantic Scholar candidates."
+    )
     sections = [
         f"# ClaimLens Source-Verified Brief: {title or video_id}",
         "",
         f"- Video ID: {video_id}",
         f"- Video: {source_url}",
         f"- Report language: {report_language}",
-        "- Source verification: Advanced-source-verified with PubMed/Semantic Scholar candidates.",
+        f"- Source verification: {verification_label}",
         "- Review status: Human review required for health/science claims.",
         *_metadata_lines(metadata or {}),
         "",
@@ -180,6 +198,9 @@ def render_verified_markdown_brief(
         sections.extend(_claim_section(claim, evidence_by_claim.get(claim["id"], [])))
     sections.extend(
         [
+            "",
+            "## Adapter outcomes",
+            _adapter_outcome_bullets(adapter_results or []),
             "",
             "## Human Review Disclaimer",
             (
@@ -251,3 +272,32 @@ def _evidence_bullets(items: list) -> str:
         )
         for item in items
     )
+
+
+def _adapter_outcome_bullets(items: list[dict]) -> str:
+    if not items:
+        return "- No adapter outcome was recorded."
+    return "\n".join(
+        f"- {item.get('adapter', 'unknown')}: {item.get('status', 'unknown')}"
+        + (
+            f" ({item['message']})"
+            if item.get("message")
+            else f" ({item.get('candidate_count', 0)} candidates)"
+        )
+        for item in items
+    )
+
+
+def _adapter_results(raw_value: str | None) -> list[dict]:
+    try:
+        raw = json.loads(raw_value or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(raw, list):
+        return []
+    return [
+        item
+        if isinstance(item, dict)
+        else {"adapter": str(item), "status": "unknown", "candidate_count": 0}
+        for item in raw
+    ]

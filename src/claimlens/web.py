@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import json
 import logging
 import secrets
 import time
@@ -206,6 +207,10 @@ def _badge_class(status: str) -> str:
         "running": "run",
         "saved": "warn",
         "exhausted": "warn",
+        "completed_with_warnings": "warn",
+        "warning": "warn",
+        "rate_limited": "warn",
+        "no_candidates": "warn",
         "failed": "bad",
         "invalid": "bad",
     }.get((status or "").lower(), "idle")
@@ -271,6 +276,9 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             context = self._context()
             if parsed.path == "/health":
                 self._send_text("ok\n")
+                return
+            if parsed.path == "/api/run-status":
+                self._send_run_status(database_path, run_id=run_id, context=context)
                 return
             if parsed.path == "/login":
                 self._send_html(render_login_page(context=context))
@@ -443,6 +451,37 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             encoded = body.encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+
+        def _send_run_status(
+            self,
+            database_path: Path | str,
+            *,
+            run_id: int | None,
+            context: WebContext,
+        ) -> None:
+            if run_id is None:
+                self._send_json({"error": "Run not found."}, status=404)
+                return
+            payload = run_status_payload(
+                database_path,
+                run_id=run_id,
+                user_id=context.user_id,
+                guest_token=context.guest_token,
+                csrf_token=context.csrf_token,
+            )
+            if payload is None:
+                self._send_json({"error": "Run not found."}, status=404)
+                return
+            self._send_json(payload)
+
+        def _send_json(self, payload: dict, *, status: int = 200) -> None:
+            encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", str(len(encoded)))
             self.end_headers()
             self.wfile.write(encoded)
@@ -767,16 +806,16 @@ def render_process_page(
         stepper = _stepper(step_rows)
         pipeline_badge = _status_badge(selected_run["status"])
         next_step = next_eligible_step(database_path, selected_run["id"])
-        controls = _controls(selected_run["id"], next_step, csrf_token=csrf_token)
+        controls = _controls(
+            database_path,
+            selected_run["id"],
+            next_step,
+            csrf_token=csrf_token,
+            user_id=user_id,
+        )
         outputs = _outputs(database_path, selected_run["video_id"])
         jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
-        job_rows = "".join(_job_row(row) for row in jobs)
-        if job_rows:
-            outputs += (
-                '<div class="card"><div class="card-head"><h2>Jobs</h2></div><table>'
-                "<thead><tr><th>Action</th><th>Status</th><th>Progress</th><th>Message</th></tr></thead>"
-                f"<tbody>{job_rows}</tbody></table></div>"
-            )
+        outputs += _jobs_card(jobs)
 
     run_options = "\n".join(
         f'<option value="{row["id"]}">#{row["id"]} {html.escape(row["video_id"] or "")}'
@@ -792,18 +831,18 @@ def render_process_page(
   <div class="card">
     <div class="card-head">
       <h2>Pipeline &middot; video <span class="mono">{video_label}</span></h2>
-      {pipeline_badge}
+      <span id="pipeline-status">{pipeline_badge}</span>
     </div>
-    <div class="stepper">{stepper}</div>
+    <div id="pipeline-stepper" class="stepper">{stepper}</div>
   </div>
   <div class="card">
     <div class="card-head"><h2>Steps</h2></div>
     <table>
       <thead><tr><th>Step</th><th>Status</th><th>Failure</th><th>Output</th></tr></thead>
-      <tbody>{rows}</tbody>
+      <tbody id="pipeline-steps">{rows}</tbody>
     </table>
     <div class="card-body">
-      {controls}
+      <div id="pipeline-controls">{controls}</div>
       {_manual_transcript_form(selected_run["id"], csrf_token)}
     </div>
   </div>
@@ -847,8 +886,11 @@ def render_process_page(
     </div>
   </div>
   {pipeline_card}
-  {outputs}
+  <div id="pipeline-outputs">{outputs}</div>
 </main>
+{_live_status_script(selected_run["id"])
+ if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
+ else ""}
 """
     return _page_shell(
         "ClaimLens Process",
@@ -865,6 +907,8 @@ def _stepper(step_rows) -> str:
         status = (row["status"] or "").lower()
         if status == "succeeded":
             cls, glyph = "done", "&check;"
+        elif status == "completed_with_warnings":
+            cls, glyph = "active", "!"
         elif status == "running":
             cls, glyph = "active", str(index)
         elif status == "failed":
@@ -911,12 +955,16 @@ def _run_job(
             message=_public_error(exc),
         )
         return
+    completed_run = db.get_pipeline_run(database_path, run_id)
+    completed_with_warnings = (
+        completed_run is not None and completed_run["status"] == "completed_with_warnings"
+    )
     db.update_job(
         database_path,
         job_id=job_id,
-        status="succeeded",
+        status="completed_with_warnings" if completed_with_warnings else "succeeded",
         progress=100,
-        message="Completed",
+        message="Completed with warnings" if completed_with_warnings else "Completed",
         output_path=str(output) if output else None,
     )
 
@@ -1031,18 +1079,30 @@ def _run_action(
             video_id=run["video_id"],
             briefs_path=config.paths.briefs,
         )
+        verification = db.latest_verification_run(database_path, run["video_id"])
+        verification_status = verification["status"] if verification is not None else "failed"
         db.set_step_status(
             database_path,
             run_id=run_id,
             step="source_verification",
-            status="succeeded",
+            status=verification_status,
             output_path=str(path),
+            failure_message=(
+                verification["failure_message"]
+                if verification_status == "completed_with_warnings" and verification is not None
+                else None
+            ),
         )
         db.set_run_status(
             database_path,
             run_id=run_id,
-            status="succeeded",
+            status=verification_status,
             current_step="source_verification",
+            failure_message=(
+                verification["failure_message"]
+                if verification_status == "completed_with_warnings" and verification is not None
+                else None
+            ),
         )
         _ = verification_run_id
         return path
@@ -1050,24 +1110,43 @@ def _run_action(
         raise ValueError(f"Unsupported action: {action}")
 
 
-def _controls(run_id: int, next_step: str | None, *, csrf_token: str = "") -> str:
+def _controls(
+    database_path: Path | str,
+    run_id: int,
+    next_step: str | None,
+    *,
+    csrf_token: str = "",
+    user_id: int | None = None,
+) -> str:
     if next_step is None:
         return ""
     secret = ""
+    saved_providers = (
+        {row["provider"] for row in db.list_user_api_keys(database_path, user_id=user_id)}
+        if user_id is not None
+        else set()
+    )
     if next_step == "analysis":
-        secret = (
-            '<label class="field grow"><span>OpenAI API key</span>'
-            '<input name="openai_api_key" type="password" placeholder="OpenAI API key">'
-            "</label>"
-        )
+        if "openai" not in saved_providers:
+            secret = (
+                '<label class="field grow"><span>OpenAI API key</span>'
+                '<input name="openai_api_key" type="password" placeholder="OpenAI API key">'
+                "</label>"
+            )
     elif next_step == "source_verification":
-        secret = (
-            '<label class="field grow"><span>Semantic Scholar API key</span>'
-            '<input name="semantic_scholar_api_key" type="password" '
-            'placeholder="Semantic Scholar API key"></label>'
-            '<label class="field grow"><span>NCBI API key</span>'
-            '<input name="ncbi_api_key" type="password" placeholder="NCBI API key"></label>'
-        )
+        fields = []
+        if "semantic_scholar" not in saved_providers:
+            fields.append(
+                '<label class="field grow"><span>Semantic Scholar API key</span>'
+                '<input name="semantic_scholar_api_key" type="password" '
+                'placeholder="Semantic Scholar API key"></label>'
+            )
+        if "ncbi" not in saved_providers:
+            fields.append(
+                '<label class="field grow"><span>NCBI API key</span>'
+                '<input name="ncbi_api_key" type="password" placeholder="NCBI API key"></label>'
+            )
+        secret = "".join(fields)
     return f"""
     <form method="post" class="row" style="margin-top:16px">
       <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
@@ -1078,6 +1157,136 @@ def _controls(run_id: int, next_step: str | None, *, csrf_token: str = "") -> st
           html.escape(next_step.replace("_", " "))}</button>
     </form>
     """
+
+
+def _jobs_card(jobs) -> str:
+    job_rows = "".join(_job_row(row) for row in jobs)
+    if not job_rows:
+        return ""
+    return (
+        '<div class="card"><div class="card-head"><h2>Jobs</h2></div><table>'
+        "<thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>"
+        f"<tbody id=\"pipeline-jobs\">{job_rows}</tbody></table></div>"
+    )
+
+
+def _run_has_active_job(database_path: Path | str, run_id: int) -> bool:
+    return any(
+        row["status"] in {"queued", "running"}
+        for row in db.latest_jobs_for_run(database_path, run_id)
+    )
+
+
+def run_status_payload(
+    database_path: Path | str,
+    *,
+    run_id: int,
+    user_id: int | None,
+    guest_token: str | None,
+    csrf_token: str = "",
+) -> dict | None:
+    """Return the safe, renderable state needed by the live Process page."""
+
+    run = db.get_visible_pipeline_run(
+        database_path,
+        run_id,
+        user_id=user_id,
+        guest_token=guest_token,
+    )
+    if run is None:
+        return None
+    step_rows = db.list_run_steps(database_path, run_id)
+    jobs = db.latest_jobs_for_run(database_path, run_id)
+    next_step = next_eligible_step(database_path, run_id)
+    outputs = _outputs(database_path, run["video_id"]) + _jobs_card(jobs)
+    state = {
+        "run": {
+            "status": run["status"],
+            "current_step": run["current_step"],
+            "failure_message": run["failure_message"],
+        },
+        "steps": [
+            {
+                "step": row["step"],
+                "status": row["status"],
+                "failure_message": row["failure_message"],
+                "output_path": row["output_path"],
+                "updated_at": row["updated_at"],
+            }
+            for row in step_rows
+        ],
+        "jobs": [
+            {
+                "id": row["id"],
+                "action": row["action"],
+                "status": row["status"],
+                "message": row["message"],
+                "output_path": row["output_path"],
+                "updated_at": row["updated_at"],
+            }
+            for row in jobs
+        ],
+        "next_step": next_step,
+    }
+    return {
+        "signature": json.dumps(state, sort_keys=True, separators=(",", ":")),
+        "active": any(row["status"] in {"queued", "running"} for row in jobs),
+        "pipeline_status_html": _status_badge(run["status"]),
+        "stepper_html": _stepper(step_rows),
+        "steps_html": "\n".join(_step_row(row) for row in step_rows),
+        "controls_html": _controls(
+            database_path,
+            run_id,
+            next_step,
+            csrf_token=csrf_token,
+            user_id=user_id,
+        ),
+        "outputs_html": outputs,
+    }
+
+
+def _live_status_script(run_id: int) -> str:
+    return f"""
+<script>
+(() => {{
+  const endpoint = "/api/run-status?run_id={run_id}";
+  const regions = {{
+    pipeline: document.getElementById("pipeline-status"),
+    stepper: document.getElementById("pipeline-stepper"),
+    steps: document.getElementById("pipeline-steps"),
+    controls: document.getElementById("pipeline-controls"),
+    outputs: document.getElementById("pipeline-outputs")
+  }};
+  let signature = null;
+  let inFlight = false;
+
+  const schedule = (delay) => window.setTimeout(refresh, delay);
+  async function refresh() {{
+    if (inFlight) return;
+    inFlight = true;
+    try {{
+      const response = await fetch(endpoint, {{cache: "no-store", credentials: "same-origin"}});
+      if (!response.ok) {{ schedule(5000); return; }}
+      const state = await response.json();
+      if (state.signature !== signature) {{
+        regions.pipeline.innerHTML = state.pipeline_status_html;
+        regions.stepper.innerHTML = state.stepper_html;
+        regions.steps.innerHTML = state.steps_html;
+        regions.controls.innerHTML = state.controls_html;
+        regions.outputs.innerHTML = state.outputs_html;
+        signature = state.signature;
+      }}
+      if (state.active) schedule(2000);
+    }} catch (_error) {{
+      schedule(5000);
+    }} finally {{
+      inFlight = false;
+    }}
+  }}
+  refresh();
+}})();
+</script>
+"""
 
 
 def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
@@ -1405,7 +1614,6 @@ def _job_row(row) -> str:
         "<tr>"
         f"<td class=\"name\">{html.escape(row['action'].replace('_', ' '))}</td>"
         f"<td class=\"status\">{_status_badge(row['status'])}</td>"
-        f"<td>{int(row['progress'])}%</td>"
         f"<td>{html.escape(row['message'] or '')}</td>"
         "</tr>"
     )

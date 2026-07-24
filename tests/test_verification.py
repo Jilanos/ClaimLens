@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from claimlens import db
@@ -7,6 +8,7 @@ from claimlens.pipeline import create_run
 from claimlens.verification import (
     SourceCandidate,
     SourceQuery,
+    SourceRateLimitError,
     assess_claim_evidence,
     build_claim_query,
     verify_sources,
@@ -154,6 +156,46 @@ def test_verify_sources_persists_sources_evidence_and_verdict(tmp_path):
     assert claims[0]["verdict"] == "mixed"
     assert len(evidence) == 2
     assert len(sources) == 2
+
+
+def test_verify_sources_surfaces_no_candidates_and_rate_limits(tmp_path):
+    database, _run_id = prepared_database(tmp_path)
+
+    class NoCandidates:
+        name = "pubmed"
+
+        def search(self, query):
+            return []
+
+    class RateLimited:
+        name = "semantic_scholar"
+
+        def search(self, query):
+            raise SourceRateLimitError("limited", retry_after_seconds=0)
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[NoCandidates(), RateLimited()],
+        max_results=5,
+        timeout_seconds=1,
+    )
+
+    verification = db.latest_verification_run(database, "abc123XYZ_")
+    assert verification["status"] == "completed_with_warnings"
+    assert "semantic_scholar" in verification["failure_message"]
+    outcomes = json.loads(verification["source_adapters_json"])
+    assert {item["status"] for item in outcomes} == {"no_candidates", "rate_limited"}
+
+    report = generate_verified_brief(
+        database,
+        video_id="abc123XYZ_",
+        briefs_path=tmp_path / "briefs",
+    )
+    markdown = report.read_text(encoding="utf-8")
+    assert "completed with warnings" in markdown
+    assert "semantic_scholar: rate_limited" in markdown
+    assert "advanced-source-verified with PubMed/Semantic Scholar candidates" not in markdown
 
 
 def test_generate_verified_brief_includes_citations_and_status(tmp_path):

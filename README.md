@@ -11,7 +11,7 @@ The refined MVP is local-first:
 5. Use OpenAI to generate a structured analysis.
 6. Generate a Markdown brief.
 7. Optionally verify notable claims against PubMed and Semantic Scholar.
-8. Inspect and launch steps from a local HTML process page with guarded POST actions, async job
+8. Inspect and launch steps from a local HTML process page with guarded POST actions, live async job
    status, and report viewing/download.
 9. Optionally log in to reuse encrypted per-user API keys and manage them from Options.
 
@@ -81,7 +81,9 @@ generated briefs.
 Authenticated web users can save OpenAI, Semantic Scholar, and NCBI/PubMed keys from the Options
 page. Saved keys are encrypted in SQLite with `CLAIMLENS_KEY_ENCRYPTION_SECRET`; keep that secret
 outside Git and back it up separately. Guest users can still enter keys per process, and those keys
-are used only for the submitted job/action.
+are used only for the submitted job/action. On the Process page, signed-in users with a saved key
+do not see a redundant per-run key field; guests and users without that provider key can still enter
+one for the submitted action.
 
 Authenticated users can also save multiple Supadata keys from Options. Supadata transcript fetching
 is opt-in through configuration. Local runs keep the classic YouTube path by default; the deployed
@@ -135,11 +137,17 @@ rate_limit_window_seconds = 300
 advanced_source_verification = false
 ```
 
+The Process page polls active job state every two seconds through a run-scoped JSON endpoint and
+stops when the job reaches a terminal state. It displays semantic status and messages rather than a
+numeric percentage, because external provider calls do not expose reliable intermediate progress.
+
 The source verification keys are optional for local tests and some API usage, but should be supplied
 for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not
 persisted in SQLite, generated transcripts, generated briefs, or the local HTML output.
 PubMed and Semantic Scholar can run without keys; saved or environment keys only improve quota and
-reliability.
+reliability. Verification reports list each adapter outcome, including no candidates, timeouts, and
+rate limits. A run with warnings is not presented as fully source-verified; a Semantic Scholar HTTP
+429 is retried once with a bounded delay and then shown with remediation guidance.
 
 ## Current Implementation
 
@@ -152,15 +160,16 @@ Implemented:
 - URL validation for one YouTube video URL.
 - Mandatory subtitle extraction with persisted failure causes.
 - Transcript and segment persistence in SQLite.
-- Cleaned transcript artifacts.
+- Cleaned transcript artifacts reflowed into readable paragraphs while raw timestamped segments remain
+  available.
 - Mockable OpenAI analysis boundary and structured analysis storage.
 - Direct Markdown brief generation labeled as not advanced-source-verified.
 - Optional PubMed/Semantic Scholar source verification for stored notable claims.
 - Non-binary claim verdicts: supported, contradicted, mixed, unclear, and not_checked.
 - Source-verified Markdown brief generation with supporting/contradicting evidence snippets.
-- Local HTML process page with CSRF-protected actions, bounded request bodies, step statuses,
-  async job state, failure details, transcript preview, source links, report viewing, report
-  download, and next-step controls.
+- Local HTML process page with CSRF-protected actions, bounded request bodies, live job state,
+  semantic status messages, failure details, transcript preview, source links, report viewing,
+  report download, and next-step controls.
 - Login/logout, secure session storage, top navigation, and an Options page for encrypted per-user
   API key management.
 - Optional Kapsule account login bridge for shared paulmondou.fr credentials.

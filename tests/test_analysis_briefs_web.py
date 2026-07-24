@@ -7,7 +7,13 @@ from claimlens.auth import hash_password
 from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.config import load_config
 from claimlens.pipeline import create_run
-from claimlens.web import WebContext, render_brief_page, render_options_page, render_process_page
+from claimlens.web import (
+    WebContext,
+    render_brief_page,
+    render_options_page,
+    render_process_page,
+    run_status_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -221,6 +227,100 @@ def test_render_process_page_shows_step_status_failure_and_controls(tmp_path):
     assert "captions" in html
     assert "failed" in html
     assert "Subtitles are unavailable." in html
+
+
+def test_live_process_state_is_scoped_and_has_no_numeric_progress(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    job_id = db.create_job(database, run_id=run_id, action="captions")
+    db.update_job(database, job_id=job_id, status="running", progress=5, message="Running")
+
+    payload = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+        csrf_token="csrf",
+    )
+    denied = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="other-guest",
+    )
+
+    assert payload is not None
+    assert payload["active"] is True
+    assert "progress" not in payload["signature"]
+    assert "%" not in payload["outputs_html"]
+    assert denied is None
+
+
+def test_process_controls_hide_saved_profile_keys(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    user_id = db.create_user(database, email="user@example.test", password_hash="hash")
+    db.upsert_user_api_key(
+        database,
+        user_id=user_id,
+        provider="openai",
+        encrypted_value="encrypted",
+        key_fingerprint="fingerprint",
+        masked_value="sk-u...cret",
+    )
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        user_id=user_id,
+    )
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+    db.set_step_status(database, run_id=run_id, step="clean_transcript", status="succeeded")
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        user_id=user_id,
+        guest_token="guest",
+        context=WebContext(
+            user_id=user_id,
+            email="user@example.test",
+            csrf_token="csrf",
+            guest_token="guest",
+            session_token="session",
+        ),
+    )
+
+    assert 'name="openai_api_key"' not in rendered
+
+
+def test_process_controls_keep_key_fields_for_guests(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+    db.set_step_status(database, run_id=run_id, step="clean_transcript", status="succeeded")
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        context=WebContext(
+            user_id=None,
+            email=None,
+            csrf_token="csrf",
+            guest_token="guest",
+            session_token=None,
+        ),
+    )
+
+    assert 'name="openai_api_key"' in rendered
 
 
 def test_render_process_page_shows_guest_navigation(tmp_path):

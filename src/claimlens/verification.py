@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +28,14 @@ LOGGER = logging.getLogger(__name__)
 
 class VerificationError(RuntimeError):
     """Raised when optional source verification cannot continue."""
+
+
+class SourceRateLimitError(VerificationError):
+    """Raised when a source adapter returns a rate-limit response."""
+
+    def __init__(self, message: str, *, retry_after_seconds: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
 
 
 @dataclass(frozen=True)
@@ -70,6 +79,7 @@ class ClaimAssessment:
 class AdapterSearchResult:
     candidates: list[SourceCandidate]
     errors: list[str]
+    outcomes: list[dict]
 
 
 class SourceAdapter(Protocol):
@@ -257,6 +267,7 @@ def verify_sources(
         summary_id=analysis["id"],
         adapters=[adapter.name for adapter in adapters],
     )
+    adapter_results: list[dict] = []
     try:
         for claim in claims:
             query = SourceQuery(
@@ -267,6 +278,9 @@ def verify_sources(
                 timeout_seconds=timeout_seconds,
             )
             search_result = _search_all(adapters, query)
+            adapter_results.extend(
+                {"claim_id": claim["id"], **outcome} for outcome in search_result.outcomes
+            )
             candidates = search_result.candidates
             source_ids_by_url: dict[str, int] = {}
             for candidate in candidates:
@@ -317,10 +331,22 @@ def verify_sources(
                     snippet=snippet.snippet,
                     rationale=snippet.rationale,
                 )
+        has_candidates = any(item["candidate_count"] > 0 for item in adapter_results)
+        has_warnings = any(item["status"] != "candidates" for item in adapter_results)
+        verification_status = (
+            "succeeded" if has_candidates and not has_warnings else "completed_with_warnings"
+        )
+        warning_messages = [
+            f"{item['adapter']}: {item['message']}"
+            for item in adapter_results
+            if item.get("message")
+        ]
         db.finish_verification_run(
             database_path,
             verification_run_id=verification_run_id,
-            status="succeeded",
+            status=verification_status,
+            failure_message="; ".join(warning_messages) if warning_messages else None,
+            adapter_results=adapter_results,
         )
     except Exception as exc:
         db.finish_verification_run(
@@ -328,6 +354,7 @@ def verify_sources(
             verification_run_id=verification_run_id,
             status="failed",
             failure_message=str(exc),
+            adapter_results=adapter_results,
         )
         raise
     return verification_run_id
@@ -347,15 +374,58 @@ def default_adapters(
 def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSearchResult:
     candidates: list[SourceCandidate] = []
     errors: list[str] = []
+    outcomes: list[dict] = []
     for adapter in adapters:
-        try:
-            candidates.extend(adapter.search(query))
-        except Exception as exc:
-            message = f"{adapter.name}: {exc}"
-            LOGGER.warning("Source adapter failed for claim %s: %s", query.claim_id, message)
-            errors.append(message)
-            continue
-    return AdapterSearchResult(candidates=candidates, errors=errors)
+        retry_count = 0
+        while True:
+            try:
+                adapter_candidates = adapter.search(query)
+                candidates.extend(adapter_candidates)
+                outcomes.append(
+                    {
+                        "adapter": adapter.name,
+                        "status": "candidates" if adapter_candidates else "no_candidates",
+                        "candidate_count": len(adapter_candidates),
+                        "message": None if adapter_candidates else "No candidates returned.",
+                    }
+                )
+                break
+            except SourceRateLimitError as exc:
+                if retry_count == 0:
+                    retry_count += 1
+                    delay = min(exc.retry_after_seconds or 1, 3)
+                    time.sleep(delay)
+                    continue
+                message = f"Rate limited (HTTP 429) after {retry_count} retry."
+                LOGGER.warning(
+                    "Source adapter rate limited for claim %s: %s",
+                    query.claim_id,
+                    adapter.name,
+                )
+                errors.append(f"{adapter.name}: {message}")
+                outcomes.append(
+                    {
+                        "adapter": adapter.name,
+                        "status": "rate_limited",
+                        "candidate_count": 0,
+                        "message": message,
+                    }
+                )
+                break
+            except Exception as exc:
+                message = str(exc)
+                LOGGER.warning("Source adapter failed for claim %s: %s", query.claim_id, message)
+                errors.append(f"{adapter.name}: {message}")
+                outcomes.append(
+                    {
+                        "adapter": adapter.name,
+                        "status": "error",
+                        "candidate_count": 0,
+                        "message": message,
+                    }
+                )
+                break
+    return AdapterSearchResult(candidates=candidates, errors=errors, outcomes=outcomes)
 
 
 def _candidate_polarity(candidate: SourceCandidate) -> str:
@@ -369,6 +439,12 @@ def _read_json(url: str, *, timeout: int, headers: dict[str, str] | None = None)
         with urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
+        if exc.code == 429:
+            retry_after = _retry_after_seconds(exc)
+            raise SourceRateLimitError(
+                "Source request was rate limited (HTTP 429).",
+                retry_after_seconds=retry_after,
+            ) from exc
         raise VerificationError(f"Source request failed with HTTP {exc.code}.") from exc
     except (URLError, TimeoutError) as exc:
         raise VerificationError(
@@ -376,6 +452,14 @@ def _read_json(url: str, *, timeout: int, headers: dict[str, str] | None = None)
         ) from exc
     except json.JSONDecodeError as exc:
         raise VerificationError("Source response was not valid JSON.") from exc
+
+
+def _retry_after_seconds(exc: HTTPError) -> int | None:
+    value = exc.headers.get("Retry-After") if exc.headers else None
+    try:
+        return max(0, int(value)) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _pubmed_abstracts(

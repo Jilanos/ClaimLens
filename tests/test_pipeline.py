@@ -105,7 +105,7 @@ def test_clean_transcript_text_removes_timestamps_noise_and_duplicates():
 
     assert "00:00" not in cleaned
     assert "[Music]" not in cleaned
-    assert cleaned.splitlines() == ["hello there", "important claim"]
+    assert cleaned == "hello there important claim"
 
 
 def test_clean_run_transcript_writes_artifact_and_keeps_raw_segments(monkeypatch, tmp_path):
@@ -131,9 +131,25 @@ def test_clean_run_transcript_writes_artifact_and_keeps_raw_segments(monkeypatch
     cleaned = db.get_cleaned_transcript(database, "abc123XYZ_")
     with sqlite3.connect(database) as connection:
         raw_count = connection.execute("SELECT COUNT(*) FROM transcript_segments").fetchone()[0]
-    assert output_path.read_text(encoding="utf-8") == "hello\nworld\n"
-    assert cleaned["text"] == "hello\nworld"
+    assert output_path.read_text(encoding="utf-8") == "hello world\n"
+    assert cleaned["text"] == "hello world"
     assert raw_count == 2
+
+
+def test_clean_transcript_reflows_caption_chunks_into_paragraphs():
+    cleaned = clean_transcript_text(
+        "One short sentence. "
+        "This second sentence extends the paragraph enough to demonstrate readable transcript "
+        "reflow without preserving each provider caption boundary. "
+        "A final sentence closes the first paragraph. "
+        "Another paragraph starts here and contains enough text to remain readable for review. "
+        "It should not be split into eight word lines."
+    )
+
+    assert "\n\n" in cleaned
+    assert "provider caption boundary" in cleaned
+    assert "eight word lines" in cleaned
+    assert "\n" not in cleaned.replace("\n\n", "")
 
 
 def test_manual_transcript_fallback_continues_pipeline(tmp_path):

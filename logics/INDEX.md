@@ -23,6 +23,7 @@
 | [prod_010_remove_supadata_fetch_preflight_latency](product/prod_010_remove_supadata_fetch_preflight_latency.md) | Remove Supadata fetch preflight latency | Proposed |  |  | product/prod_010_remove_supadata_fetch_preflight_latency.md |
 | [prod_011_validate_supadata_first_fallback_delivery](product/prod_011_validate_supadata_first_fallback_delivery.md) | Validate Supadata-first fallback delivery | Proposed |  |  | product/prod_011_validate_supadata_first_fallback_delivery.md |
 | [prod_012_claimlens_supadata_first_transcript_deployment](product/prod_012_claimlens_supadata_first_transcript_deployment.md) | ClaimLens Supadata-first transcript deployment | Superseded |  |  | product/prod_012_claimlens_supadata_first_transcript_deployment.md |
+| [prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results](product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md) | Live ClaimLens process feedback and trustworthy verification results | Settled |  |  | product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md |
 
 ## Roadmaps
 
@@ -41,6 +42,7 @@ _None_
 | [req_006_deployable_web_auth_and_api_key_management](request/req_006_deployable_web_auth_and_api_key_management.md) | Deployable Web Auth And API Key Management | Done |  |  | request/req_006_deployable_web_auth_and_api_key_management.md |
 | [req_007_supadata_native_transcript_key_rotation](request/req_007_supadata_native_transcript_key_rotation.md) | Supadata Native Transcript Key Rotation | Done |  |  | request/req_007_supadata_native_transcript_key_rotation.md |
 | [req_008_supadata_first_provider_order_fix](request/req_008_supadata_first_provider_order_fix.md) | Enable Supadata-first transcript provider order in deployment | Done |  |  | request/req_008_supadata_first_provider_order_fix.md |
+| [req_009_make_process_state_live_and_verification_outcomes_actionable](request/req_009_make_process_state_live_and_verification_outcomes_actionable.md) | Make process state live and verification outcomes actionable | Done |  |  | request/req_009_make_process_state_live_and_verification_outcomes_actionable.md |
 
 ## Backlog
 
@@ -102,6 +104,11 @@ _None_
 | [item_054_configure_supadata_first_deployment](backlog/item_054_configure_supadata_first_deployment.md) | Configure Supadata-first deployment | Done |  | 100% | backlog/item_054_configure_supadata_first_deployment.md |
 | [item_055_remove_supadata_fetch_preflight_latency](backlog/item_055_remove_supadata_fetch_preflight_latency.md) | Remove Supadata fetch preflight latency | Done |  | 100% | backlog/item_055_remove_supadata_fetch_preflight_latency.md |
 | [item_056_validate_supadata_first_fallback_delivery](backlog/item_056_validate_supadata_first_fallback_delivery.md) | Validate Supadata-first fallback delivery | Done |  | 100% | backlog/item_056_validate_supadata_first_fallback_delivery.md |
+| [item_057_add_bounded_live_process_job_state_refresh](backlog/item_057_add_bounded_live_process_job_state_refresh.md) | Add bounded live Process job state refresh | Done |  | 100% | backlog/item_057_add_bounded_live_process_job_state_refresh.md |
+| [item_058_hide_redundant_process_api_key_fields_for_saved_profiles](backlog/item_058_hide_redundant_process_api_key_fields_for_saved_profiles.md) | Hide redundant Process API key fields for saved profiles | Done |  | 100% | backlog/item_058_hide_redundant_process_api_key_fields_for_saved_profiles.md |
+| [item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs](backlog/item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs.md) | Reflow cleaned transcript segments into readable paragraphs | Done |  | 100% | backlog/item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs.md |
+| [item_060_report_source_verification_limits_and_rate_limited_adapters_honestly](backlog/item_060_report_source_verification_limits_and_rate_limited_adapters_honestly.md) | Report source verification limits and rate-limited adapters honestly | Done |  | 100% | backlog/item_060_report_source_verification_limits_and_rate_limited_adapters_honestly.md |
+| [item_061_validate_live_process_feedback_and_verification_outcome_delivery](backlog/item_061_validate_live_process_feedback_and_verification_outcome_delivery.md) | Validate live process feedback and verification outcome delivery | Done |  | 100% | backlog/item_061_validate_live_process_feedback_and_verification_outcome_delivery.md |
 
 ## Tasks
 
@@ -116,3 +123,4 @@ _None_
 | [task_007_orchestrate_deployable_web_auth_and_api_key_management](tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md) | Orchestrate Deployable Web Auth And API Key Management | Done | codex | 100% | tasks/task_007_orchestrate_deployable_web_auth_and_api_key_management.md |
 | [task_008_orchestrate_supadata_native_transcript_key_rotation](tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md) | Orchestrate Supadata Native Transcript Key Rotation | Done | codex | 100% | tasks/task_008_orchestrate_supadata_native_transcript_key_rotation.md |
 | [task_009_orchestrate_supadata_first_deployment_provider_fix](tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md) | Orchestrate Supadata-first deployment provider fix | Done | codex | 100% | tasks/task_009_orchestrate_supadata_first_deployment_provider_fix.md |
+| [task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery](tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md) | Orchestrate live process feedback and verification reliability delivery | Done | codex | 100% | tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md |

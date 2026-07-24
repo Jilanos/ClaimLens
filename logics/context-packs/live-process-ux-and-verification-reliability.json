@@ -1,0 +1,435 @@
+{
+  "budgets": {
+    "max_docs": 28,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_009_make_process_state_live_and_verification_outcomes_actionable item_057_add_bounded_live_process_job_state_refresh item_058_hide_redundant_process_api_key_fields_for_saved_profiles item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs item_060_report_source_verification_limits_and_rate_limited_adapters_honestly item_061_validate_live_process_feedback_and_verification_outcome_delivery task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery --mode full --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_057_add_bounded_live_process_job_state_refresh",
+          "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+          "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+          "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+          "item_061_validate_live_process_feedback_and_verification_outcome_delivery"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md",
+      "ref": "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results",
+      "sections": {
+        "Goals": [
+          "- Make process actions feel complete without manual page refreshes.",
+          "- Remove irrelevant credential prompts for signed-in users while preserving BYO-key guest workflows.",
+          "- Produce readable transcript artifacts for analysis and review.",
+          "- Make verification limits and evidence gaps visible enough for informed human review."
+        ],
+        "Key product decisions": [
+          "- Use structured input as the source of truth for generated docs.",
+          "- Keep generated write paths local and repo-bounded."
+        ],
+        "Overview": [
+          "Operators need the Process page to reflect work already completed in the background and to understand whether verification found evidence, found nothing, or could not complete because a source adapter was limited."
+        ],
+        "References": [
+          "- Product back-reference: `req_009_make_process_state_live_and_verification_outcomes_actionable`",
+          "- Task back-reference: `task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery`"
+        ]
+      },
+      "status": "Proposed",
+      "title": "Live ClaimLens process feedback and trustworthy verification results"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, make process state live and verification outcomes actionable, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Make process state live and verification outcomes actionable",
+        "use when": "You need to implement or review the scaffolded workflow for Make process state live and verification outcomes actionable."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_057_add_bounded_live_process_job_state_refresh",
+          "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+          "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+          "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+          "item_061_validate_live_process_feedback_and_verification_outcome_delivery"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ]
+      },
+      "path": "logics/request/req_009_make_process_state_live_and_verification_outcomes_actionable.md",
+      "ref": "req_009_make_process_state_live_and_verification_outcomes_actionable",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The Process page no longer renders a numeric job progress percentage; it renders an explicit status and message for each job.",
+          "- While a visible run has queued or running jobs, the browser refreshes its job and step state through an authenticated, run-scoped JSON endpoint at a bounded interval no shorter than two seconds, and stops polling after terminal state.",
+          "- The live refresh updates job status, step status, failure message, next available action, and output links without requiring the user to open a new page; requests that return unchanged state avoid a full DOM rewrite.",
+          "- For an authenticated user with a saved OpenAI, Semantic Scholar, or NCBI key, the corresponding Process-page manual key field is absent and the action uses the saved key. Guests and authenticated users without that provider key still see the manual field.",
+          "- The API never exposes plaintext saved keys in HTML, JSON status responses, logs, or tests.",
+          "- Cleaned transcript text joins consecutive caption segments into readable paragraphs rather than retaining arbitrary provider line breaks; sentence boundaries and a bounded paragraph length determine paragraph breaks."
+        ],
+        "Needs": [
+          "- Replace the static process-page snapshot with a lightweight live job view: it must show meaningful queued, running, succeeded, failed, and warning states without a fake percentage progress value.",
+          "- Hide per-run OpenAI, Semantic Scholar, and NCBI key inputs for authenticated users when the corresponding encrypted profile key is already available; retain the inputs for guests and for providers without a saved key.",
+          "- Normalize caption-segment line breaks into readable paragraphs for cleaned transcripts while retaining the raw timestamped segments in SQLite.",
+          "- Make source-verification outcomes actionable: distinguish no candidates from adapter failure and rate limiting, and do not label an all-adapter-failed run as source-verified."
+        ]
+      },
+      "status": "Draft",
+      "title": "Make process state live and verification outcomes actionable"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, add bounded live process job state refresh, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Add bounded live Process job state refresh",
+        "use when": "Implementing the scaffolded slice for Add bounded live Process job state refresh."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_057_add_bounded_live_process_job_state_refresh"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/backlog/item_057_add_bounded_live_process_job_state_refresh.md",
+      "ref": "item_057_add_bounded_live_process_job_state_refresh",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- A completed background captions job becomes visible in the same open Process page without navigation or manual refresh.",
+          "- Polling is authorized, bounded, terminal-aware, and avoids rewriting unchanged state."
+        ],
+        "Problem": [
+          "- The Process page captures the job at submission time and never sees its later SQLite state, leaving a completed task displayed as running at 5%."
+        ]
+      },
+      "status": "Ready",
+      "title": "Add bounded live Process job state refresh"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, hide redundant process api key fields for saved profiles, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Hide redundant Process API key fields for saved profiles",
+        "use when": "Implementing the scaffolded slice for Hide redundant Process API key fields for saved profiles."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_058_hide_redundant_process_api_key_fields_for_saved_profiles"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/backlog/item_058_hide_redundant_process_api_key_fields_for_saved_profiles.md",
+      "ref": "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Saved profile keys are used without showing redundant Process-page password inputs.",
+          "- No saved key value is included in HTML or JSON."
+        ],
+        "Problem": [
+          "- Signed-in users are prompted for API keys even though the backend already resolves their saved encrypted keys."
+        ]
+      },
+      "status": "Ready",
+      "title": "Hide redundant Process API key fields for saved profiles"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, reflow cleaned transcript segments into readable paragraphs, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Reflow cleaned transcript segments into readable paragraphs",
+        "use when": "Implementing the scaffolded slice for Reflow cleaned transcript segments into readable paragraphs."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/backlog/item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs.md",
+      "ref": "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The supplied F6OKdue0UBw-style caption chunks render as readable prose without word loss or duplication.",
+          "- Stored raw segments remain byte-for-byte unaffected by cleaning."
+        ],
+        "Problem": [
+          "- Provider caption segmentation causes the cleaned transcript, analysis prompt, and excerpts to break every few words."
+        ]
+      },
+      "status": "Ready",
+      "title": "Reflow cleaned transcript segments into readable paragraphs"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate live process feedback and verification reliability delivery",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_057_add_bounded_live_process_job_state_refresh",
+          "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+          "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+          "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+          "item_061_validate_live_process_feedback_and_verification_outcome_delivery"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md",
+      "ref": "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- Run `python3 -m logics_manager lint --require-status`.",
+          "- Run scaffold command tests."
+        ]
+      },
+      "status": "Ready",
+      "title": "Orchestrate live process feedback and verification reliability delivery"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_057_add_bounded_live_process_job_state_refresh",
+          "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+          "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+          "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+          "item_061_validate_live_process_feedback_and_verification_outcome_delivery"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md",
+      "ref": "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Live ClaimLens process feedback and trustworthy verification results"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, report source verification limits and rate-limited adapters honestly, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Report source verification limits and rate-limited adapters honestly",
+        "use when": "Implementing the scaffolded slice for Report source verification limits and rate-limited adapters honestly."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/backlog/item_060_report_source_verification_limits_and_rate_limited_adapters_honestly.md",
+      "ref": "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The F6OKdue0UBw outcome clearly reports Semantic Scholar HTTP 429 and PubMed no-candidate results.",
+          "- A brief is never labelled source-verified when all adapters failed."
+        ],
+        "Problem": [
+          "- A Semantic Scholar HTTP 429 plus zero PubMed candidates produces a completed verified brief with no evidence, leaving the user unable to distinguish a negative finding from an unavailable adapter."
+        ]
+      },
+      "status": "Ready",
+      "title": "Report source verification limits and rate-limited adapters honestly"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, validate live process feedback and verification outcome delivery, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Validate live process feedback and verification outcome delivery",
+        "use when": "Implementing the scaffolded slice for Validate live process feedback and verification outcome delivery."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_061_validate_live_process_feedback_and_verification_outcome_delivery"
+        ],
+        "prod": [
+          "prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results"
+        ],
+        "req": [
+          "req_009_make_process_state_live_and_verification_outcomes_actionable"
+        ],
+        "task": [
+          "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+        ]
+      },
+      "path": "logics/backlog/item_061_validate_live_process_feedback_and_verification_outcome_delivery.md",
+      "ref": "item_061_validate_live_process_feedback_and_verification_outcome_delivery",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The full automated suite and workflow validation pass without live provider credentials."
+        ],
+        "Problem": [
+          "- The change crosses web rendering, authorization, transcript processing, and external-source failure handling, so it needs focused regression coverage and clear operator documentation."
+        ]
+      },
+      "status": "Ready",
+      "title": "Validate live process feedback and verification outcome delivery"
+    }
+  ],
+  "estimates": {
+    "char_count": 14835,
+    "companion_doc_count": 1,
+    "doc_count": 8
+  },
+  "generated_at": "2026-07-24T14:25:43Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_009_make_process_state_live_and_verification_outcomes_actionable",
+      "item_057_add_bounded_live_process_job_state_refresh",
+      "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+      "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+      "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+      "item_061_validate_live_process_feedback_and_verification_outcome_delivery",
+      "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "full",
+  "profile": "normal",
+  "ref": "req_009_make_process_state_live_and_verification_outcomes_actionable,item_057_add_bounded_live_process_job_state_refresh,item_058_hide_redundant_process_api_key_fields_for_saved_profiles,item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs,item_060_report_source_verification_limits_and_rate_limited_adapters_honestly,item_061_validate_live_process_feedback_and_verification_outcome_delivery,task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery",
+  "refs": [
+    "req_009_make_process_state_live_and_verification_outcomes_actionable",
+    "item_057_add_bounded_live_process_job_state_refresh",
+    "item_058_hide_redundant_process_api_key_fields_for_saved_profiles",
+    "item_059_reflow_cleaned_transcript_segments_into_readable_paragraphs",
+    "item_060_report_source_verification_limits_and_rate_limited_adapters_honestly",
+    "item_061_validate_live_process_feedback_and_verification_outcome_delivery",
+    "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md",
+      "ref": "task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery"
+    }
+  ]
+}

@@ -646,7 +646,9 @@ def set_run_status(
                     current_step = COALESCE(?, current_step),
                     failure_message = ?,
                     finished_at = CASE
-                        WHEN ? IN ('failed', 'succeeded') THEN CURRENT_TIMESTAMP
+                        WHEN ? IN (
+                            'failed', 'succeeded', 'completed_with_warnings'
+                        ) THEN CURRENT_TIMESTAMP
                         ELSE finished_at
                     END
                 WHERE id = ?
@@ -972,6 +974,7 @@ def finish_verification_run(
     verification_run_id: int,
     status: str,
     failure_message: str | None = None,
+    adapter_results: list[dict] | None = None,
 ) -> None:
     with closing(connect(database_path)) as connection:
         with connection:
@@ -979,11 +982,17 @@ def finish_verification_run(
                 """
                 UPDATE verification_runs
                 SET status = ?,
+                    source_adapters_json = COALESCE(?, source_adapters_json),
                     failure_message = ?,
                     finished_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (status, failure_message, verification_run_id),
+                (
+                    status,
+                    json.dumps(adapter_results) if adapter_results is not None else None,
+                    failure_message,
+                    verification_run_id,
+                ),
             )
 
 
@@ -1214,7 +1223,9 @@ def update_job(
                     output_path = COALESCE(?, output_path),
                     updated_at = CURRENT_TIMESTAMP,
                     finished_at = CASE
-                        WHEN ? IN ('failed', 'succeeded', 'rejected') THEN CURRENT_TIMESTAMP
+                        WHEN ? IN (
+                            'failed', 'succeeded', 'completed_with_warnings', 'rejected'
+                        ) THEN CURRENT_TIMESTAMP
                         ELSE finished_at
                     END
                 WHERE id = ?

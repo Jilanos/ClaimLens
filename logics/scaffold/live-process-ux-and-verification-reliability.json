@@ -1,0 +1,186 @@
+{
+  "title": "Make process state live and verification outcomes actionable",
+  "references": [
+    "src/claimlens/web.py",
+    "src/claimlens/pipeline.py",
+    "src/claimlens/verification.py",
+    "src/claimlens/briefs.py",
+    "src/claimlens/api_keys.py",
+    "tests/test_analysis_briefs_web.py",
+    "tests/test_pipeline.py",
+    "tests/test_verification.py",
+    "docs/deployment-paulmondou-infra.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Process UX and verification reliability",
+    "needs": [
+      "Replace the static process-page snapshot with a lightweight live job view: it must show meaningful queued, running, succeeded, failed, and warning states without a fake percentage progress value.",
+      "Hide per-run OpenAI, Semantic Scholar, and NCBI key inputs for authenticated users when the corresponding encrypted profile key is already available; retain the inputs for guests and for providers without a saved key.",
+      "Normalize caption-segment line breaks into readable paragraphs for cleaned transcripts while retaining the raw timestamped segments in SQLite.",
+      "Make source-verification outcomes actionable: distinguish no candidates from adapter failure and rate limiting, and do not label an all-adapter-failed run as source-verified."
+    ],
+    "context": [
+      "Jobs are submitted to a background executor and are set to running at 5%, then directly to 100%; the Process page is server-rendered once and has no polling or auto-refresh.",
+      "API key resolution already prefers authenticated users' encrypted saved keys, but the Process controls render manual key fields unconditionally.",
+      "clean_transcript_text currently joins each source subtitle segment with a newline, preserving the provider's short caption chunks in the cleaned artifact and LLM input.",
+      "For video F6OKdue0UBw, source verification produced no evidence because Semantic Scholar returned HTTP 429 and PubMed returned no candidates; the markdown report still announced advanced source verification as completed.",
+      "The verified report currently renders only supporting and contradicting snippets, so context-only candidates and adapter errors are not visible as first-class outcome states."
+    ],
+    "acceptance_criteria": [
+      "The Process page no longer renders a numeric job progress percentage; it renders an explicit status and message for each job.",
+      "While a visible run has queued or running jobs, the browser refreshes its job and step state through an authenticated, run-scoped JSON endpoint at a bounded interval no shorter than two seconds, and stops polling after terminal state.",
+      "The live refresh updates job status, step status, failure message, next available action, and output links without requiring the user to open a new page; requests that return unchanged state avoid a full DOM rewrite.",
+      "For an authenticated user with a saved OpenAI, Semantic Scholar, or NCBI key, the corresponding Process-page manual key field is absent and the action uses the saved key. Guests and authenticated users without that provider key still see the manual field.",
+      "The API never exposes plaintext saved keys in HTML, JSON status responses, logs, or tests.",
+      "Cleaned transcript text joins consecutive caption segments into readable paragraphs rather than retaining arbitrary provider line breaks; sentence boundaries and a bounded paragraph length determine paragraph breaks.",
+      "Raw transcript text and timestamped segments remain persisted unchanged, and cleaned-text reflow does not remove or duplicate words across segment boundaries.",
+      "Source verification records and presents per-adapter outcomes for each run, including no candidates, HTTP 429/rate limit, timeout, and other adapter errors.",
+      "A verification run for which every configured adapter failed is surfaced as failed or completed with warnings and is not presented as a successfully source-verified brief. Mixed outcomes remain explicit about which adapters supplied usable candidates.",
+      "Semantic Scholar HTTP 429 handling is bounded: it respects Retry-After when supplied, uses a finite retry policy, and gives the user a clear remediation message that a saved Semantic Scholar key can improve quota.",
+      "Focused tests cover live status polling authorization and terminal behavior, conditional key fields, transcript paragraph reflow, and verification outcomes for rate limits, no candidates, and partial adapter success. Ruff, pytest, Logics lint, and Logics audit pass before closeout."
+    ]
+  },
+  "product": {
+    "title": "Live ClaimLens process feedback and trustworthy verification results",
+    "overview": "Operators need the Process page to reflect work already completed in the background and to understand whether verification found evidence, found nothing, or could not complete because a source adapter was limited.",
+    "goals": [
+      "Make process actions feel complete without manual page refreshes.",
+      "Remove irrelevant credential prompts for signed-in users while preserving BYO-key guest workflows.",
+      "Produce readable transcript artifacts for analysis and review.",
+      "Make verification limits and evidence gaps visible enough for informed human review."
+    ],
+    "non_goals": [
+      "Move jobs to an external queue or introduce a realtime messaging service.",
+      "Store or display plaintext API keys.",
+      "Alter raw transcript timing data or enable generated/translated captions.",
+      "Claim scientific validation when no usable evidence was retrieved."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Add bounded live Process job state refresh",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Process UX",
+      "request_acs": ["AC1", "AC2", "AC3"],
+      "problem": [
+        "The Process page captures the job at submission time and never sees its later SQLite state, leaving a completed task displayed as running at 5%."
+      ],
+      "scope_in": [
+        "Add a run-visible JSON status representation.",
+        "Poll only while the selected run has active jobs, then update the relevant Process UI state and stop.",
+        "Replace numeric job progress display with semantic status and message."
+      ],
+      "scope_out": [
+        "WebSockets, server-sent events, and external job queues.",
+        "Fine-grained progress reporting for opaque external API calls."
+      ],
+      "acceptance_criteria": [
+        "A completed background captions job becomes visible in the same open Process page without navigation or manual refresh.",
+        "Polling is authorized, bounded, terminal-aware, and avoids rewriting unchanged state."
+      ]
+    },
+    {
+      "title": "Hide redundant Process API key fields for saved profiles",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "Authenticated workflow",
+      "request_acs": ["AC4", "AC5"],
+      "problem": [
+        "Signed-in users are prompted for API keys even though the backend already resolves their saved encrypted keys."
+      ],
+      "scope_in": [
+        "Render key fields conditionally by authenticated saved-key availability.",
+        "Preserve guest and missing-key manual entry flows."
+      ],
+      "scope_out": [
+        "Changing key encryption, storage, or server fallback policy."
+      ],
+      "acceptance_criteria": [
+        "Saved profile keys are used without showing redundant Process-page password inputs.",
+        "No saved key value is included in HTML or JSON."
+      ]
+    },
+    {
+      "title": "Reflow cleaned transcript segments into readable paragraphs",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Transcript quality",
+      "request_acs": ["AC6", "AC7"],
+      "problem": [
+        "Provider caption segmentation causes the cleaned transcript, analysis prompt, and excerpts to break every few words."
+      ],
+      "scope_in": [
+        "Join adjacent cleaned captions with normalized whitespace.",
+        "Create paragraphs at sentence boundaries and a documented bounded size.",
+        "Keep raw transcript and segment data unchanged."
+      ],
+      "scope_out": [
+        "Re-transcription, translation, or changes to source timestamps."
+      ],
+      "acceptance_criteria": [
+        "The supplied F6OKdue0UBw-style caption chunks render as readable prose without word loss or duplication.",
+        "Stored raw segments remain byte-for-byte unaffected by cleaning."
+      ]
+    },
+    {
+      "title": "Report source verification limits and rate-limited adapters honestly",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Verification reliability",
+      "request_acs": ["AC8", "AC9", "AC10"],
+      "problem": [
+        "A Semantic Scholar HTTP 429 plus zero PubMed candidates produces a completed verified brief with no evidence, leaving the user unable to distinguish a negative finding from an unavailable adapter."
+      ],
+      "scope_in": [
+        "Persist and render adapter-level result summaries.",
+        "Use a truthful terminal verification state for all-adapter failure and partial outcomes.",
+        "Add finite Semantic Scholar rate-limit handling and remediation guidance."
+      ],
+      "scope_out": [
+        "Guaranteed retrieval of evidence for every exercise claim.",
+        "Replacing PubMed or Semantic Scholar with paid proprietary search."
+      ],
+      "acceptance_criteria": [
+        "The F6OKdue0UBw outcome clearly reports Semantic Scholar HTTP 429 and PubMed no-candidate results.",
+        "A brief is never labelled source-verified when all adapters failed."
+      ]
+    },
+    {
+      "title": "Validate live process feedback and verification outcome delivery",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Validation",
+      "request_acs": ["AC11"],
+      "problem": [
+        "The change crosses web rendering, authorization, transcript processing, and external-source failure handling, so it needs focused regression coverage and clear operator documentation."
+      ],
+      "scope_in": [
+        "Add deterministic offline tests for all new states.",
+        "Document polling behavior, transcript formatting, and verification warning states.",
+        "Run code and Logics validation."
+      ],
+      "scope_out": [
+        "Live third-party API calls in CI."
+      ],
+      "acceptance_criteria": [
+        "The full automated suite and workflow validation pass without live provider credentials."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate live process feedback and verification reliability delivery",
+    "plan": [
+      "Implement the run-scoped live status contract before updating Process-page rendering.",
+      "Deliver conditional credential controls and transcript paragraph reflow with focused tests.",
+      "Implement verification outcome persistence, bounded rate-limit behavior, and truthful report states.",
+      "Validate end-to-end state transitions, documentation, and acceptance-criteria traceability before closeout."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/live-process-ux-and-verification-reliability.json",
+    "mode": "full",
+    "profile": "normal"
+  }
+}

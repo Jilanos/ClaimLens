@@ -33,6 +33,9 @@ TIMESTAMP_RE = re.compile(
     re.IGNORECASE,
 )
 WHITESPACE_RE = re.compile(r"[ \t]+")
+SENTENCE_END_RE = re.compile(r"[.!?…][\"'’)]*$")
+PARAGRAPH_MIN_CHARS = 280
+PARAGRAPH_MAX_CHARS = 600
 
 
 class PipelineError(RuntimeError):
@@ -291,7 +294,27 @@ def clean_transcript_text(text: str) -> str:
             continue
         lines.append(line)
         previous = line
-    return "\n".join(lines)
+    return _reflow_transcript_paragraphs(" ".join(lines))
+
+
+def _reflow_transcript_paragraphs(text: str) -> str:
+    words = text.split()
+    if not words:
+        return ""
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for word in words:
+        current.append(word)
+        candidate = " ".join(current)
+        at_sentence_end = bool(SENTENCE_END_RE.search(word))
+        reaches_target = len(candidate) >= PARAGRAPH_MIN_CHARS
+        exceeds_bound = len(candidate) >= PARAGRAPH_MAX_CHARS
+        if exceeds_bound or (at_sentence_end and reaches_target):
+            paragraphs.append(candidate)
+            current = []
+    if current:
+        paragraphs.append(" ".join(current))
+    return "\n\n".join(paragraphs)
 
 
 def clean_run_transcript(
