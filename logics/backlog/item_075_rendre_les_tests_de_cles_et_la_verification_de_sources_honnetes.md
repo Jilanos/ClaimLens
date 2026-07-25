@@ -2,8 +2,8 @@
 > From version: 1.0.0
 > Schema version: 1.0
 > Status: Done
-> Understanding: 90%
-> Confidence: 85%
+> Understanding: 95
+> Confidence: 95
 > Progress: 100%
 > Complexity: Medium
 > Theme: integrations
@@ -54,3 +54,4 @@
 
 # Notes
 - Task `task_015_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes` was finished via `logics-manager flow finish task` on 2026-07-25.
+- Task `task_013_orchestrer_la_remediation_de_l_audit_claimlens` was finished via `logics-manager flow finish task` on 2026-07-25.

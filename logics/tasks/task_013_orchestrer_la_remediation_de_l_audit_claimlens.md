@@ -1,10 +1,10 @@
 ## task_013_orchestrer_la_remediation_de_l_audit_claimlens - Orchestrer la remediation de l'audit ClaimLens
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: In progress
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Medium
 > Theme: Implementation delivery
 > Reminder: Update status/understanding/confidence/progress and linked request/backlog references when you edit this doc.
@@ -27,10 +27,10 @@
 - `item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production`
 
 # Definition of Done (DoD)
-- [ ] Generated request, product, backlog, and task docs are present.
-- [ ] Context-pack handoff is available when requested.
-- [ ] Validation passes.
-- [ ] Meaningful waves followed ADR 009: affected docs updated and the repo left commit-ready without automatic commits.
+- [x] Generated request, product, backlog, and task docs are present.
+- [x] Context-pack handoff is available when requested.
+- [x] Validation passes.
+- [x] Meaningful waves followed ADR 009: affected docs updated and the repo left commit-ready without automatic commits.
 
 # AC Traceability
 - request-AC1 -> This task. Proof: scaffold command generated the request-chain corpus.
@@ -41,9 +41,14 @@
 # Validation
 - Run `python3 -m logics_manager lint --require-status`.
 - Run scaffold command tests.
+- Finish workflow executed on 2026-07-25.
+- Linked backlog/request close verification passed.
 
 # Report
 - Implementation complete.
+- Finished on 2026-07-25.
+- Linked backlog item(s): `item_074_lier_identite_anonyme_csrf_et_limitations_de_debit`, `item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes`, `item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production`
+- Related request(s): `req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25`
 
 # AI Context
 - Summary: Orchestrer la remediation de l'audit ClaimLens
