@@ -1,0 +1,278 @@
+{
+  "budgets": {
+    "max_docs": 20,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25 item_074_lier_identite_anonyme_csrf_et_limitations_de_debit item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production task_013_orchestrer_la_remediation_de_l_audit_claimlens --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+          "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+          "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_016_securisation_et_fiabilisation_de_claimlens.md",
+      "ref": "prod_016_securisation_et_fiabilisation_de_claimlens",
+      "status": "Proposed",
+      "title": "Securisation et fiabilisation de ClaimLens"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, remedier aux constats de l'audit technique 2026-07-25, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Remedier aux constats de l'audit technique 2026-07-25",
+        "use when": "You need to implement or review the scaffolded workflow for Remedier aux constats de l'audit technique 2026-07-25."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+          "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+          "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ]
+      },
+      "path": "logics/request/req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25.md",
+      "ref": "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Remedier aux constats de l'audit technique 2026-07-25"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, lier identite anonyme, csrf et limitations de debit, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Lier identite anonyme, CSRF et limitations de debit",
+        "use when": "Implementing the scaffolded slice for Lier identite anonyme, CSRF et limitations de debit."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_074_lier_identite_anonyme_csrf_et_limitations_de_debit.md",
+      "ref": "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Lier identite anonyme, CSRF et limitations de debit"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rendre les tests de cles et la verification de sources honnetes, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rendre les tests de cles et la verification de sources honnetes",
+        "use when": "Implementing the scaffolded slice for Rendre les tests de cles et la verification de sources honnetes."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes.md",
+      "ref": "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Rendre les tests de cles et la verification de sources honnetes"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, standardiser le stockage des cles et la fiabilite web de production, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Standardiser le stockage des cles et la fiabilite web de production",
+        "use when": "Implementing the scaffolded slice for Standardiser le stockage des cles et la fiabilite web de production."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production.md",
+      "ref": "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Standardiser le stockage des cles et la fiabilite web de production"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrer la remediation de l'audit ClaimLens",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+          "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+          "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/tasks/task_013_orchestrer_la_remediation_de_l_audit_claimlens.md",
+      "ref": "task_013_orchestrer_la_remediation_de_l_audit_claimlens",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrer la remediation de l'audit ClaimLens"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+          "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+          "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production"
+        ],
+        "prod": [
+          "prod_016_securisation_et_fiabilisation_de_claimlens"
+        ],
+        "req": [
+          "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25"
+        ],
+        "task": [
+          "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_016_securisation_et_fiabilisation_de_claimlens.md",
+      "ref": "prod_016_securisation_et_fiabilisation_de_claimlens",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "Securisation et fiabilisation de ClaimLens"
+    }
+  ],
+  "estimates": {
+    "char_count": 6532,
+    "companion_doc_count": 1,
+    "doc_count": 6
+  },
+  "generated_at": "2026-07-25T14:09:45Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25",
+      "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+      "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+      "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production",
+      "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25,item_074_lier_identite_anonyme_csrf_et_limitations_de_debit,item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes,item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production,task_013_orchestrer_la_remediation_de_l_audit_claimlens",
+  "refs": [
+    "req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25",
+    "item_074_lier_identite_anonyme_csrf_et_limitations_de_debit",
+    "item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes",
+    "item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production",
+    "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_013_orchestrer_la_remediation_de_l_audit_claimlens.md",
+      "ref": "task_013_orchestrer_la_remediation_de_l_audit_claimlens"
+    }
+  ]
+}

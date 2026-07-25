@@ -17,6 +17,7 @@ from claimlens import db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
 from claimlens.api_keys import KeyContext, resolve_api_key, save_supadata_api_key, save_user_api_key
 from claimlens.auth import (
+    guest_csrf_token,
     hash_password,
     new_guest_token,
     new_session_token,
@@ -341,14 +342,15 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
     recovered_jobs = db.recover_orphaned_jobs(database_path)
     if recovered_jobs:
         LOGGER.warning("Marked %s orphaned web jobs as interrupted", recovered_jobs)
-    guest_csrf_token = secrets.token_urlsafe(32)
-
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             run_id = _int_value(query.get("run_id", [""])[0])
             context = self._context()
+            self._pending_guest_cookie = (
+                None if self._cookie("claimlens_guest") else context.guest_token
+            )
             if parsed.path == "/health":
                 self._send_text("ok\n")
                 return
@@ -399,6 +401,9 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
 
         def do_POST(self) -> None:  # noqa: N802
             context = self._context()
+            self._pending_guest_cookie = (
+                None if self._cookie("claimlens_guest") else context.guest_token
+            )
             try:
                 form = self._read_form()
             except ValueError as exc:
@@ -434,6 +439,12 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     else f"guest:{context.guest_token}"
                 )
                 _check_rate_limit(database_path, identity, config)
+                if context.user_id is None:
+                    _check_rate_limit(
+                        database_path,
+                        f"guest-ip:{self._request_ip()}",
+                        config,
+                    )
                 if action == "login":
                     self._handle_login(form)
                     return
@@ -507,8 +518,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
 
             self.send_response(303)
             self.send_header("Location", f"/?run_id={run_id}")
-            if not self._cookie("claimlens_guest"):
-                self._set_cookie("claimlens_guest", context.guest_token, config=config)
+            self._set_pending_guest_cookie(config)
             self.end_headers()
 
         def log_message(self, format: str, *args: object) -> None:
@@ -529,6 +539,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(encoded)))
+            self._set_pending_guest_cookie(config)
             self.end_headers()
             self.wfile.write(encoded)
 
@@ -621,7 +632,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             return WebContext(
                 user_id=None,
                 email=None,
-                csrf_token=guest_csrf_token,
+                csrf_token=guest_csrf_token(guest_token),
                 guest_token=guest_token,
                 session_token=None,
             )
@@ -655,7 +666,9 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                         context=WebContext(
                             user_id=None,
                             email=None,
-                            csrf_token=guest_csrf_token,
+                            csrf_token=guest_csrf_token(
+                                self._cookie("claimlens_guest") or new_guest_token()
+                            ),
                             guest_token=self._cookie("claimlens_guest") or new_guest_token(),
                             session_token=None,
                         ),
@@ -692,6 +705,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             self.send_response(303)
             self.send_header("Location", "/")
             self._set_cookie("claimlens_session", token, config=config)
+            self._set_pending_guest_cookie(config)
             self.end_headers()
 
         def _handle_logout(self, context: WebContext) -> None:
@@ -700,6 +714,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             self.send_response(303)
             self.send_header("Location", "/")
             self._clear_cookie("claimlens_session", config=config)
+            self._set_pending_guest_cookie(config)
             self.end_headers()
 
         def _handle_options_action(
@@ -833,6 +848,19 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 if key == name:
                     return value or None
             return None
+
+        def _request_ip(self) -> str:
+            """Use the proxy-provided client address only behind the trusted proxy."""
+            return (
+                self.headers.get("X-Real-IP", "").strip()
+                or self.client_address[0]
+            )[:128]
+
+        def _set_pending_guest_cookie(self, config: AppConfig) -> None:
+            value = getattr(self, "_pending_guest_cookie", None)
+            if value:
+                self._set_cookie("claimlens_guest", value, config=config)
+                self._pending_guest_cookie = None
 
         def _set_cookie(self, name: str, value: str, *, config: AppConfig) -> None:
             secure = "; Secure" if config.web.secure_cookies else ""

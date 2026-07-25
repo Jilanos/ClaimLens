@@ -26,6 +26,7 @@
 | [prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results](product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md) | Live ClaimLens process feedback and trustworthy verification results | Settled |  |  | product/prod_013_live_claimlens_process_feedback_and_trustworthy_verification_results.md |
 | [prod_014_reliable_claimlens_jobs_and_evidence_aware_reports](product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md) | Reliable ClaimLens jobs and evidence-aware reports | Settled |  |  | product/prod_014_reliable_claimlens_jobs_and_evidence_aware_reports.md |
 | [prod_015_focused_english_language_claimlens_analysis_workspace](product/prod_015_focused_english_language_claimlens_analysis_workspace.md) | Focused English-language ClaimLens analysis workspace | Settled |  |  | product/prod_015_focused_english_language_claimlens_analysis_workspace.md |
+| [prod_016_securisation_et_fiabilisation_de_claimlens](product/prod_016_securisation_et_fiabilisation_de_claimlens.md) | Securisation et fiabilisation de ClaimLens | Proposed |  |  | product/prod_016_securisation_et_fiabilisation_de_claimlens.md |
 
 ## Roadmaps
 
@@ -47,6 +48,7 @@ _None_
 | [req_009_make_process_state_live_and_verification_outcomes_actionable](request/req_009_make_process_state_live_and_verification_outcomes_actionable.md) | Make process state live and verification outcomes actionable | Done |  |  | request/req_009_make_process_state_live_and_verification_outcomes_actionable.md |
 | [req_010_harden_claimlens_production_reliability_and_verification_integrity](request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md) | Harden ClaimLens production reliability and verification integrity | Done |  |  | request/req_010_harden_claimlens_production_reliability_and_verification_integrity.md |
 | [req_011_refine_the_claimlens_analysis_workspace_user_experience](request/req_011_refine_the_claimlens_analysis_workspace_user_experience.md) | Refine the ClaimLens analysis workspace user experience | Done |  |  | request/req_011_refine_the_claimlens_analysis_workspace_user_experience.md |
+| [req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25](request/req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25.md) | Remedier aux constats de l'audit technique 2026-07-25 | Draft |  |  | request/req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25.md |
 
 ## Backlog
 
@@ -125,6 +127,9 @@ _None_
 | [item_071_add_an_evidence_aware_results_summary](backlog/item_071_add_an_evidence_aware_results_summary.md) | Add an evidence-aware results summary | Done |  | 100% | backlog/item_071_add_an_evidence_aware_results_summary.md |
 | [item_072_separate_analysis_creation_from_analysis_history](backlog/item_072_separate_analysis_creation_from_analysis_history.md) | Separate analysis creation from analysis history | Done |  | 100% | backlog/item_072_separate_analysis_creation_from_analysis_history.md |
 | [item_073_make_the_workflow_responsive_and_testable](backlog/item_073_make_the_workflow_responsive_and_testable.md) | Make the workflow responsive and testable | Done |  | 100% | backlog/item_073_make_the_workflow_responsive_and_testable.md |
+| [item_074_lier_identite_anonyme_csrf_et_limitations_de_debit](backlog/item_074_lier_identite_anonyme_csrf_et_limitations_de_debit.md) | Lier identite anonyme, CSRF et limitations de debit | Ready |  | 0% | backlog/item_074_lier_identite_anonyme_csrf_et_limitations_de_debit.md |
+| [item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes](backlog/item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes.md) | Rendre les tests de cles et la verification de sources honnetes | Ready |  | 0% | backlog/item_075_rendre_les_tests_de_cles_et_la_verification_de_sources_honnetes.md |
+| [item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production](backlog/item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production.md) | Standardiser le stockage des cles et la fiabilite web de production | Ready |  | 0% | backlog/item_076_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production.md |
 
 ## Tasks
 
@@ -142,3 +147,4 @@ _None_
 | [task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery](tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md) | Orchestrate live process feedback and verification reliability delivery | Done | codex | 100% | tasks/task_010_orchestrate_live_process_feedback_and_verification_reliability_delivery.md |
 | [task_011_orchestrate_production_reliability_and_verification_integrity_hardening](tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md) | Orchestrate production reliability and verification integrity hardening | Done | codex | 100% | tasks/task_011_orchestrate_production_reliability_and_verification_integrity_hardening.md |
 | [task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement](tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md) | Orchestrate the ClaimLens analysis workspace UX refinement | Done | codex | 100% | tasks/task_012_orchestrate_the_claimlens_analysis_workspace_ux_refinement.md |
+| [task_013_orchestrer_la_remediation_de_l_audit_claimlens](tasks/task_013_orchestrer_la_remediation_de_l_audit_claimlens.md) | Orchestrer la remediation de l'audit ClaimLens | Ready |  | 0% | tasks/task_013_orchestrer_la_remediation_de_l_audit_claimlens.md |

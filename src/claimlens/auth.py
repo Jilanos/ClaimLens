@@ -9,6 +9,7 @@ import secrets
 
 PASSWORD_ALGORITHM = "pbkdf2_sha256"
 PASSWORD_ITERATIONS = 260_000
+GUEST_CSRF_SECRET = secrets.token_bytes(32)
 
 
 class AuthError(RuntimeError):
@@ -59,3 +60,12 @@ def token_digest(token: str) -> str:
 
 def new_guest_token() -> str:
     return secrets.token_urlsafe(24)
+
+
+def guest_csrf_token(guest_token: str) -> str:
+    """Return a process-secret-bound CSRF token unique to one guest identity."""
+    return hmac.new(
+        GUEST_CSRF_SECRET,
+        guest_token.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
