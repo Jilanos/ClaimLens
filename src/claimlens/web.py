@@ -15,7 +15,14 @@ from urllib.parse import parse_qs, urlparse
 
 from claimlens import db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
-from claimlens.api_keys import KeyContext, resolve_api_key, save_supadata_api_key, save_user_api_key
+from claimlens.api_keys import (
+    ApiKeyTestError,
+    KeyContext,
+    resolve_api_key,
+    save_supadata_api_key,
+    save_user_api_key,
+    validate_provider_api_key,
+)
 from claimlens.auth import (
     guest_csrf_token,
     hash_password,
@@ -746,6 +753,10 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 )
                 if not key:
                     raise ValueError("No saved key to test.")
+                try:
+                    validate_provider_api_key(provider, key)
+                except ApiKeyTestError as exc:
+                    raise ValueError(str(exc)) from exc
                 db.mark_user_api_key_tested(
                     database_path,
                     user_id=context.user_id,

@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 from claimlens import db
 from claimlens.config import AppConfig
 from claimlens.secrets import decrypt_secret, encrypt_secret, mask_secret
 
 PROVIDERS = {"openai", "semantic_scholar", "ncbi"}
+
+
+class ApiKeyTestError(ValueError):
+    """Raised when a provider rejects or cannot validate an API key."""
 
 
 @dataclass(frozen=True)
@@ -84,6 +92,45 @@ def _provider(provider: str) -> str:
     if normalized not in PROVIDERS:
         raise ValueError(f"Unsupported API key provider: {provider}")
     return normalized
+
+
+def validate_provider_api_key(provider: str, api_key: str, *, timeout: float = 10.0) -> None:
+    """Run a minimal authenticated provider request and raise on non-success."""
+    provider = _provider(provider)
+    if not api_key.strip():
+        raise ApiKeyTestError("The API key is empty.")
+    if provider == "openai":
+        request = Request(
+            "https://api.openai.com/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+    elif provider == "semantic_scholar":
+        query = urlencode({"query": "test", "limit": "1"})
+        request = Request(
+            f"https://api.semanticscholar.org/graph/v1/paper/search?{query}",
+            headers={"x-api-key": api_key},
+        )
+    else:
+        query = urlencode(
+            {
+                "db": "pubmed",
+                "term": "test",
+                "retmode": "json",
+                "retmax": "0",
+                "api_key": api_key,
+            }
+        )
+        request = Request(f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?{query}")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            if not 200 <= response.status < 300:
+                raise ApiKeyTestError(f"{provider} returned HTTP {response.status}.")
+            if provider != "ncbi":
+                json.loads(response.read())
+    except HTTPError as exc:
+        raise ApiKeyTestError(f"{provider} rejected the key (HTTP {exc.code}).") from exc
+    except (URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        raise ApiKeyTestError(f"{provider} key test failed: {exc}") from exc
 
 
 def _fingerprint(value: str) -> str:
