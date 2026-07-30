@@ -85,7 +85,8 @@ jobs:
           script: |
             set -euo pipefail
             cd /home/deploy/paulmondou-infra
-            ./scripts/deploy-image.sh claimlens '${{ env.IMAGE }}@${{ needs.publish.outputs.image_digest }}' 'https://claimlens.paulmondou.fr/health' CLAIMLENS_IMAGE
+            # paulmondou-infra validates versioned GHCR tags before deployment.
+            ./scripts/deploy-image.sh claimlens '${{ env.IMAGE }}:${{ github.ref_name }}' 'https://claimlens.paulmondou.fr/health' CLAIMLENS_IMAGE
 
   release:
     needs: deploy
