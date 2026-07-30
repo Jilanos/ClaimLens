@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import tomllib
 from dataclasses import dataclass
@@ -46,6 +47,10 @@ class WebConfig:
     allow_server_api_key_fallback: bool
     key_encryption_secret: str | None
     kapsule_database: Path | None
+    trusted_proxy_ips: tuple[str, ...]
+    max_queued_jobs: int
+    key_encryption_key_id: str
+    key_encryption_previous: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -198,6 +203,22 @@ def load_config(
             ),
             key_encryption_secret=environ.get("CLAIMLENS_KEY_ENCRYPTION_SECRET"),
             kapsule_database=_optional_env_path(environ, "CLAIMLENS_KAPSULE_DB"),
+            trusted_proxy_ips=_csv_setting(
+                environ.get("CLAIMLENS_TRUSTED_PROXY_IPS") or str(web.get("trusted_proxy_ips", ""))
+            ),
+            max_queued_jobs=_int_env_setting(
+                environ,
+                web,
+                env_key="CLAIMLENS_MAX_QUEUED_JOBS",
+                config_key="max_queued_jobs",
+                default=16,
+            ),
+            key_encryption_key_id=(
+                environ.get("CLAIMLENS_KEY_ENCRYPTION_KEY_ID") or "primary"
+            ).strip(),
+            key_encryption_previous=_secret_keyring(
+                environ.get("CLAIMLENS_KEY_ENCRYPTION_PREVIOUS")
+            ),
         ),
         sources=SourceConfig(
             advanced_source_verification=bool(sources.get("advanced_source_verification", False)),
@@ -224,6 +245,24 @@ def _read_toml(path: Path) -> dict[str, Any]:
 def _optional_env_path(env: dict[str, str], key: str) -> Path | None:
     value = env.get(key)
     return Path(value).expanduser() if value else None
+
+
+def _csv_setting(value: str | None) -> tuple[str, ...]:
+    return tuple(part.strip() for part in (value or "").split(",") if part.strip())
+
+
+def _secret_keyring(value: str | None) -> dict[str, str]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ConfigError("CLAIMLENS_KEY_ENCRYPTION_PREVIOUS must be a JSON object.") from exc
+    if not isinstance(parsed, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in parsed.items()
+    ):
+        raise ConfigError("CLAIMLENS_KEY_ENCRYPTION_PREVIOUS must map key IDs to secrets.")
+    return {key: secret for key, secret in parsed.items() if key and secret}
 
 
 def _env_path(env: dict[str, str], key: str, fallback: str | Path) -> Path:

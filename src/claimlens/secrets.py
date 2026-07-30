@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import secrets as py_secrets
+from dataclasses import dataclass
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -18,7 +19,72 @@ class SecretError(RuntimeError):
     """Raised when encrypted secret material cannot be used."""
 
 
-def encrypt_secret(plaintext: str, deployment_secret: str) -> str:
+@dataclass(frozen=True)
+class SecretKeyring:
+    active_id: str
+    active_secret: str
+    previous: dict[str, str]
+
+    def secret_for(self, key_id: str) -> str:
+        if key_id == self.active_id:
+            return self.active_secret
+        try:
+            return self.previous[key_id]
+        except KeyError as exc:
+            raise SecretError(f"Encrypted secret uses unavailable key ID: {key_id}.") from exc
+
+
+def encrypt_secret(
+    plaintext: str,
+    deployment_secret: str | SecretKeyring,
+    *,
+    key_id: str = "primary",
+) -> str:
+    keyring = _keyring(deployment_secret, key_id=key_id)
+    if not keyring.active_secret:
+        raise SecretError("CLAIMLENS_KEY_ENCRYPTION_SECRET is required to store API keys.")
+    nonce = py_secrets.token_bytes(12)
+    ciphertext = AESGCM(_derive_aead_key(keyring.active_secret)).encrypt(
+        nonce,
+        plaintext.encode("utf-8"),
+        b"claimlens-secret-v3:" + keyring.active_id.encode("utf-8"),
+    )
+    return (
+        "v3:"
+        + keyring.active_id
+        + ":"
+        + base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+    )
+
+
+def decrypt_secret(encrypted: str, deployment_secret: str | SecretKeyring) -> str:
+    keyring = _keyring(deployment_secret)
+    if not keyring.active_secret:
+        raise SecretError("CLAIMLENS_KEY_ENCRYPTION_SECRET is required to read API keys.")
+    if encrypted.startswith("v3:"):
+        try:
+            _, key_id, encoded = encrypted.split(":", 2)
+            raw = base64.urlsafe_b64decode(encoded.encode("ascii"))
+            return (
+                AESGCM(_derive_aead_key(keyring.secret_for(key_id)))
+                .decrypt(raw[:12], raw[12:], b"claimlens-secret-v3:" + key_id.encode("utf-8"))
+                .decode("utf-8")
+            )
+        except (ValueError, InvalidTag, UnicodeDecodeError) as exc:
+            raise SecretError("Encrypted secret authentication failed.") from exc
+    for secret in (keyring.active_secret, *keyring.previous.values()):
+        try:
+            return _decrypt_legacy(encrypted, secret)
+        except SecretError:
+            continue
+    raise SecretError("Encrypted secret authentication failed.")
+
+
+def _keyring(value: str | SecretKeyring, *, key_id: str = "primary") -> SecretKeyring:
+    return value if isinstance(value, SecretKeyring) else SecretKeyring(key_id, value, {})
+
+
+def _encrypt_v2(plaintext: str, deployment_secret: str) -> str:
     if not deployment_secret:
         raise SecretError("CLAIMLENS_KEY_ENCRYPTION_SECRET is required to store API keys.")
     nonce = py_secrets.token_bytes(12)
@@ -30,17 +96,21 @@ def encrypt_secret(plaintext: str, deployment_secret: str) -> str:
     return "v2:" + base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
 
 
-def decrypt_secret(encrypted: str, deployment_secret: str) -> str:
+def _decrypt_legacy(encrypted: str, deployment_secret: str) -> str:
     if not deployment_secret:
         raise SecretError("CLAIMLENS_KEY_ENCRYPTION_SECRET is required to read API keys.")
     if encrypted.startswith("v2:"):
         try:
             raw = base64.urlsafe_b64decode(encrypted[3:].encode("ascii"))
-            return AESGCM(_derive_aead_key(deployment_secret)).decrypt(
-                raw[:12],
-                raw[12:],
-                b"claimlens-secret-v2",
-            ).decode("utf-8")
+            return (
+                AESGCM(_derive_aead_key(deployment_secret))
+                .decrypt(
+                    raw[:12],
+                    raw[12:],
+                    b"claimlens-secret-v2",
+                )
+                .decode("utf-8")
+            )
         except (ValueError, InvalidTag, UnicodeDecodeError) as exc:
             raise SecretError("Encrypted secret authentication failed.") from exc
     if not encrypted.startswith("v1:"):

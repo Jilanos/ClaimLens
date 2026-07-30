@@ -11,6 +11,7 @@ from claimlens import db
 from claimlens.api_keys import (
     current_billing_period,
     eligible_supadata_keys,
+    keyring_for_config,
     next_billing_period_start,
 )
 from claimlens.config import AppConfig
@@ -225,7 +226,7 @@ def _fetch_supadata_native_transcript(
     candidates = eligible_supadata_keys(
         database_path,
         user_id=user_id,
-        deployment_secret=config.web.key_encryption_secret,
+        deployment_secret=keyring_for_config(config),
         monthly_cap=config.transcripts.supadata_monthly_request_cap,
     )
     if not candidates:

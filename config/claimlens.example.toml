@@ -30,6 +30,9 @@ public_base_url = ""
 secure_cookies = false
 registration_enabled = false
 allow_server_api_key_fallback = true
+max_queued_jobs = 16
+# Comma-separated application peer IPs allowed to supply X-Real-IP. Leave empty locally.
+trusted_proxy_ips = ""
 
 [sources]
 advanced_source_verification = false

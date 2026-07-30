@@ -36,6 +36,8 @@ jobs:
   publish:
     needs: validate
     runs-on: ubuntu-latest
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/login-action@v3
@@ -52,6 +54,7 @@ jobs:
             type=raw,value=${{ github.ref_name }}
             type=sha,format=long
       - uses: docker/build-push-action@v6
+        id: build
         with:
           context: .
           push: true
@@ -82,7 +85,7 @@ jobs:
           script: |
             set -euo pipefail
             cd /home/deploy/paulmondou-infra
-            ./scripts/deploy-image.sh claimlens '${{ env.IMAGE }}:${{ github.ref_name }}' 'https://claimlens.paulmondou.fr/health' CLAIMLENS_IMAGE
+            ./scripts/deploy-image.sh claimlens '${{ env.IMAGE }}@${{ needs.publish.outputs.image_digest }}' 'https://claimlens.paulmondou.fr/health' CLAIMLENS_IMAGE
 
   release:
     needs: deploy

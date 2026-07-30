@@ -1,0 +1,312 @@
+{
+  "budgets": {
+    "max_docs": 24,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http item_078_borner_et_observer_la_file_de_jobs_web item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+          "item_078_borner_et_observer_la_file_de_jobs_web",
+          "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+          "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_017_hardening_de_production_claimlens_suivi.md",
+      "ref": "prod_017_hardening_de_production_claimlens_suivi",
+      "status": "Proposed",
+      "title": "Hardening de production ClaimLens - suivi"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, finaliser le hardening web et operationnel de claimlens, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Finaliser le hardening web et operationnel de ClaimLens",
+        "use when": "You need to implement or review the scaffolded workflow for Finaliser le hardening web et operationnel de ClaimLens."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+          "item_078_borner_et_observer_la_file_de_jobs_web",
+          "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+          "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ]
+      },
+      "path": "logics/request/req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens.md",
+      "ref": "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Finaliser le hardening web et operationnel de ClaimLens"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, fiabiliser l'identite client derriere le reverse proxy et tester le serveur http, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Fiabiliser l'identite client derriere le reverse proxy et tester le serveur HTTP",
+        "use when": "Implementing the scaffolded slice for Fiabiliser l'identite client derriere le reverse proxy et tester le serveur HTTP."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http.md",
+      "ref": "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Fiabiliser l'identite client derriere le reverse proxy et tester le serveur HTTP"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, borner et observer la file de jobs web, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Borner et observer la file de jobs web",
+        "use when": "Implementing the scaffolded slice for Borner et observer la file de jobs web."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_078_borner_et_observer_la_file_de_jobs_web"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_078_borner_et_observer_la_file_de_jobs_web.md",
+      "ref": "item_078_borner_et_observer_la_file_de_jobs_web",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Borner et observer la file de jobs web"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rendre les secrets applicatifs rotatifs et migrables, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rendre les secrets applicatifs rotatifs et migrables",
+        "use when": "Implementing the scaffolded slice for Rendre les secrets applicatifs rotatifs et migrables."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables.md",
+      "ref": "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Rendre les secrets applicatifs rotatifs et migrables"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrer le suivi de hardening web et operationnel ClaimLens",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+          "item_078_borner_et_observer_la_file_de_jobs_web",
+          "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+          "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md",
+      "ref": "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrer le suivi de hardening web et operationnel ClaimLens"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+          "item_078_borner_et_observer_la_file_de_jobs_web",
+          "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+          "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_017_hardening_de_production_claimlens_suivi.md",
+      "ref": "prod_017_hardening_de_production_claimlens_suivi",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "Hardening de production ClaimLens - suivi"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rendre la chaine ci/cd conteneurisee tracable, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rendre la chaine CI/CD conteneurisee tracable",
+        "use when": "Implementing the scaffolded slice for Rendre la chaine CI/CD conteneurisee tracable."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable"
+        ],
+        "prod": [
+          "prod_017_hardening_de_production_claimlens_suivi"
+        ],
+        "req": [
+          "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens"
+        ],
+        "task": [
+          "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable.md",
+      "ref": "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Rendre la chaine CI/CD conteneurisee tracable"
+    }
+  ],
+  "estimates": {
+    "char_count": 7719,
+    "companion_doc_count": 1,
+    "doc_count": 7
+  },
+  "generated_at": "2026-07-30T07:52:03Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens",
+      "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+      "item_078_borner_et_observer_la_file_de_jobs_web",
+      "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+      "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable",
+      "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens,item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http,item_078_borner_et_observer_la_file_de_jobs_web,item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables,item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable,task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens",
+  "refs": [
+    "req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens",
+    "item_077_fiabiliser_l_identite_client_derriere_le_reverse_proxy_et_tester_le_serveur_http",
+    "item_078_borner_et_observer_la_file_de_jobs_web",
+    "item_079_rendre_les_secrets_applicatifs_rotatifs_et_migrables",
+    "item_080_rendre_la_chaine_ci_cd_conteneurisee_tracable",
+    "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- Run `python3 -m logics_manager lint --require-status`.",
+        "- Run scaffold command tests."
+      ],
+      "path": "logics/tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md",
+      "ref": "task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens"
+    }
+  ]
+}

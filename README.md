@@ -63,6 +63,10 @@ CLAIMLENS_HOST=127.0.0.1
 CLAIMLENS_PORT=8765
 CLAIMLENS_KAPSULE_DB=
 CLAIMLENS_KEY_ENCRYPTION_SECRET=
+CLAIMLENS_KEY_ENCRYPTION_KEY_ID=primary
+CLAIMLENS_KEY_ENCRYPTION_PREVIOUS=
+CLAIMLENS_TRUSTED_PROXY_IPS=
+CLAIMLENS_MAX_QUEUED_JOBS=16
 CLAIMLENS_SECURE_COOKIES=false
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
@@ -84,6 +88,10 @@ outside Git and back it up separately. Guest users can still enter keys per proc
 are used only for the submitted job/action. On the Process page, signed-in users with a saved key
 do not see a redundant per-run key field; guests and users without that provider key can still enter
 one for the submitted action.
+
+New saved keys use an AES-GCM `v3:key_id` envelope. To rotate, configure the new active encryption
+secret and key ID, retain the former key in `CLAIMLENS_KEY_ENCRYPTION_PREVIOUS` (a JSON mapping),
+back up the database, then run `claimlens rotate-secrets`.
 
 Authenticated users can also save multiple Supadata keys from Options. Supadata transcript fetching
 is opt-in through configuration. Local runs keep the classic YouTube path by default; the deployed
@@ -143,6 +151,8 @@ enable_web_search = false
 The Process page polls active job state every two seconds through a run-scoped JSON endpoint and
 stops when the job reaches a terminal state. It displays semantic status and messages rather than a
 numeric percentage, because external provider calls do not expose reliable intermediate progress.
+The in-process queue is bounded by `CLAIMLENS_MAX_QUEUED_JOBS` (16 by default); `/health/jobs`
+reports queued/running/failed counts and the most recent job failure for internal monitoring.
 
 The source verification keys are optional for local tests and some API usage, but should be supplied
 for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not

@@ -16,6 +16,12 @@ CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=false
 CLAIMLENS_KAPSULE_DB=/kapsule-data/kapsule.sqlite
 CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER=supadata,youtube
 CLAIMLENS_SUPADATA_TIMEOUT_SECONDS=10
+# Set this to the fixed Caddy container/network address (not a public CIDR).
+CLAIMLENS_TRUSTED_PROXY_IPS=<caddy-container-ip>
+CLAIMLENS_MAX_QUEUED_JOBS=16
+CLAIMLENS_KEY_ENCRYPTION_KEY_ID=2026-07
+# JSON map of temporarily accepted former keys, used only during rotation.
+CLAIMLENS_KEY_ENCRYPTION_PREVIOUS={"2026-01":"<former secret>"}
 ```
 
 Add to `docker-compose.yml`:
@@ -41,6 +47,10 @@ Add to `docker-compose.yml`:
       CLAIMLENS_KAPSULE_DB: /kapsule-data/kapsule.sqlite
       CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER: ${CLAIMLENS_TRANSCRIPT_PROVIDER_ORDER:-supadata,youtube}
       CLAIMLENS_SUPADATA_TIMEOUT_SECONDS: ${CLAIMLENS_SUPADATA_TIMEOUT_SECONDS:-10}
+      CLAIMLENS_TRUSTED_PROXY_IPS: ${CLAIMLENS_TRUSTED_PROXY_IPS:?set Caddy peer IP}
+      CLAIMLENS_MAX_QUEUED_JOBS: ${CLAIMLENS_MAX_QUEUED_JOBS:-16}
+      CLAIMLENS_KEY_ENCRYPTION_KEY_ID: ${CLAIMLENS_KEY_ENCRYPTION_KEY_ID:-primary}
+      CLAIMLENS_KEY_ENCRYPTION_PREVIOUS: ${CLAIMLENS_KEY_ENCRYPTION_PREVIOUS:-}
     volumes:
       - claimlens-data:/data
       - kapsule-data:/kapsule-data:ro
@@ -64,7 +74,9 @@ Add to `Caddyfile`:
 {$CLAIMLENS_DOMAIN} {
 	encode zstd gzip
 	import security_headers
-	reverse_proxy claimlens:8765
+	reverse_proxy claimlens:8765 {
+		header_up X-Real-IP {remote_host}
+	}
 }
 ```
 
@@ -98,6 +110,11 @@ DEPLOY_APP_REPOS="ClaimLens:../ClaimLens:ClaimLens" \
 - Web action limits are persisted in the ClaimLens SQLite database and keyed by authenticated account
   or guest token, not by the Caddy socket address. Keep the deployment on one ClaimLens application
   process unless a shared job and session architecture is introduced.
+- `X-Real-IP` is accepted only when the direct socket peer matches `CLAIMLENS_TRUSTED_PROXY_IPS`.
+  Caddy must overwrite it with `{remote_host}` as above; never publish the application port directly.
+- Rotate stored API keys by setting the new active secret/key ID, retaining the previous key in
+  `CLAIMLENS_KEY_ENCRYPTION_PREVIOUS`, backing up the volume, then running
+  `claimlens rotate-secrets`. Remove the previous key only after a verified backup and restart.
 - Jobs interrupted by an application restart are surfaced as retryable interruptions rather than
   remaining indefinitely in `running`.
 

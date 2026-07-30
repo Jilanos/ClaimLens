@@ -1,0 +1,168 @@
+{
+  "title": "Finaliser le hardening web et operationnel de ClaimLens",
+  "references": [
+    "AUDIT_TECHNIQUE.md",
+    "src/claimlens/web.py",
+    "src/claimlens/secrets.py",
+    ".github/workflows/ci.yml",
+    "docs/deployment-paulmondou-infra.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Production security and reliability follow-up",
+    "needs": [
+      "Rendre la limitation anonyme fiable derriere Caddy sans faire confiance a une IP fournie par le client.",
+      "Prouver les garanties du serveur HTTP par des tests d'integration multi-client.",
+      "Borner et rendre observable l'execution des jobs web.",
+      "Permettre la rotation verifiable des cles de chiffrement des API keys et renforcer la chaine CI/CD."
+    ],
+    "context": [
+      "L'audit de reanalyse constate que web.py utilise X-Real-IP pour une seconde limite anonyme, tandis que le Caddyfile documente ne reecrit pas explicitement cet en-tete.",
+      "Les tests actuels couvrent les services et rendus, mais ne demarrent pas le ThreadingHTTPServer ni deux clients HTTP independants.",
+      "Les secrets nouvellement ecrits utilisent AES-GCM v2 mais aucun mecanisme de key_id, de rotation ou de migration v1 vers v2 n'est livre.",
+      "Les jobs restent executes par un ThreadPoolExecutor en memoire; apres redemarrage ils sont interrompus et la file n'a ni limite explicite ni metriques operationnelles.",
+      "Le chantier ne modifie pas les regles de polarite, les libelles ou la promesse produit du mode source-verified."
+    ],
+    "acceptance_criteria": [
+      "AC1: Le deploiement Caddy transmet une identite client fiable, un client ne peut pas contourner la limite anonyme en forgeant X-Real-IP, et l'application refuse ou ignore les headers forwarded hors proxy de confiance.",
+      "AC2: Une suite HTTP demarre le serveur reel et couvre cookies, CSRF, corps trop volumineux, redirections, isolation de deux clients, rapports, limites de debit et comportement derriere proxy.",
+      "AC3: La file de jobs est bornee, sa saturation est restituee clairement, les transitions et echecs sont observables, et le redemarrage conserve une experience retryable coherente.",
+      "AC4: Les API keys stockees disposent d'un format versionne avec key_id, d'une rotation transactionnelle testee et d'un chemin de migration v1 vers AES-GCM v2.",
+      "AC5: La CI valide aussi l'image Docker; les actions, artefacts SBOM/provenance et le deploiement d'image sont rendus tracables et reproductibles."
+    ]
+  },
+  "product": {
+    "title": "Hardening de production ClaimLens - suivi",
+    "overview": "Finaliser les controles de frontiere web, la preuve d'integration, l'exploitation des jobs, la rotation des secrets et la supply chain sans modifier le moteur de verification scientifique.",
+    "goals": [
+      "Prevenir le contournement des protections anti-abus exposees par le reverse proxy.",
+      "Rendre les comportements web critiques reproductibles et testes depuis HTTP.",
+      "Donner une capacite operationnelle explicite et observable aux jobs.",
+      "Rendre les secrets rotatifs et la livraison conteneurisee verifiable."
+    ],
+    "non_goals": [
+      "Changer la polarite scientifique, les verdicts ou les libelles source-verified.",
+      "Migrer immediatement vers une file de jobs externe ou une architecture multi-replica.",
+      "Ajouter de nouveaux fournisseurs de sources ou de transcription."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Fiabiliser l'identite client derriere le reverse proxy et tester le serveur HTTP",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Web security",
+      "request_acs": ["AC1", "AC2"],
+      "problem": [
+        "La limite anonyme derive d'un X-Real-IP forgeable si le proxy ne l'ecrase pas.",
+        "Les garanties web ne sont pas validees sur le vrai serveur HTTP."
+      ],
+      "scope_in": [
+        "Contrat proxy de confiance et configuration Caddy explicite.",
+        "Resolution d'IP client defensive dans l'application.",
+        "Tests HTTP multi-client avec serveur ephemere et cas de spoofing."
+      ],
+      "scope_out": [
+        "Refonte visuelle du Process page.",
+        "Modification du modele de verdict des sources."
+      ],
+      "acceptance_criteria": [
+        "AC1: X-Real-IP est ecrase par Caddy et n'est honore par ClaimLens que depuis un proxy de confiance configure.",
+        "AC2: Les requetes directes avec headers forwarded forges ne contournent pas le budget anonyme.",
+        "AC3: Les tests HTTP couvrent cookies invites, CSRF, limite de taille, deux clients, autorisation des rapports, redirections et rate limiting."
+      ]
+    },
+    {
+      "title": "Borner et observer la file de jobs web",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Operations",
+      "request_acs": ["AC3"],
+      "problem": [
+        "La file en memoire n'a pas de limite explicite ni de signaux de saturation et les transitions sont insuffisamment exploitables en production."
+      ],
+      "scope_in": [
+        "Limite configuree de jobs actifs et en attente.",
+        "Refus controle avec message actionnable lors de la saturation.",
+        "Metriques ou endpoint operationnel pour etats, durees et echecs.",
+        "Tests de saturation, interruption et relance apres redemarrage."
+      ],
+      "scope_out": [
+        "File externe persistante.",
+        "Execution multi-replica."
+      ],
+      "acceptance_criteria": [
+        "AC1: Une action au-dela de la capacite est refusee sans creer de job orphelin.",
+        "AC2: L'operateur peut observer jobs queued/running/failed, durees et raison du dernier echec.",
+        "AC3: Un job interrompu au redemarrage est retryable et ne bloque plus son action."
+      ]
+    },
+    {
+      "title": "Rendre les secrets applicatifs rotatifs et migrables",
+      "priority": "Medium",
+      "complexity": "High",
+      "theme": "Secrets management",
+      "request_acs": ["AC4"],
+      "problem": [
+        "AES-GCM v2 protege les nouvelles ecritures, mais les anciennes valeurs v1 restent sans migration pilotee et la cle de chiffrement ne peut pas etre tournee sans interruption."
+      ],
+      "scope_in": [
+        "Format de secret versionne avec key_id.",
+        "Configuration d'une cle active et de cles de lecture transitoires.",
+        "Commande transactionnelle de rotation avec verification et migration v1 vers v2.",
+        "Tests de rotation, mauvaise cle, corruption, rollback et compatibilite v1."
+      ],
+      "scope_out": [
+        "Migration obligatoire vers un secret manager externe.",
+        "Changement du modele BYO key."
+      ],
+      "acceptance_criteria": [
+        "AC1: Chaque nouvelle valeur chiffree contient une version et un key_id exploitables.",
+        "AC2: La rotation rechiffre toutes les lignes eligibles dans une transaction et echoue sans ecriture partielle.",
+        "AC3: Les secrets v1 sont migres vers v2 et le retrait de la compatibilite v1 est documente."
+      ]
+    },
+    {
+      "title": "Rendre la chaine CI/CD conteneurisee tracable",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "Supply chain",
+      "request_acs": ["AC5"],
+      "problem": [
+        "La qualite Python est verifiee, mais le build image n'est pas un gate de PR et les actions/deploiements reposent encore sur des references mutables ou des tags."
+      ],
+      "scope_in": [
+        "Build Docker et smoke test de l'image dans la CI.",
+        "Actions GitHub epinglees par SHA avec version lisible en commentaire.",
+        "Scan de vulnerabilites selon un seuil explicite.",
+        "Publication et verification de SBOM/provenance.",
+        "Deploiement par digest d'image."
+      ],
+      "scope_out": [
+        "Changement d'hebergeur ou de registre.",
+        "Signature de code hors chaine GitHub actuelle."
+      ],
+      "acceptance_criteria": [
+        "AC1: Chaque PR construit l'image et execute un smoke test healthcheck sous utilisateur non-root.",
+        "AC2: Les actions sont epinglees, le scan applique le seuil documente et les artefacts SBOM/provenance sont conserves.",
+        "AC3: Le deploiement utilise le digest produit par le job de publication."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrer le suivi de hardening web et operationnel ClaimLens",
+    "plan": [
+      "Etablir et tester le contrat de confiance Caddy-vers-ClaimLens avant tout changement de limitation.",
+      "Introduire la fixture HTTP et les tests multi-client, puis les utiliser comme garde-fou pour les lots web et jobs.",
+      "Borner et instrumenter les jobs en conservant le modele mono-instance actuel.",
+      "Livrer et valider la rotation transactionnelle des secrets, y compris la migration v1 vers v2.",
+      "Durcir la CI/CD conteneurisee et valider le deploiement par digest en staging.",
+      "Executer les validations de closeout et documenter les procedures operatoires."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/production-hardening-followup.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

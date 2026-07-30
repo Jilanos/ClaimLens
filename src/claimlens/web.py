@@ -18,6 +18,7 @@ from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
 from claimlens.api_keys import (
     ApiKeyTestError,
     KeyContext,
+    keyring_for_config,
     resolve_api_key,
     save_supadata_api_key,
     save_user_api_key,
@@ -344,11 +345,18 @@ class WebContext:
 
 
 def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
+    server = build_web_server(config, host=host, port=port)
+    print(f"ClaimLens process page: http://{host}:{server.server_port}")
+    server.serve_forever()
+
+
+def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTTPServer:
     database_path = config.paths.database
     db.init_db(database_path)
     recovered_jobs = db.recover_orphaned_jobs(database_path)
     if recovered_jobs:
         LOGGER.warning("Marked %s orphaned web jobs as interrupted", recovered_jobs)
+
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
             parsed = urlparse(self.path)
@@ -360,6 +368,9 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             )
             if parsed.path == "/health":
                 self._send_text("ok\n")
+                return
+            if parsed.path == "/health/jobs":
+                self._send_json(db.job_metrics(database_path))
                 return
             if parsed.path == "/api/run-status":
                 self._send_run_status(database_path, run_id=run_id, context=context)
@@ -494,7 +505,12 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     )
                     if run is None:
                         raise ValueError("Run not found.")
-                    job_id = db.create_job(database_path, run_id=run_id, action=action)
+                    job_id = db.create_job(
+                        database_path,
+                        run_id=run_id,
+                        action=action,
+                        max_queued_jobs=config.web.max_queued_jobs,
+                    )
                     if job_id is None:
                         raise ValueError("This action is already queued or running for the run.")
                     EXECUTOR.submit(
@@ -768,7 +784,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     user_id=context.user_id,
                     provider=provider,
                     value=form.get("api_key", [""])[0],
-                    deployment_secret=config.web.key_encryption_secret,
+                    deployment_secret=keyring_for_config(config),
                 )
             self.send_response(303)
             self.send_header("Location", "/options")
@@ -789,7 +805,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                     label=form.get("label", [""])[0],
                     value=form.get("api_key", [""])[0],
                     priority=_int_form(form, "priority", 100),
-                    deployment_secret=config.web.key_encryption_secret,
+                    deployment_secret=keyring_for_config(config),
                 )
             else:
                 key_id = _int_form(form, "key_id", 0)
@@ -820,7 +836,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
 
                     key = decrypt_secret(
                         row["encrypted_value"],
-                        config.web.key_encryption_secret or "",
+                        keyring_for_config(config),
                     )
                     try:
                         account = SupadataClient(api_key=key).account_info()
@@ -861,11 +877,12 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
             return None
 
         def _request_ip(self) -> str:
-            """Use the proxy-provided client address only behind the trusted proxy."""
-            return (
-                self.headers.get("X-Real-IP", "").strip()
-                or self.client_address[0]
-            )[:128]
+            """Accept proxy identity only when the direct peer is explicitly trusted."""
+            return resolve_request_ip(
+                self.client_address[0],
+                self.headers.get("X-Real-IP"),
+                config.web.trusted_proxy_ips,
+            )
 
         def _set_pending_guest_cookie(self, config: AppConfig) -> None:
             value = getattr(self, "_pending_guest_cookie", None)
@@ -887,9 +904,7 @@ def serve_process_page(config: AppConfig, *, host: str, port: int) -> None:
                 f"{name}=; Max-Age=0; HttpOnly; SameSite=Lax; Path=/{secure}",
             )
 
-    server = ThreadingHTTPServer((host, port), Handler)
-    print(f"ClaimLens process page: http://{host}:{port}")
-    server.serve_forever()
+    return ThreadingHTTPServer((host, port), Handler)
 
 
 def _render_process_page_legacy(
@@ -948,7 +963,7 @@ def _render_process_page_legacy(
 
     run_options = "\n".join(
         f'<option value="{row["id"]}">#{row["id"]} {html.escape(row["video_id"] or "")}'
-        f' - {html.escape(row["status"])}</option>'
+        f" - {html.escape(row['status'])}</option>"
         for row in runs
     )
     notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
@@ -1017,9 +1032,11 @@ def _render_process_page_legacy(
   {pipeline_card}
   <div id="pipeline-outputs">{outputs}</div>
 </main>
-{_live_status_script(selected_run["id"])
- if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
- else ""}
+{
+        _live_status_script(selected_run["id"])
+        if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
+        else ""
+    }
 """
     return _page_shell(
         "ClaimLens Process",
@@ -1110,9 +1127,11 @@ def render_process_page(
   {active_workspace}
   {_history_card(runs, selected_run["id"] if selected_run is not None else None, status_filter)}
 </main>
-{_live_status_script(selected_run["id"])
- if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
- else ""}
+{
+        _live_status_script(selected_run["id"])
+        if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
+        else ""
+    }
 """
     return _page_shell(
         "ClaimLens Analyses",
@@ -1156,7 +1175,7 @@ def _active_workspace(
         <h3>Background actions</h3>
         <div class="table-wrap"><table>
           <thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>
-          <tbody>{''.join(_job_row(row) for row in jobs)}</tbody>
+          <tbody>{"".join(_job_row(row) for row in jobs)}</tbody>
         </table></div>
         """
     diagnostics = f"""
@@ -1241,9 +1260,9 @@ def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
     )
     rows = "".join(
         f'<div class="history-row"><div><a href="/?run_id={row["id"]}">'
-        f'{html.escape(row["video_id"] or "Untitled analysis")}</a>'
-        f'<small>Analysis #{row["id"]} · {html.escape(row["started_at"] or "")}</small></div>'
-        f'{_status_badge(row["status"])}</div>'
+        f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
+        f"<small>Analysis #{row['id']} · {html.escape(row['started_at'] or '')}</small></div>"
+        f"{_status_badge(row['status'])}</div>"
         for row in runs
     )
     empty = '<p class="mono">No analyses match this status.</p>' if not rows else rows
@@ -1406,9 +1425,7 @@ def _run_action(
             provider="semantic_scholar",
             context=KeyContext(
                 user_id=user_id,
-                request_keys={
-                    "semantic_scholar": form.get("semantic_scholar_api_key", [""])[0]
-                },
+                request_keys={"semantic_scholar": form.get("semantic_scholar_api_key", [""])[0]},
             ),
         )
         ncbi_key = resolve_api_key(
@@ -1504,9 +1521,8 @@ def _controls(
     elif next_step == "source_verification":
         fields = []
         if (
-            (source_config is None or source_config.enable_semantic_scholar)
-            and "semantic_scholar" not in saved_providers
-        ):
+            source_config is None or source_config.enable_semantic_scholar
+        ) and "semantic_scholar" not in saved_providers:
             fields.append(
                 '<label class="field grow"><span>Semantic Scholar API key</span>'
                 '<input name="semantic_scholar_api_key" type="password" '
@@ -1525,7 +1541,8 @@ def _controls(
       <input type="hidden" name="action" value="{html.escape(next_step)}">
       {secret}
       <button type="submit" class="btn btn-primary">Run {
-          html.escape(next_step.replace("_", " "))}</button>
+        html.escape(next_step.replace("_", " "))
+    }</button>
     </form>
     """
 
@@ -1537,7 +1554,7 @@ def _jobs_card(jobs) -> str:
     return (
         '<div class="card"><div class="card-head"><h2>Jobs</h2></div><table>'
         "<thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>"
-        f"<tbody id=\"pipeline-jobs\">{job_rows}</tbody></table></div>"
+        f'<tbody id="pipeline-jobs">{job_rows}</tbody></table></div>'
     )
 
 
@@ -1694,9 +1711,7 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
     analysis = db.latest_analysis(database_path, video_id)
     claims = db.claims_for_summary(database_path, analysis["id"]) if analysis else []
     evidence = (
-        db.evidence_for_verification(database_path, verification["id"])
-        if verification
-        else []
+        db.evidence_for_verification(database_path, verification["id"]) if verification else []
     )
     brief_status = brief["source_verification_status"] if brief else "not_available"
     if brief_status == "advanced_source_verified":
@@ -1710,7 +1725,7 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
     links = []
     if video is not None and video["url"]:
         links.append(
-            '<li>Source video: '
+            "<li>Source video: "
             f'<a href="{html.escape(video["url"])}">{html.escape(video["title"])}</a></li>'
         )
     if cleaned is not None and cleaned["output_path"]:
@@ -1732,7 +1747,7 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
     preview = ""
     if cleaned is not None:
         preview_text = html.escape(cleaned["text"][:1200])
-        preview = f"<h3>Cleaned transcript preview</h3><div class=\"preview\">{preview_text}</div>"
+        preview = f'<h3>Cleaned transcript preview</h3><div class="preview">{preview_text}</div>'
     if not links and not preview:
         return ""
     result_status = (
@@ -1747,11 +1762,11 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
         f'{_status_badge(result_status)}</div><div class="card-body">'
         f'<div class="summary-grid">'
         f'<div class="summary-item"><strong>{len(claims)}</strong>'
-        f'<span>Claims reviewed</span></div>'
+        f"<span>Claims reviewed</span></div>"
         f'<div class="summary-item"><strong>{len(evidence)}</strong>'
-        f'<span>Evidence snippets</span></div>'
+        f"<span>Evidence snippets</span></div>"
         f'<div class="summary-item"><strong>{html.escape(report_label)}</strong>'
-        f'<span>Report status</span></div></div>'
+        f"<span>Report status</span></div></div>"
         f'<ul class="out">{"".join(links)}</ul>{preview}</div></div>'
     )
 
@@ -1852,13 +1867,9 @@ def render_options_page(
         row = status.get(provider)
         if row:
             saved = (
-                f"Saved: <span class=\"mono\">{html.escape(row['masked_value'])}</span>, "
+                f'Saved: <span class="mono">{html.escape(row["masked_value"])}</span>, '
                 f"updated {html.escape(row['updated_at'])}"
-                + (
-                    f", tested {html.escape(row['tested_at'])}"
-                    if row["tested_at"]
-                    else ""
-                )
+                + (f", tested {html.escape(row['tested_at'])}" if row["tested_at"] else "")
             )
             badge = _status_badge("succeeded" if row["tested_at"] else "saved")
         else:
@@ -1909,7 +1920,7 @@ def render_options_page(
     <p>Your API keys are encrypted at rest and only power your own analyses.</p>
   </div>
   {secret_notice}
-  {''.join(sections)}
+  {"".join(sections)}
   {_supadata_options_section(database_path, context)}
 </main>
 """
@@ -1938,22 +1949,22 @@ def _supadata_options_section(database_path: Path | str, context: WebContext) ->
             f"""
             <div class="card" style="box-shadow:none;border-color:var(--line-2)">
               <div class="card-head">
-                <h3>{html.escape(row['label'])}</h3>
+                <h3>{html.escape(row["label"])}</h3>
                 {_status_badge(status)}
               </div>
               <div class="card-body">
                 <p style="margin:0 0 12px;color:var(--muted);font-size:13.5px">
-                  <span class="mono">{html.escape(row['masked_value'])}</span> · {quota}
-                  · monthly native requests: {row['monthly_request_count']}
+                  <span class="mono">{html.escape(row["masked_value"])}</span> · {quota}
+                  · monthly native requests: {row["monthly_request_count"]}
                 </p>
                 <form method="post" class="row">
                   <input type="hidden" name="csrf_token" value="{csrf}">
                   <input type="hidden" name="action" value="update_supadata_key">
-                  <input type="hidden" name="key_id" value="{row['id']}">
+                  <input type="hidden" name="key_id" value="{row["id"]}">
                   <label class="field grow"><span>Label</span>
-                    <input name="label" value="{html.escape(row['label'])}"></label>
+                    <input name="label" value="{html.escape(row["label"])}"></label>
                   <label class="field"><span>Priority</span>
-                    <input name="priority" type="number" value="{row['priority']}"></label>
+                    <input name="priority" type="number" value="{row["priority"]}"></label>
                   <label class="check"><input name="enabled" value="1" type="checkbox" {enabled}>
                     Enabled</label>
                   <button type="submit" class="btn btn-ghost btn-sm">Update</button>
@@ -1962,13 +1973,13 @@ def _supadata_options_section(database_path: Path | str, context: WebContext) ->
                   <form method="post" style="display:inline">
                     <input type="hidden" name="csrf_token" value="{csrf}">
                     <input type="hidden" name="action" value="test_supadata_key">
-                    <input type="hidden" name="key_id" value="{row['id']}">
+                    <input type="hidden" name="key_id" value="{row["id"]}">
                     <button type="submit" class="btn btn-ghost btn-sm">Test quota</button>
                   </form>
                   <form method="post" style="display:inline">
                     <input type="hidden" name="csrf_token" value="{csrf}">
                     <input type="hidden" name="action" value="delete_supadata_key">
-                    <input type="hidden" name="key_id" value="{row['id']}">
+                    <input type="hidden" name="key_id" value="{row["id"]}">
                     <button type="submit" class="btn btn-danger btn-sm">Delete key</button>
                   </form>
                 </div>
@@ -1979,7 +1990,7 @@ def _supadata_options_section(database_path: Path | str, context: WebContext) ->
     saved = "".join(key_rows) or "<p>No Supadata keys saved.</p>"
     return f"""
   <div class="card">
-    <div class="card-head"><h2>Supadata native captions</h2>{_status_badge('native')}</div>
+    <div class="card-head"><h2>Supadata native captions</h2>{_status_badge("native")}</div>
     <div class="card-body">
       <p style="margin:0 0 16px;color:var(--muted);font-size:13.5px">
         ClaimLens only requests Supadata transcripts with <span class="mono">mode=native</span>
@@ -2011,10 +2022,10 @@ def _verification_counts(database_path: Path | str, verification_run_id: int) ->
 def _step_row(row) -> str:
     return (
         "<tr>"
-        f"<td class=\"name\">{html.escape(_step_label(row['step']))}</td>"
-        f"<td class=\"status\">{_status_badge(row['status'])}</td>"
+        f'<td class="name">{html.escape(_step_label(row["step"]))}</td>'
+        f'<td class="status">{_status_badge(row["status"])}</td>'
         f"<td>{html.escape(row['failure_message'] or '')}</td>"
-        f"<td class=\"mono\">{html.escape(row['output_path'] or '')}</td>"
+        f'<td class="mono">{html.escape(row["output_path"] or "")}</td>'
         "</tr>"
     )
 
@@ -2022,8 +2033,8 @@ def _step_row(row) -> str:
 def _job_row(row) -> str:
     return (
         "<tr>"
-        f"<td class=\"name\">{html.escape(_step_label(row['action']))}</td>"
-        f"<td class=\"status\">{_status_badge(row['status'])}</td>"
+        f'<td class="name">{html.escape(_step_label(row["action"]))}</td>'
+        f'<td class="status">{_status_badge(row["status"])}</td>'
         f"<td>{html.escape(row['message'] or '')}</td>"
         "</tr>"
     )
@@ -2153,6 +2164,15 @@ def _check_rate_limit(database_path: Path | str, identity: str, config: AppConfi
         max_actions=config.web.rate_limit_actions,
     ):
         raise ValueError("Too many actions submitted recently. Wait and try again.")
+
+
+def resolve_request_ip(
+    peer: str, forwarded_ip: str | None, trusted_proxy_ips: tuple[str, ...]
+) -> str:
+    """Resolve a client IP without trusting headers sent to the app directly."""
+    if peer in trusted_proxy_ips and forwarded_ip and forwarded_ip.strip():
+        return forwarded_ip.strip()[:128]
+    return peer
 
 
 def _public_error(exc: Exception) -> str:

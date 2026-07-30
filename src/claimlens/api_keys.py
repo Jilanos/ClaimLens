@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 from claimlens import db
 from claimlens.config import AppConfig
-from claimlens.secrets import decrypt_secret, encrypt_secret, mask_secret
+from claimlens.secrets import SecretKeyring, decrypt_secret, encrypt_secret, mask_secret
 
 PROVIDERS = {"openai", "semantic_scholar", "ncbi"}
 
@@ -42,7 +42,7 @@ def save_user_api_key(
     user_id: int,
     provider: str,
     value: str,
-    deployment_secret: str | None,
+    deployment_secret: str | SecretKeyring | None,
 ) -> None:
     provider = _provider(provider)
     clean_value = value.strip()
@@ -71,10 +71,46 @@ def resolve_api_key(
     if context.user_id is not None:
         row = db.get_user_api_key(database_path, user_id=context.user_id, provider=provider)
         if row is not None:
-            return decrypt_secret(row["encrypted_value"], config.web.key_encryption_secret or "")
+            return decrypt_secret(row["encrypted_value"], keyring_for_config(config))
     if config.web.allow_server_api_key_fallback:
         return _server_key(config, provider)
     return None
+
+
+def keyring_for_config(config: AppConfig) -> SecretKeyring:
+    return SecretKeyring(
+        config.web.key_encryption_key_id,
+        config.web.key_encryption_secret or "",
+        config.web.key_encryption_previous,
+    )
+
+
+def rotate_stored_api_keys(database_path: Path | str, *, keyring: SecretKeyring) -> int:
+    """Re-encrypt all persisted API keys atomically with the active v3 key."""
+    from contextlib import closing
+
+    with closing(db.connect(database_path)) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            rows = []
+            for table in ("user_api_keys", "supadata_api_keys"):
+                for row in connection.execute(
+                    f"SELECT id, encrypted_value FROM {table}"
+                ).fetchall():
+                    rows.append(
+                        (table, int(row["id"]), decrypt_secret(row["encrypted_value"], keyring))
+                    )
+            for table, row_id, plaintext in rows:
+                connection.execute(
+                    f"UPDATE {table} SET encrypted_value = ?, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (encrypt_secret(plaintext, keyring), row_id),
+                )
+            connection.commit()
+            return len(rows)
+        except Exception:
+            connection.rollback()
+            raise
 
 
 def _server_key(config: AppConfig, provider: str) -> str | None:
@@ -144,7 +180,7 @@ def save_supadata_api_key(
     label: str,
     value: str,
     priority: int,
-    deployment_secret: str | None,
+    deployment_secret: str | SecretKeyring | None,
 ) -> int:
     clean_value = value.strip()
     encrypted = encrypt_secret(clean_value, deployment_secret or "")
@@ -163,7 +199,7 @@ def eligible_supadata_keys(
     database_path: Path | str,
     *,
     user_id: int | None,
-    deployment_secret: str | None,
+    deployment_secret: str | SecretKeyring | None,
     monthly_cap: int,
 ) -> list[SupadataKeyCandidate]:
     if user_id is None:

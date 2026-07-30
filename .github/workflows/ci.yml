@@ -12,10 +12,12 @@ jobs:
         python-version: ["3.11", "3.12"]
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        # v5.6.0
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -27,3 +29,29 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Build image
+        run: docker build --tag claimlens:ci .
+
+      - name: Reject critical image vulnerabilities
+        run: >-
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.56.1 image
+          --exit-code 1 --severity CRITICAL --ignore-unfixed claimlens:ci
+
+      - name: Smoke test healthcheck as application user
+        run: |
+          set -euo pipefail
+          docker run --detach --rm --name claimlens-ci -p 8765:8765 claimlens:ci
+          trap 'docker logs claimlens-ci; docker stop claimlens-ci' EXIT
+          for attempt in {1..15}; do
+            curl --fail --silent http://127.0.0.1:8765/health && break
+            sleep 1
+          done
+          docker top claimlens-ci -eo user,args | grep -q '^10001 .*claimlens serve'

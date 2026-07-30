@@ -9,6 +9,7 @@ from pathlib import Path
 
 from claimlens import __version__
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
+from claimlens.api_keys import keyring_for_config, rotate_stored_api_keys
 from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import load_config
 from claimlens.db import (
@@ -62,6 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override the configured SQLite database path.",
     )
     init_parser.set_defaults(func=_init_db)
+
+    rotate_parser = subparsers.add_parser(
+        "rotate-secrets",
+        help="Re-encrypt stored API keys with the configured active encryption key.",
+    )
+    rotate_parser.add_argument(
+        "--database", type=Path, help="Override the configured SQLite database path."
+    )
+    rotate_parser.set_defaults(func=_rotate_secrets)
 
     transcribe_parser = subparsers.add_parser(
         "transcribe",
@@ -178,6 +188,18 @@ def _init_db(args: argparse.Namespace) -> int:
     database_path = args.database or config.paths.database
     path = init_db(database_path)
     print(f"Initialized ClaimLens database: {path}")
+    return 0
+
+
+def _rotate_secrets(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    if not config.web.key_encryption_secret:
+        print("CLAIMLENS_KEY_ENCRYPTION_SECRET is required for secret rotation.")
+        return 1
+    database_path = args.database or config.paths.database
+    init_db(database_path)
+    count = rotate_stored_api_keys(database_path, keyring=keyring_for_config(config))
+    print(f"Rotated {count} stored API key(s) to {config.web.key_encryption_key_id}.")
     return 0
 
 

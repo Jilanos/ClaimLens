@@ -488,10 +488,7 @@ def _add_column_if_missing(
     column: str,
     definition: str,
 ) -> None:
-    columns = {
-        row["name"]
-        for row in connection.execute(f"PRAGMA table_info({table})").fetchall()
-    }
+    columns = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})").fetchall()}
     if column not in columns:
         connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
@@ -1204,9 +1201,24 @@ def verified_claims_for_summary(
         ).fetchall()
 
 
-def create_job(database_path: Path | str, *, run_id: int, action: str) -> int | None:
+class JobQueueFullError(RuntimeError):
+    """Raised when the configured in-process job capacity is exhausted."""
+
+
+def create_job(
+    database_path: Path | str, *, run_id: int, action: str, max_queued_jobs: int | None = None
+) -> int | None:
     with closing(connect(database_path)) as connection:
-        with connection:
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            if max_queued_jobs is not None:
+                active_count = connection.execute(
+                    "SELECT COUNT(*) FROM jobs WHERE status IN ('queued', 'running')"
+                ).fetchone()[0]
+                if active_count >= max_queued_jobs:
+                    raise JobQueueFullError(
+                        "The job queue is full. Wait for an active job to finish."
+                    )
             existing = connection.execute(
                 """
                 SELECT id FROM jobs
@@ -1224,7 +1236,31 @@ def create_job(database_path: Path | str, *, run_id: int, action: str) -> int | 
                 """,
                 (run_id, action),
             )
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
     return int(cursor.lastrowid)
+
+
+def job_metrics(database_path: Path | str) -> dict[str, int | str | None]:
+    with closing(connect(database_path)) as connection:
+        counts = {
+            row["status"]: int(row["count"])
+            for row in connection.execute(
+                "SELECT status, COUNT(*) AS count FROM jobs GROUP BY status"
+            ).fetchall()
+        }
+        last_failed = connection.execute(
+            "SELECT message FROM jobs WHERE status IN ('failed', 'interrupted') "
+            "ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    return {
+        "queued": counts.get("queued", 0),
+        "running": counts.get("running", 0),
+        "failed": counts.get("failed", 0) + counts.get("interrupted", 0),
+        "last_failure": last_failed["message"] if last_failed else None,
+    }
 
 
 def update_job(
