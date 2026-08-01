@@ -221,10 +221,25 @@ def load_config(
             ),
         ),
         sources=SourceConfig(
-            advanced_source_verification=bool(sources.get("advanced_source_verification", False)),
-            enable_pubmed=bool(sources.get("enable_pubmed", True)),
-            enable_semantic_scholar=bool(sources.get("enable_semantic_scholar", True)),
-            enable_web_search=bool(sources.get("enable_web_search", False)),
+            advanced_source_verification=_bool_setting(
+                environ,
+                sources,
+                "CLAIMLENS_ADVANCED_SOURCE_VERIFICATION",
+                False,
+            ),
+            enable_pubmed=_bool_setting(environ, sources, "CLAIMLENS_ENABLE_PUBMED", True),
+            enable_semantic_scholar=_bool_setting(
+                environ,
+                sources,
+                "CLAIMLENS_ENABLE_SEMANTIC_SCHOLAR",
+                True,
+            ),
+            enable_web_search=_bool_setting(
+                environ,
+                sources,
+                "CLAIMLENS_ENABLE_WEB_SEARCH",
+                False,
+            ),
         ),
         api_keys=ApiKeys(
             youtube=environ.get("YOUTUBE_API_KEY"),

@@ -1334,8 +1334,15 @@ def _run_job(
         )
         if not succeeded:
             return
-        next_action = _next_automatic_step(config, database_path, run_id)
+        next_action = _next_automatic_step(
+            config,
+            database_path,
+            run_id,
+            form,
+            user_id=user_id,
+        )
         if next_action is None:
+            _mark_run_awaiting_input(config, database_path, run_id)
             return
         try:
             next_job_id = db.create_job(
@@ -1363,11 +1370,79 @@ def _next_automatic_step(
     config: AppConfig,
     database_path: Path | str,
     run_id: int,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
 ) -> str | None:
     next_action = next_chained_step(database_path, run_id)
     if next_action == "source_verification" and not config.sources.advanced_source_verification:
         return None
+    if next_action == "analysis" and not _openai_key_available(
+        config,
+        database_path,
+        form,
+        user_id=user_id,
+    ):
+        # Pause instead of failing: the step stays pending so the page asks for the key.
+        return None
     return next_action
+
+
+def _offered_step(
+    config: AppConfig,
+    database_path: Path | str,
+    run_id: int,
+) -> str | None:
+    """The step the page will offer the user, applying the same gate as the renderer."""
+
+    step = next_eligible_step(database_path, run_id)
+    if step == "source_verification" and not config.sources.advanced_source_verification:
+        return None
+    return step
+
+
+def _mark_run_awaiting_input(
+    config: AppConfig,
+    database_path: Path | str,
+    run_id: int,
+) -> None:
+    """Stop claiming a run is in progress once the chain has paused for the user."""
+
+    pending = _offered_step(config, database_path, run_id)
+    if pending is None:
+        return
+    run = db.get_pipeline_run(database_path, run_id)
+    if run is not None and run["status"] == "running":
+        db.set_run_status(
+            database_path,
+            run_id=run_id,
+            status="pending",
+            current_step=pending,
+        )
+
+
+def _openai_key_available(
+    config: AppConfig,
+    database_path: Path | str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
+) -> bool:
+    try:
+        return bool(
+            resolve_api_key(
+                database_path,
+                config,
+                provider="openai",
+                context=KeyContext(
+                    user_id=user_id,
+                    request_keys={"openai": form.get("openai_api_key", [""])[0]},
+                ),
+            )
+        )
+    except Exception:
+        LOGGER.info("Could not resolve an OpenAI key while chaining; pausing the run")
+        return False
 
 
 def _execute_job(

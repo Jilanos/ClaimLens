@@ -17,8 +17,10 @@ The refined MVP is local-first:
 
 Steps 2 to 6 run as one chain: submitting a URL launches the analysis and it advances through to the
 brief without further clicks. The chain stops at the first failure and leaves that step retryable, so
-the page always offers the next useful action. Nothing needs a page reload — the process page patches
-itself from a run-scoped JSON endpoint.
+the page always offers the next useful action. It also pauses — rather than failing — before a step
+whose input is genuinely missing: with no resolvable OpenAI key the run is marked as waiting and the
+page asks for the key instead of burning the step. Nothing needs a page reload — the process page
+patches itself from a run-scoped JSON endpoint.
 
 Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
 verification is optional, disabled by default at deployment level, and opted into per analysis with
@@ -75,6 +77,10 @@ CLAIMLENS_KEY_ENCRYPTION_PREVIOUS=
 CLAIMLENS_TRUSTED_PROXY_IPS=
 CLAIMLENS_MAX_QUEUED_JOBS=16
 CLAIMLENS_JOB_WORKERS=4
+CLAIMLENS_ADVANCED_SOURCE_VERIFICATION=false
+CLAIMLENS_ENABLE_PUBMED=true
+CLAIMLENS_ENABLE_SEMANTIC_SCHOLAR=true
+CLAIMLENS_ENABLE_WEB_SEARCH=false
 CLAIMLENS_SECURE_COOKIES=false
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
@@ -135,7 +141,10 @@ existing Kapsule email/password credentials. The Kapsule database is read-only f
 first successful Kapsule login provisions a local ClaimLens user row so ClaimLens-owned API keys,
 runs, and sessions remain isolated in the ClaimLens database.
 
-Advanced source verification is disabled by default:
+Advanced source verification is disabled by default. Every `[sources]` flag below also reads an
+environment variable that takes precedence over the file, because a container ships a read-only TOML:
+set `CLAIMLENS_ADVANCED_SOURCE_VERIFICATION=true` to expose the per-analysis opt-in on the launcher
+without rebuilding the image.
 
 ```toml
 [pipeline]

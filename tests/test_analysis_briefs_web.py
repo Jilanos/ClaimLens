@@ -207,6 +207,13 @@ def test_history_collapses_older_analyses(tmp_path):
     assert "Show 3 older" in rendered
 
 
+# The chain only advances into analysis when an OpenAI key is actually resolvable.
+CHAIN_ENV = {
+    "CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret",
+    "OPENAI_API_KEY": "test-openai-key",
+}
+
+
 def chain_recorder(executed: list[str], *, fail_on: str | None = None):
     def fake_run_action(
         config,
@@ -229,7 +236,7 @@ def chain_recorder(executed: list[str], *, fail_on: str | None = None):
 def test_run_job_chains_every_step_through_to_the_brief(tmp_path, monkeypatch):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
-    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    config = load_config(env=CHAIN_ENV)
     executed: list[str] = []
     monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))
 
@@ -243,7 +250,7 @@ def test_run_job_chains_every_step_through_to_the_brief(tmp_path, monkeypatch):
 def test_run_job_stops_the_chain_and_leaves_the_failed_step_retryable(tmp_path, monkeypatch):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
-    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    config = load_config(env=CHAIN_ENV)
     executed: list[str] = []
     monkeypatch.setattr(
         "claimlens.web._run_action",
@@ -263,6 +270,58 @@ def test_run_job_stops_the_chain_and_leaves_the_failed_step_retryable(tmp_path, 
     assert next_eligible_step(database, run_id) == "analysis"
 
 
+def test_run_job_pauses_before_analysis_when_no_openai_key_is_available(tmp_path, monkeypatch):
+    """A deployment without a server key must ask for one, not fail the step."""
+
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    executed: list[str] = []
+    monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))
+
+    job_id = db.create_job(database, run_id=run_id, action="captions")
+    _run_job(config, database, run_id, "captions", {}, job_id, None, "guest")
+
+    assert executed == ["captions", "clean_transcript"]
+    steps = {row["step"]: row["status"] for row in db.list_run_steps(database, run_id)}
+    assert steps["analysis"] == "pending"
+    run = db.get_pipeline_run(database, run_id)
+    # Waiting on the user, not pretending to still be working.
+    assert run["status"] == "pending"
+
+    payload = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+        csrf_token="csrf",
+    )
+    assert payload is not None
+    assert payload["active"] is False
+    assert "Next: Analyze claims" in payload["action_html"]
+    assert 'name="openai_api_key"' in payload["controls_html"]
+
+
+def test_run_job_resumes_the_chain_with_a_key_supplied_on_the_form(tmp_path, monkeypatch):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+    db.set_step_status(database, run_id=run_id, step="clean_transcript", status="succeeded")
+    executed: list[str] = []
+    monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))
+
+    form = {"openai_api_key": ["sk-typed-by-the-user"], "run_id": [str(run_id)]}
+    job_id = db.create_job(database, run_id=run_id, action="analysis")
+    _run_job(config, database, run_id, "analysis", form, job_id)
+
+    assert executed == ["analysis", "brief"]
+
+
 def test_run_job_skips_verification_the_deployment_has_disabled(tmp_path, monkeypatch):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(
@@ -270,7 +329,7 @@ def test_run_job_skips_verification_the_deployment_has_disabled(tmp_path, monkey
         "https://www.youtube.com/watch?v=abc123XYZ_",
         verify_sources=True,
     )
-    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    config = load_config(env=CHAIN_ENV)
     assert config.sources.advanced_source_verification is False
     executed: list[str] = []
     monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))

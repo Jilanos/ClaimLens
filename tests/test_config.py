@@ -85,6 +85,40 @@ enable_web_search = true
     assert config.api_keys.openai == "test-openai-key"
 
 
+def test_source_flags_are_settable_from_the_environment(tmp_path, monkeypatch):
+    """A container ships a read-only TOML, so the env has to be able to override it."""
+
+    config_file = tmp_path / "claimlens.toml"
+    config_file.write_text(
+        """
+[sources]
+advanced_source_verification = false
+enable_pubmed = true
+enable_semantic_scholar = true
+enable_web_search = false
+""".strip(),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CLAIMLENS_ADVANCED_SOURCE_VERIFICATION", "true")
+    monkeypatch.setenv("CLAIMLENS_ENABLE_SEMANTIC_SCHOLAR", "false")
+
+    config = load_config(config_file)
+
+    assert config.sources.advanced_source_verification is True
+    assert config.sources.enable_semantic_scholar is False
+    # Untouched flags keep the file's values.
+    assert config.sources.enable_pubmed is True
+    assert config.sources.enable_web_search is False
+
+
+def test_source_flags_reject_an_unparsable_environment_value(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CLAIMLENS_ADVANCED_SOURCE_VERIFICATION", "maybe")
+
+    with pytest.raises(ConfigError, match="CLAIMLENS_ADVANCED_SOURCE_VERIFICATION"):
+        load_config()
+
+
 def test_load_config_reports_invalid_integer_values(tmp_path):
     config_file = tmp_path / "claimlens.toml"
     config_file.write_text(
