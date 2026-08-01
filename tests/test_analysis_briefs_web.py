@@ -6,10 +6,12 @@ from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, p
 from claimlens.api_keys import save_supadata_api_key
 from claimlens.auth import hash_password
 from claimlens.briefs import generate_brief, render_markdown_brief
-from claimlens.config import load_config
-from claimlens.pipeline import create_run
+from claimlens.config import SourceConfig, load_config
+from claimlens.pipeline import create_run, next_eligible_step
 from claimlens.web import (
+    HISTORY_VISIBLE_ROWS,
     WebContext,
+    _run_job,
     render_brief_page,
     render_options_page,
     render_process_page,
@@ -65,6 +67,218 @@ def store_cleaned_fixture(database, video_id: str) -> None:
         transcript_id=transcript_id,
         text="clean text",
     )
+
+
+def source_config(*, advanced: bool) -> SourceConfig:
+    return SourceConfig(
+        advanced_source_verification=advanced,
+        enable_pubmed=True,
+        enable_semantic_scholar=True,
+        enable_web_search=False,
+    )
+
+
+def test_launcher_offers_source_verification_opt_in_before_the_pipeline_runs(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    rendered = render_process_page(
+        database,
+        csrf_token="csrf",
+        source_config=source_config(advanced=True),
+    )
+
+    assert 'name="verify_sources"' in rendered
+    assert 'type="checkbox"' in rendered
+    assert "New analysis" in rendered
+
+
+def test_launcher_hides_opt_in_when_verification_is_disabled(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    rendered = render_process_page(
+        database,
+        csrf_token="csrf",
+        source_config=source_config(advanced=False),
+    )
+
+    assert 'name="verify_sources"' not in rendered
+
+
+def test_live_script_is_present_even_without_an_active_job(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+
+    rendered = render_process_page(database, run_id=run_id, csrf_token="csrf")
+
+    assert "/api/run-status?run_id=" in rendered
+    assert "visibilitychange" in rendered
+
+
+def test_live_payload_covers_every_dynamic_region_without_duplicating_jobs(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    db.set_step_status(
+        database,
+        run_id=run_id,
+        step="captions",
+        status="failed",
+        failure_message="Subtitles are unavailable.",
+    )
+    db.create_job(database, run_id=run_id, action="captions")
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        csrf_token="csrf",
+    )
+    payload = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+        csrf_token="csrf",
+    )
+
+    assert payload is not None
+    # Every region the payload can patch must exist in the server-rendered page.
+    for region in (
+        "pipeline-status",
+        "pipeline-stepper",
+        "pipeline-steps",
+        "pipeline-jobs",
+        "pipeline-action",
+        "pipeline-controls",
+        "pipeline-recovery",
+        "pipeline-outputs",
+    ):
+        assert f'id="{region}"' in rendered
+    # The jobs table is rendered once, and the results region never carries a second copy.
+    assert rendered.count('id="pipeline-jobs"') == 1
+    assert "Background actions" not in payload["outputs_html"]
+    assert "Paste a transcript fallback" in payload["recovery_html"]
+    assert "Transcript recovery needed" in payload["action_html"]
+
+
+def test_failed_step_is_announced_as_a_retry(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+    db.set_step_status(
+        database,
+        run_id=run_id,
+        step="clean_transcript",
+        status="failed",
+        failure_message="Subtitle cleanup produced an empty transcript.",
+    )
+    db.set_run_status(database, run_id=run_id, status="failed", current_step="clean_transcript")
+
+    payload = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+        csrf_token="csrf",
+    )
+
+    assert payload is not None
+    assert "Retry: Prepare transcript" in payload["action_html"]
+    assert 'value="clean_transcript"' in payload["controls_html"]
+
+
+def test_history_collapses_older_analyses(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    for index in range(HISTORY_VISIBLE_ROWS + 3):
+        create_run(database, f"https://www.youtube.com/watch?v=video{index:06d}")
+
+    rendered = render_process_page(database, csrf_token="csrf")
+
+    assert "Show 3 older" in rendered
+
+
+def chain_recorder(executed: list[str], *, fail_on: str | None = None):
+    def fake_run_action(
+        config,
+        database_path,
+        run_id,
+        action,
+        form,
+        user_id=None,
+        guest_token=None,
+    ):
+        executed.append(action)
+        if action == fail_on:
+            raise RuntimeError("step blew up")
+        db.set_step_status(database_path, run_id=run_id, step=action, status="succeeded")
+        return None
+
+    return fake_run_action
+
+
+def test_run_job_chains_every_step_through_to_the_brief(tmp_path, monkeypatch):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    executed: list[str] = []
+    monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))
+
+    job_id = db.create_job(database, run_id=run_id, action="captions")
+    _run_job(config, database, run_id, "captions", {}, job_id)
+
+    assert executed == ["captions", "clean_transcript", "analysis", "brief"]
+    assert all(job["status"] == "succeeded" for job in db.latest_jobs_for_run(database, run_id))
+
+
+def test_run_job_stops_the_chain_and_leaves_the_failed_step_retryable(tmp_path, monkeypatch):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    executed: list[str] = []
+    monkeypatch.setattr(
+        "claimlens.web._run_action",
+        chain_recorder(executed, fail_on="analysis"),
+    )
+
+    job_id = db.create_job(database, run_id=run_id, action="captions")
+    _run_job(config, database, run_id, "captions", {}, job_id)
+
+    assert executed == ["captions", "clean_transcript", "analysis"]
+    steps = {row["step"]: row["status"] for row in db.list_run_steps(database, run_id)}
+    assert steps["analysis"] == "failed"
+    assert steps["brief"] == "pending"
+    run = db.get_pipeline_run(database, run_id)
+    assert run["status"] == "failed"
+    # The user can pick the run back up where it broke.
+    assert next_eligible_step(database, run_id) == "analysis"
+
+
+def test_run_job_skips_verification_the_deployment_has_disabled(tmp_path, monkeypatch):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        verify_sources=True,
+    )
+    config = load_config(env={"CLAIMLENS_KEY_ENCRYPTION_SECRET": "deploy-secret"})
+    assert config.sources.advanced_source_verification is False
+    executed: list[str] = []
+    monkeypatch.setattr("claimlens.web._run_action", chain_recorder(executed))
+
+    job_id = db.create_job(database, run_id=run_id, action="captions")
+    _run_job(config, database, run_id, "captions", {}, job_id)
+
+    assert executed == ["captions", "clean_transcript", "analysis", "brief"]
 
 
 def test_parse_analysis_json_contract():
@@ -352,7 +566,7 @@ def test_render_process_page_shows_guest_navigation(tmp_path):
     assert 'href="/login"' in rendered
     assert "Paste transcript fallback" not in rendered
     assert "Active analysis" in rendered
-    assert "New analysis" in rendered
+    assert "Start another analysis" in rendered
     assert "Execution details" in rendered
     assert "Recent analyses" in rendered
 

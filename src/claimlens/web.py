@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import logging
+import os
 import secrets
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -40,13 +41,31 @@ from claimlens.pipeline import (
     clean_run_transcript,
     create_run,
     extract_required_subtitles,
+    next_chained_step,
     next_eligible_step,
 )
 from claimlens.verification import default_adapters, verify_sources
 from claimlens.youtube import SupadataClient, SupadataError
 
 LOGGER = logging.getLogger(__name__)
-EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="claimlens-job")
+DEFAULT_JOB_WORKERS = 4
+
+
+def _job_workers() -> int:
+    """Size the worker pool, which now bounds concurrent runs rather than steps.
+
+    A worker stays busy for a whole chain, so this is the number of analyses that can
+    progress at once.
+    """
+
+    try:
+        value = int(os.environ.get("CLAIMLENS_JOB_WORKERS", DEFAULT_JOB_WORKERS))
+    except ValueError:
+        return DEFAULT_JOB_WORKERS
+    return max(1, min(value, 16))
+
+
+EXECUTOR = ThreadPoolExecutor(max_workers=_job_workers(), thread_name_prefix="claimlens-job")
 STEP_LABELS = {
     "captions": "Get captions",
     "clean_transcript": "Prepare transcript",
@@ -54,6 +73,8 @@ STEP_LABELS = {
     "brief": "Create brief",
     "source_verification": "Check sources",
 }
+#: Analyses shown before the history collapses into a disclosure.
+HISTORY_VISIBLE_ROWS = 8
 STATUS_LABELS = {
     "queued": "Queued",
     "running": "In progress",
@@ -238,6 +259,18 @@ ul.out li:last-child { border-bottom:0; }
 .history-row a { font-weight:600; text-decoration:none; }
 .history-row small { display:block; color:var(--muted); margin-top:3px; }
 .history-filter { max-width:170px; min-height:34px; padding:6px 9px; font-size:13px; }
+.history-row[aria-current] { background:var(--accent-wash); border-radius:var(--radius-sm);
+  padding-left:10px; padding-right:10px; }
+.history-more { margin-top:6px; }
+.history-more summary { cursor:pointer; color:var(--accent); font-weight:600; font-size:13px;
+  padding:8px 4px; }
+.launcher summary { cursor:pointer; font-weight:600; font-size:14px; padding:16px 20px;
+  color:var(--ink-2); }
+.launcher[open] summary { padding-bottom:0; }
+.check { display:flex; align-items:flex-start; gap:10px; margin-top:14px; font-size:13.5px;
+  color:var(--ink-2); }
+.check input { margin:2px 0 0; width:16px; height:16px; accent-color:var(--accent); flex:0 0 auto; }
+.check small { display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
 .diagnostic { margin-top:16px; border-top:1px solid var(--line-2); padding-top:14px; }
 .diagnostic summary { cursor:pointer; color:var(--ink-2); font-weight:600; font-size:13px; }
 .diagnostic-body { margin-top:12px; overflow-x:auto; }
@@ -494,6 +527,20 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                         fetch_metadata=True,
                         user_id=context.user_id,
                         guest_token=None if context.user_id is not None else context.guest_token,
+                        verify_sources=(
+                            config.sources.advanced_source_verification
+                            and form.get("verify_sources", [""])[0] == "1"
+                        ),
+                    )
+                    # Start the chain right away: the user already asked for the analysis.
+                    submit_job(
+                        config,
+                        database_path,
+                        run_id,
+                        "captions",
+                        form,
+                        user_id=context.user_id,
+                        guest_token=context.guest_token,
                     )
                 else:
                     run_id = int(form.get("run_id", [""])[0])
@@ -505,25 +552,17 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     )
                     if run is None:
                         raise ValueError("Run not found.")
-                    job_id = db.create_job(
-                        database_path,
-                        run_id=run_id,
-                        action=action,
-                        max_queued_jobs=config.web.max_queued_jobs,
-                    )
-                    if job_id is None:
-                        raise ValueError("This action is already queued or running for the run.")
-                    EXECUTOR.submit(
-                        _run_job,
+                    job_id = submit_job(
                         config,
                         database_path,
                         run_id,
                         action,
                         form,
-                        job_id,
-                        context.user_id,
-                        context.guest_token,
+                        user_id=context.user_id,
+                        guest_token=context.guest_token,
                     )
+                    if job_id is None:
+                        raise ValueError("This action is already queued or running for the run.")
             except Exception as exc:
                 LOGGER.info("Web action rejected: %s", exc)
                 body = render_process_page(
@@ -907,146 +946,6 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
     return ThreadingHTTPServer((host, port), Handler)
 
 
-def _render_process_page_legacy(
-    database_path: Path | str,
-    *,
-    run_id: int | None = None,
-    notice: str | None = None,
-    csrf_token: str = "",
-    user_id: int | None = None,
-    guest_token: str | None = None,
-    context: WebContext | None = None,
-    source_config: SourceConfig | None = None,
-) -> str:
-    selected_run = (
-        db.get_visible_pipeline_run(
-            database_path,
-            run_id,
-            user_id=user_id,
-            guest_token=guest_token,
-        )
-        if run_id and (user_id is not None or guest_token)
-        else db.get_pipeline_run(database_path, run_id)
-        if run_id
-        else None
-    )
-    runs = (
-        db.list_visible_pipeline_runs(database_path, user_id=user_id, guest_token=guest_token)
-        if user_id is not None or guest_token
-        else db.list_pipeline_runs(database_path)
-    )
-    rows = ""
-    controls = ""
-    outputs = ""
-
-    stepper = ""
-    pipeline_badge = ""
-    if selected_run is not None:
-        step_rows = db.list_run_steps(database_path, selected_run["id"])
-        rows = "\n".join(_step_row(row) for row in step_rows)
-        stepper = _stepper(step_rows)
-        pipeline_badge = _status_badge(selected_run["status"])
-        next_step = next_eligible_step(database_path, selected_run["id"])
-        if source_config is not None and not source_config.advanced_source_verification:
-            next_step = None if next_step == "source_verification" else next_step
-        controls = _controls(
-            database_path,
-            selected_run["id"],
-            next_step,
-            csrf_token=csrf_token,
-            user_id=user_id,
-            source_config=source_config,
-        )
-        outputs = _outputs(database_path, selected_run["video_id"])
-        jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
-        outputs += _jobs_card(jobs)
-
-    run_options = "\n".join(
-        f'<option value="{row["id"]}">#{row["id"]} {html.escape(row["video_id"] or "")}'
-        f" - {html.escape(row['status'])}</option>"
-        for row in runs
-    )
-    notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
-
-    pipeline_card = ""
-    if selected_run is not None:
-        video_label = html.escape(selected_run["video_id"] or "")
-        pipeline_card = f"""
-  <div class="card">
-    <div class="card-head">
-      <h2>Pipeline &middot; video <span class="mono">{video_label}</span></h2>
-      <span id="pipeline-status">{pipeline_badge}</span>
-    </div>
-    <div id="pipeline-stepper" class="stepper">{stepper}</div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h2>Steps</h2></div>
-    <table>
-      <thead><tr><th>Step</th><th>Status</th><th>Failure</th><th>Output</th></tr></thead>
-      <tbody id="pipeline-steps">{rows}</tbody>
-    </table>
-    <div class="card-body">
-      <div id="pipeline-controls">{controls}</div>
-      {_manual_transcript_form(selected_run["id"], csrf_token)}
-    </div>
-  </div>
-"""
-
-    body = f"""
-<main>
-  <div class="page-head">
-    <h1>ClaimLens Process</h1>
-    <p>Extract the transcript, analyze the claims, then check them against scientific sources.</p>
-  </div>
-  {notice_html}
-  <div class="card">
-    <div class="card-head"><h2>Create Run</h2>
-      <span class="sub">One YouTube video per run</span></div>
-    <div class="card-body">
-      <form method="post" class="row">
-        <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
-        <input type="hidden" name="action" value="create">
-        <label class="field grow" style="flex:1 1 320px">
-          <span>Video URL</span>
-          <input name="video_url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
-        </label>
-        <label class="field" style="flex:0 0 160px">
-          <span>Report language</span>
-          <input name="report_language" value="en">
-        </label>
-        <button type="submit" class="btn btn-primary">Create</button>
-      </form>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h2>Load Run</h2></div>
-    <div class="card-body">
-      <form method="get" class="row">
-        <label class="field grow"><span>Existing run</span>
-          <select name="run_id">{run_options}</select>
-        </label>
-        <button type="submit" class="btn btn-ghost">Load</button>
-      </form>
-    </div>
-  </div>
-  {pipeline_card}
-  <div id="pipeline-outputs">{outputs}</div>
-</main>
-{
-        _live_status_script(selected_run["id"])
-        if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
-        else ""
-    }
-"""
-    return _page_shell(
-        "ClaimLens Process",
-        body,
-        context=context,
-        csrf_token=csrf_token,
-        active="process",
-    )
-
-
 def render_process_page(
     database_path: Path | str,
     *,
@@ -1080,27 +979,11 @@ def render_process_page(
         else None
     )
     notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
-    create_card = f"""
-  <div class="card">
-    <div class="card-head"><h2>New analysis</h2>
-      <span class="sub">One YouTube video per analysis</span></div>
-    <div class="card-body">
-      <form method="post" class="row">
-        <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
-        <input type="hidden" name="action" value="create">
-        <label class="field grow" style="flex:1 1 320px">
-          <span>YouTube video URL</span>
-          <input name="video_url" type="url" required placeholder="https://www.youtube.com/watch?v=...">
-        </label>
-        <label class="field" style="flex:0 0 160px">
-          <span>Report language</span>
-          <input name="report_language" value="en">
-        </label>
-        <button type="submit" class="btn btn-primary">Start analysis</button>
-      </form>
-    </div>
-  </div>
-"""
+    create_card = _create_card(
+        csrf_token=csrf_token,
+        source_config=source_config,
+        collapsed=selected_run is not None,
+    )
     active_workspace = ""
     if selected_run is not None:
         step_rows = db.list_run_steps(database_path, selected_run["id"])
@@ -1116,6 +999,17 @@ def render_process_page(
             user_id=user_id,
             source_config=source_config,
         )
+    history_card = _history_card(
+        runs,
+        selected_run["id"] if selected_run is not None else None,
+        status_filter,
+    )
+    # Work in progress comes first; the launcher and the archive stay out of its way.
+    sections = (
+        f"{active_workspace}\n{create_card}\n{history_card}"
+        if selected_run is not None
+        else f"{create_card}\n{history_card}"
+    )
     body = f"""
 <main>
   <div class="page-head">
@@ -1123,15 +1017,9 @@ def render_process_page(
     <p>Track transcript extraction, claim analysis, and evidence review in one workspace.</p>
   </div>
   {notice_html}
-  {create_card}
-  {active_workspace}
-  {_history_card(runs, selected_run["id"] if selected_run is not None else None, status_filter)}
+  {sections}
 </main>
-{
-        _live_status_script(selected_run["id"])
-        if selected_run is not None and _run_has_active_job(database_path, selected_run["id"])
-        else ""
-    }
+{_live_status_script(selected_run["id"]) if selected_run is not None else ""}
 """
     return _page_shell(
         "ClaimLens Analyses",
@@ -1140,6 +1028,60 @@ def render_process_page(
         csrf_token=csrf_token,
         active="process",
     )
+
+
+def _create_card(
+    *,
+    csrf_token: str,
+    source_config: SourceConfig | None,
+    collapsed: bool,
+) -> str:
+    """Render the launcher, collapsed to a disclosure once a run is on screen."""
+
+    verify_option = ""
+    if source_config is None or source_config.advanced_source_verification:
+        verify_option = """
+        <label class="check">
+          <input type="checkbox" name="verify_sources" value="1">
+          <span>Check claims against PubMed and Semantic Scholar
+            <small>Runs after the brief. Slower, and needs evidence provider keys.</small></span>
+        </label>
+"""
+    form = f"""
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
+        <input type="hidden" name="action" value="create">
+        <div class="row">
+          <label class="field grow" style="flex:1 1 320px">
+            <span>YouTube video URL</span>
+            <input name="video_url" type="url" required
+              placeholder="https://www.youtube.com/watch?v=...">
+          </label>
+          <label class="field" style="flex:0 0 160px">
+            <span>Report language</span>
+            <input name="report_language" value="en">
+          </label>
+          <button type="submit" class="btn btn-primary">Start analysis</button>
+        </div>
+        {verify_option}
+      </form>
+"""
+    if collapsed:
+        return f"""
+  <div class="card">
+    <details class="launcher">
+      <summary>Start another analysis</summary>
+      <div class="card-body">{form}</div>
+    </details>
+  </div>
+"""
+    return f"""
+  <div class="card">
+    <div class="card-head"><h2>New analysis</h2>
+      <span class="sub">Runs through to the brief on its own</span></div>
+    <div class="card-body">{form}</div>
+  </div>
+"""
 
 
 def _active_workspace(
@@ -1164,20 +1106,12 @@ def _active_workspace(
         source_config=source_config,
     )
     recovery = _manual_transcript_form(selected_run["id"], csrf_token) if failed_captions else ""
-    active_label, active_message = _active_action(selected_run, next_step, failed_captions)
     video_id = html.escape(selected_run["video_id"] or "")
     video_url = html.escape(selected_run["source_url"] or selected_run["video_id"] or "")
     step_rows_html = "\n".join(_step_row(row) for row in step_rows)
     jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
-    jobs_html = ""
-    if jobs:
-        jobs_html = f"""
-        <h3>Background actions</h3>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>
-          <tbody>{"".join(_job_row(row) for row in jobs)}</tbody>
-        </table></div>
-        """
+    # The jobs table lives here only. The live payload updates this tbody in place, so
+    # nothing may render a second copy elsewhere on the page.
     diagnostics = f"""
     <details class="diagnostic">
       <summary>Execution details</summary>
@@ -1189,7 +1123,11 @@ def _active_workspace(
             <tbody id="pipeline-steps">{step_rows_html}</tbody>
           </table>
         </div>
-        {jobs_html}
+        <h3>Background actions</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>
+          <tbody id="pipeline-jobs">{_jobs_rows(jobs)}</tbody>
+        </table></div>
       </div>
     </details>
 """
@@ -1206,10 +1144,11 @@ def _active_workspace(
         </div>
         <div class="card-body">
           <div class="workspace-action">
-            <h3>{html.escape(active_label)}</h3>
-            <p>{html.escape(active_message)}</p>
+            <div id="pipeline-action">{
+        _action_html(selected_run, next_step, failed_captions)
+    }</div>
             <div id="pipeline-controls">{controls}</div>
-            {recovery}
+            <div id="pipeline-recovery">{recovery}</div>
           </div>
           {diagnostics}
         </div>
@@ -1220,6 +1159,17 @@ def _active_workspace(
 """
 
 
+def _action_html(selected_run, next_step: str | None, failed_captions: bool) -> str:
+    label, message = _active_action(selected_run, next_step, failed_captions)
+    return f"<h3>{html.escape(label)}</h3><p>{html.escape(message)}</p>"
+
+
+def _jobs_rows(jobs) -> str:
+    if not jobs:
+        return '<tr><td colspan="3" class="mono">No background action yet.</td></tr>'
+    return "".join(_job_row(row) for row in jobs)
+
+
 def _active_action(selected_run, next_step: str | None, failed_captions: bool) -> tuple[str, str]:
     if failed_captions:
         return (
@@ -1228,11 +1178,16 @@ def _active_action(selected_run, next_step: str | None, failed_captions: bool) -
         )
     if next_step:
         label = _step_label(next_step)
+        if selected_run["status"] == "failed":
+            return (
+                f"Retry: {label}",
+                f"{label} did not complete. Launch it again to resume the analysis.",
+            )
         return f"Next: {label}", f"Continue with {label.lower()} when you are ready."
-    if selected_run["status"] == "running":
+    if selected_run["status"] in {"running", "created"}:
         return (
             "Analysis in progress",
-            "ClaimLens is processing this analysis. This view updates automatically.",
+            "ClaimLens runs the remaining steps through to the brief. This view updates itself.",
         )
     if selected_run["status"] == "completed_with_warnings":
         return (
@@ -1258,14 +1213,27 @@ def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
             ("failed", "Needs attention"),
         ]
     )
-    rows = "".join(
-        f'<div class="history-row"><div><a href="/?run_id={row["id"]}">'
-        f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
-        f"<small>Analysis #{row['id']} · {html.escape(row['started_at'] or '')}</small></div>"
-        f"{_status_badge(row['status'])}</div>"
-        for row in runs
-    )
-    empty = '<p class="mono">No analyses match this status.</p>' if not rows else rows
+    def row_html(row) -> str:
+        current = ' aria-current="true"' if row["id"] == selected_run_id else ""
+        return (
+            f'<div class="history-row"{current}><div><a href="/?run_id={row["id"]}">'
+            f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
+            f"<small>Analysis #{row['id']} · {html.escape(row['started_at'] or '')}</small></div>"
+            f"{_status_badge(row['status'])}</div>"
+        )
+
+    if not runs:
+        listing = '<p class="mono">No analyses match this status.</p>'
+    else:
+        visible = "".join(row_html(row) for row in runs[:HISTORY_VISIBLE_ROWS])
+        listing = f'<div class="history-list">{visible}</div>'
+        remainder = runs[HISTORY_VISIBLE_ROWS:]
+        if remainder:
+            hidden = "".join(row_html(row) for row in remainder)
+            listing += (
+                f'<details class="history-more"><summary>Show {len(remainder)} older</summary>'
+                f'<div class="history-list">{hidden}</div></details>'
+            )
     return f"""
   <div class="card">
     <div class="card-head"><h2>Recent analyses</h2>
@@ -1273,7 +1241,7 @@ def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
         <select id="status-filter" class="history-filter" name="status"
           onchange="this.form.submit()">{options}</select></form>
     </div>
-    <div class="card-body"><div class="history-list">{empty}</div></div>
+    <div class="card-body">{listing}</div>
   </div>
 """
 
@@ -1301,6 +1269,40 @@ def _stepper(step_rows) -> str:
     return "".join(cells)
 
 
+def submit_job(
+    config: AppConfig,
+    database_path: Path | str,
+    run_id: int,
+    action: str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None = None,
+    guest_token: str | None = None,
+) -> int | None:
+    """Queue one action and hand the whole remaining chain to a worker thread."""
+
+    job_id = db.create_job(
+        database_path,
+        run_id=run_id,
+        action=action,
+        max_queued_jobs=config.web.max_queued_jobs,
+    )
+    if job_id is None:
+        return None
+    EXECUTOR.submit(
+        _run_job,
+        config,
+        database_path,
+        run_id,
+        action,
+        form,
+        job_id,
+        user_id,
+        guest_token,
+    )
+    return job_id
+
+
 def _run_job(
     config: AppConfig,
     database_path: Path | str,
@@ -1311,6 +1313,74 @@ def _run_job(
     user_id: int | None = None,
     guest_token: str | None = None,
 ) -> None:
+    """Run one action, then keep chaining eligible steps on the same worker thread.
+
+    Chaining in-thread rather than resubmitting keeps one worker per run, so a long
+    chain cannot starve the pool of the other concurrent runs.
+    """
+
+    current_action = action
+    current_job_id = job_id
+    while True:
+        succeeded = _execute_job(
+            config,
+            database_path,
+            run_id,
+            current_action,
+            form,
+            current_job_id,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        if not succeeded:
+            return
+        next_action = _next_automatic_step(config, database_path, run_id)
+        if next_action is None:
+            return
+        try:
+            next_job_id = db.create_job(
+                database_path,
+                run_id=run_id,
+                action=next_action,
+                max_queued_jobs=config.web.max_queued_jobs,
+            )
+        except db.JobQueueFullError:
+            LOGGER.info("Chain paused, queue full: run=%s next=%s", run_id, next_action)
+            return
+        if next_job_id is None:
+            return
+        db.set_run_status(
+            database_path,
+            run_id=run_id,
+            status="running",
+            current_step=next_action,
+        )
+        current_action = next_action
+        current_job_id = next_job_id
+
+
+def _next_automatic_step(
+    config: AppConfig,
+    database_path: Path | str,
+    run_id: int,
+) -> str | None:
+    next_action = next_chained_step(database_path, run_id)
+    if next_action == "source_verification" and not config.sources.advanced_source_verification:
+        return None
+    return next_action
+
+
+def _execute_job(
+    config: AppConfig,
+    database_path: Path | str,
+    run_id: int,
+    action: str,
+    form: dict[str, list[str]],
+    job_id: int,
+    *,
+    user_id: int | None,
+    guest_token: str | None,
+) -> bool:
     db.update_job(database_path, job_id=job_id, status="running", progress=5, message="Running")
     try:
         output = _run_action(
@@ -1324,14 +1394,16 @@ def _run_job(
         )
     except Exception as exc:
         LOGGER.exception("Job failed: run=%s action=%s", run_id, action)
+        message = _public_error(exc)
         db.update_job(
             database_path,
             job_id=job_id,
             status="failed",
             progress=100,
-            message=_public_error(exc),
+            message=message,
         )
-        return
+        _mark_step_failed(database_path, run_id, action, message)
+        return False
     completed_run = db.get_pipeline_run(database_path, run_id)
     completed_with_warnings = (
         completed_run is not None and completed_run["status"] == "completed_with_warnings"
@@ -1344,6 +1416,37 @@ def _run_job(
         message="Completed with warnings" if completed_with_warnings else "Completed",
         output_path=str(output) if output else None,
     )
+    return True
+
+
+def _mark_step_failed(
+    database_path: Path | str,
+    run_id: int,
+    action: str,
+    message: str,
+) -> None:
+    """Leave a failed action in a retryable state instead of stuck as running."""
+
+    if action not in STEP_LABELS:
+        return
+    statuses = {row["step"]: row["status"] for row in db.list_run_steps(database_path, run_id)}
+    if statuses.get(action) in {"pending", "running"}:
+        db.set_step_status(
+            database_path,
+            run_id=run_id,
+            step=action,
+            status="failed",
+            failure_message=message,
+        )
+    run = db.get_pipeline_run(database_path, run_id)
+    if run is not None and run["status"] != "failed":
+        db.set_run_status(
+            database_path,
+            run_id=run_id,
+            status="failed",
+            current_step=action,
+            failure_message=message,
+        )
 
 
 def _run_action(
@@ -1547,24 +1650,6 @@ def _controls(
     """
 
 
-def _jobs_card(jobs) -> str:
-    job_rows = "".join(_job_row(row) for row in jobs)
-    if not job_rows:
-        return ""
-    return (
-        '<div class="card"><div class="card-head"><h2>Jobs</h2></div><table>'
-        "<thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>"
-        f'<tbody id="pipeline-jobs">{job_rows}</tbody></table></div>'
-    )
-
-
-def _run_has_active_job(database_path: Path | str, run_id: int) -> bool:
-    return any(
-        row["status"] in {"queued", "running"}
-        for row in db.latest_jobs_for_run(database_path, run_id)
-    )
-
-
 def run_status_payload(
     database_path: Path | str,
     *,
@@ -1589,7 +1674,8 @@ def run_status_payload(
     next_step = next_eligible_step(database_path, run_id)
     if source_config is not None and not source_config.advanced_source_verification:
         next_step = None if next_step == "source_verification" else next_step
-    outputs = _outputs(database_path, run["video_id"]) + _jobs_card(jobs)
+    captions_row = next((row for row in step_rows if row["step"] == "captions"), None)
+    failed_captions = captions_row is not None and captions_row["status"] == "failed"
     state = {
         "run": {
             "status": run["status"],
@@ -1625,6 +1711,8 @@ def run_status_payload(
         "pipeline_status_html": _status_badge(run["status"]),
         "stepper_html": _stepper(step_rows),
         "steps_html": "\n".join(_step_row(row) for row in step_rows),
+        "jobs_html": _jobs_rows(jobs),
+        "action_html": _action_html(run, next_step, failed_captions),
         "controls_html": _controls(
             database_path,
             run_id,
@@ -1633,48 +1721,77 @@ def run_status_payload(
             user_id=user_id,
             source_config=source_config,
         ),
-        "outputs_html": outputs,
+        "recovery_html": _manual_transcript_form(run_id, csrf_token) if failed_captions else "",
+        "outputs_html": _outputs(database_path, run["video_id"]),
     }
 
 
 def _live_status_script(run_id: int) -> str:
+    """Poll the run state and patch every dynamic region, with no page reload.
+
+    Polling never stops on a completed run: the chain, a retry, or another tab can make
+    the run active again. It backs off while idle and pauses on a hidden tab instead.
+    """
+
     return f"""
 <script>
 (() => {{
   const endpoint = "/api/run-status?run_id={run_id}";
-  const regions = {{
-    pipeline: document.getElementById("pipeline-status"),
-    stepper: document.getElementById("pipeline-stepper"),
-    steps: document.getElementById("pipeline-steps"),
-    controls: document.getElementById("pipeline-controls"),
-    outputs: document.getElementById("pipeline-outputs")
+  const ACTIVE_DELAY = 2000;
+  const IDLE_DELAY = 15000;
+  const ERROR_DELAY = 5000;
+  const REGION_KEYS = {{
+    "pipeline-status": "pipeline_status_html",
+    "pipeline-stepper": "stepper_html",
+    "pipeline-steps": "steps_html",
+    "pipeline-jobs": "jobs_html",
+    "pipeline-action": "action_html",
+    "pipeline-controls": "controls_html",
+    "pipeline-recovery": "recovery_html",
+    "pipeline-outputs": "outputs_html"
   }};
   let signature = null;
   let inFlight = false;
+  let timer = null;
 
-  const schedule = (delay) => window.setTimeout(refresh, delay);
+  function schedule(delay) {{
+    if (timer !== null) window.clearTimeout(timer);
+    timer = window.setTimeout(refresh, delay);
+  }}
+
+  function paint(state) {{
+    for (const [id, key] of Object.entries(REGION_KEYS)) {{
+      const node = document.getElementById(id);
+      if (!node || typeof state[key] !== "string") continue;
+      // Never clobber a field the user is typing in, e.g. a pasted transcript.
+      if (node.contains(document.activeElement)) continue;
+      node.innerHTML = state[key];
+    }}
+  }}
+
   async function refresh() {{
     if (inFlight) return;
+    if (document.hidden) {{ schedule(IDLE_DELAY); return; }}
     inFlight = true;
     try {{
       const response = await fetch(endpoint, {{cache: "no-store", credentials: "same-origin"}});
-      if (!response.ok) {{ schedule(5000); return; }}
+      if (!response.ok) {{ schedule(ERROR_DELAY); return; }}
       const state = await response.json();
       if (state.signature !== signature) {{
-        regions.pipeline.innerHTML = state.pipeline_status_html;
-        regions.stepper.innerHTML = state.stepper_html;
-        regions.steps.innerHTML = state.steps_html;
-        regions.controls.innerHTML = state.controls_html;
-        regions.outputs.innerHTML = state.outputs_html;
+        paint(state);
         signature = state.signature;
       }}
-      if (state.active) schedule(2000);
+      schedule(state.active ? ACTIVE_DELAY : IDLE_DELAY);
     }} catch (_error) {{
-      schedule(5000);
+      schedule(ERROR_DELAY);
     }} finally {{
       inFlight = false;
     }}
   }}
+
+  document.addEventListener("visibilitychange", () => {{
+    if (!document.hidden) schedule(0);
+  }});
   refresh();
 }})();
 </script>

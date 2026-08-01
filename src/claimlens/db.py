@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     finished_at TEXT,
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     guest_token TEXT,
+    verify_sources INTEGER NOT NULL DEFAULT 0,
     details TEXT
 );
 
@@ -293,7 +294,7 @@ CREATE INDEX IF NOT EXISTS idx_supadata_api_keys_user_priority
 ON supadata_api_keys(user_id, enabled, priority, id);
 
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '6')
+VALUES ('schema_version', '7')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -354,6 +355,12 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     _add_column_if_missing(connection, "pipeline_runs", "report_language", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "user_id", "INTEGER")
     _add_column_if_missing(connection, "pipeline_runs", "guest_token", "TEXT")
+    _add_column_if_missing(
+        connection,
+        "pipeline_runs",
+        "verify_sources",
+        "INTEGER NOT NULL DEFAULT 0",
+    )
     _add_column_if_missing(connection, "transcripts", "submitted_by_user_id", "INTEGER")
     _add_column_if_missing(connection, "transcripts", "submitted_by_guest_token", "TEXT")
     connection.execute(
@@ -612,16 +619,19 @@ def create_pipeline_run(
     user_id: int | None = None,
     guest_token: str | None = None,
     command: str = "run-video",
+    verify_sources: bool = False,
 ) -> int:
-    steps = ["captions", "clean_transcript", "analysis", "brief", "source_verification"]
+    steps = ["captions", "clean_transcript", "analysis", "brief"]
+    if verify_sources:
+        steps.append("source_verification")
     with closing(connect(database_path)) as connection:
         with connection:
             cursor = connection.execute(
                 """
                 INSERT INTO pipeline_runs
                     (command, status, video_id, source_url, current_step, report_language,
-                     user_id, guest_token, details)
-                VALUES (?, 'created', ?, ?, 'captions', ?, ?, ?, ?)
+                     user_id, guest_token, verify_sources, details)
+                VALUES (?, 'created', ?, ?, 'captions', ?, ?, ?, ?, ?)
                 """,
                 (
                     command,
@@ -630,11 +640,13 @@ def create_pipeline_run(
                     report_language,
                     user_id,
                     guest_token,
+                    1 if verify_sources else 0,
                     json.dumps(
                         {
                             "video_id": video_id,
                             "source_url": source_url,
                             "report_language": report_language,
+                            "verify_sources": bool(verify_sources),
                         }
                     ),
                 ),

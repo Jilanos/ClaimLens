@@ -11,13 +11,20 @@ The refined MVP is local-first:
 5. Use OpenAI to generate a structured analysis.
 6. Generate a Markdown brief.
 7. Optionally verify notable claims against PubMed and Semantic Scholar.
-8. Inspect and launch steps from a local HTML process page with guarded POST actions, live async job
-   status, and report viewing/download.
+8. Inspect progress on a local HTML process page with guarded POST actions, live async job status,
+   and report viewing/download.
 9. Optionally log in to reuse encrypted per-user API keys and manage them from Options.
 
+Steps 2 to 6 run as one chain: submitting a URL launches the analysis and it advances through to the
+brief without further clicks. The chain stops at the first failure and leaves that step retryable, so
+the page always offers the next useful action. Nothing needs a page reload — the process page patches
+itself from a run-scoped JSON endpoint.
+
 Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
-verification is optional and disabled by default; when launched, it checks stored notable claims
-against PubMed and Semantic Scholar candidates and renders a source-verified brief.
+verification is optional, disabled by default at deployment level, and opted into per analysis with
+the checkbox on the launcher before the pipeline starts. When requested it runs after the brief,
+checks stored notable claims against PubMed and Semantic Scholar candidates, and renders a
+source-verified brief.
 
 ## Local Development
 
@@ -67,6 +74,7 @@ CLAIMLENS_KEY_ENCRYPTION_KEY_ID=primary
 CLAIMLENS_KEY_ENCRYPTION_PREVIOUS=
 CLAIMLENS_TRUSTED_PROXY_IPS=
 CLAIMLENS_MAX_QUEUED_JOBS=16
+CLAIMLENS_JOB_WORKERS=4
 CLAIMLENS_SECURE_COOKIES=false
 CLAIMLENS_REGISTRATION_ENABLED=false
 CLAIMLENS_ALLOW_SERVER_API_KEY_FALLBACK=true
@@ -148,11 +156,16 @@ enable_semantic_scholar = true
 enable_web_search = false
 ```
 
-The Process page polls active job state every two seconds through a run-scoped JSON endpoint and
-stops when the job reaches a terminal state. It displays semantic status and messages rather than a
-numeric percentage, because external provider calls do not expose reliable intermediate progress.
-The in-process queue is bounded by `CLAIMLENS_MAX_QUEUED_JOBS` (16 by default); `/health/jobs`
-reports queued/running/failed counts and the most recent job failure for internal monitoring.
+The Process page polls a run-scoped JSON endpoint every two seconds while a job is active and backs
+off to fifteen seconds when idle, so a run that becomes active again — from the chain, a retry, or
+another tab — is picked up without a reload. Polling pauses on a hidden tab and resumes when the tab
+becomes visible. It displays semantic status and messages rather than a numeric percentage, because
+external provider calls do not expose reliable intermediate progress.
+
+The in-process queue is bounded by `CLAIMLENS_MAX_QUEUED_JOBS` (16 by default). A worker owns a run
+for the whole chain, so `CLAIMLENS_JOB_WORKERS` (4 by default, capped at 16) is the number of
+analyses that can progress at once. `/health/jobs` reports queued/running/failed counts and the most
+recent job failure for internal monitoring.
 
 The source verification keys are optional for local tests and some API usage, but should be supplied
 for real PubMed/Semantic Scholar smoke testing. They are runtime/config inputs only and are not
@@ -235,7 +248,9 @@ scientific authority.
 claimlens serve
 ```
 
-Open `http://127.0.0.1:8765`, load a run, and launch `source verification` after analysis exists.
+Open `http://127.0.0.1:8765` and submit a URL; the analysis runs through to the brief on its own.
+Tick "Check claims against PubMed and Semantic Scholar" before submitting to extend the chain with
+source verification (requires `advanced_source_verification = true` in the deployment config).
 The page shows job status, verification status, failure details, source counts, transcript preview,
 and links to view or download the generated Markdown report.
 

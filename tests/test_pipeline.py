@@ -12,6 +12,8 @@ from claimlens.pipeline import (
     clean_transcript_text,
     create_run,
     extract_required_subtitles,
+    next_chained_step,
+    next_eligible_step,
     parse_youtube_video_url,
 )
 from claimlens.youtube import (
@@ -52,8 +54,113 @@ def test_create_run_records_video_and_steps(tmp_path):
         "clean_transcript",
         "analysis",
         "brief",
+    ]
+    assert run["verify_sources"] == 0
+
+
+def test_create_run_adds_verification_step_only_when_requested(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        verify_sources=True,
+    )
+
+    run = db.get_pipeline_run(database, run_id)
+    steps = [step["step"] for step in db.list_run_steps(database, run_id)]
+    assert run["verify_sources"] == 1
+    assert steps == [
+        "captions",
+        "clean_transcript",
+        "analysis",
+        "brief",
         "source_verification",
     ]
+
+
+def test_chain_advances_to_brief_then_stops_without_verification_opt_in(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+
+    assert next_chained_step(database, run_id) == "captions"
+    for step, expected in [
+        ("captions", "clean_transcript"),
+        ("clean_transcript", "analysis"),
+        ("analysis", "brief"),
+    ]:
+        db.set_step_status(database, run_id=run_id, step=step, status="succeeded")
+        assert next_chained_step(database, run_id) == expected
+
+    db.set_step_status(database, run_id=run_id, step="brief", status="succeeded")
+    assert next_chained_step(database, run_id) is None
+    assert next_eligible_step(database, run_id) is None
+
+
+def test_chain_continues_into_verification_when_opted_in(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        verify_sources=True,
+    )
+    for step in ["captions", "clean_transcript", "analysis", "brief"]:
+        db.set_step_status(database, run_id=run_id, step=step, status="succeeded")
+
+    assert next_chained_step(database, run_id) == "source_verification"
+
+
+def test_verification_stays_unreachable_without_opt_in(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    for step in ["captions", "clean_transcript", "analysis", "brief"]:
+        db.set_step_status(database, run_id=run_id, step=step, status="succeeded")
+    db.set_step_status(database, run_id=run_id, step="source_verification", status="pending")
+
+    assert next_eligible_step(database, run_id) is None
+    assert next_chained_step(database, run_id) is None
+
+
+def test_failed_step_is_retryable_but_never_chained(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
+    db.set_step_status(
+        database,
+        run_id=run_id,
+        step="clean_transcript",
+        status="failed",
+        failure_message="boom",
+    )
+
+    assert next_eligible_step(database, run_id) == "clean_transcript"
+    assert next_chained_step(database, run_id) is None
+
+
+def test_running_step_is_not_relaunched(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(database, run_id=run_id, step="captions", status="running")
+
+    assert next_eligible_step(database, run_id) is None
+    assert next_chained_step(database, run_id) is None
+
+
+def test_manual_transcript_reopens_the_chain_after_caption_failure(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(
+        database,
+        run_id=run_id,
+        step="captions",
+        status="failed",
+        failure_message="no captions",
+    )
+    assert next_chained_step(database, run_id) is None
+
+    add_manual_transcript(database, run_id, text="pasted transcript body")
+
+    assert next_chained_step(database, run_id) == "clean_transcript"
 
 
 def test_create_run_can_fetch_video_metadata(monkeypatch, tmp_path):

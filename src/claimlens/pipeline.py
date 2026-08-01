@@ -29,6 +29,12 @@ from claimlens.youtube import (
 )
 
 MANUAL_CHANNEL_ID = "manual"
+#: Step statuses a user or the orchestrator may launch from.
+ACTIONABLE_STEP_STATUSES = frozenset({"pending", "failed"})
+#: Step statuses that satisfy a downstream step's prerequisite.
+COMPLETED_STEP_STATUSES = frozenset({"succeeded", "completed_with_warnings"})
+#: Steps the orchestrator chains without asking the user again.
+CHAINED_STEPS = ("captions", "clean_transcript", "analysis", "brief", "source_verification")
 TIMESTAMP_RE = re.compile(
     r"(?:(?:\d{1,2}:)?\d{1,2}:\d{2}(?:\.\d{1,3})?)|(?:\[\s*(?:music|applause)\s*\])",
     re.IGNORECASE,
@@ -96,6 +102,7 @@ def create_run(
     fetch_metadata: bool = False,
     user_id: int | None = None,
     guest_token: str | None = None,
+    verify_sources: bool = False,
 ) -> int:
     parsed = parse_youtube_video_url(video_url)
     db.init_db(database_path)
@@ -118,6 +125,7 @@ def create_run(
         report_language=report_language,
         user_id=user_id,
         guest_token=guest_token,
+        verify_sources=verify_sources,
     )
 
 
@@ -414,18 +422,58 @@ def add_manual_transcript(
 
 
 def next_eligible_step(database_path: Path | str, run_id: int) -> str | None:
+    """Return the next step a user or the orchestrator may launch for this run.
+
+    A step is actionable when it is pending or when a previous attempt failed, so a
+    transient provider error stays retryable instead of dead-ending the run.
+    """
+
     steps = {row["step"]: row["status"] for row in db.list_run_steps(database_path, run_id)}
-    if steps.get("captions") == "pending":
+
+    def actionable(step: str) -> bool:
+        return steps.get(step) in ACTIONABLE_STEP_STATUSES
+
+    def done(step: str) -> bool:
+        return steps.get(step) in COMPLETED_STEP_STATUSES
+
+    if actionable("captions"):
         return "captions"
-    if steps.get("captions") == "succeeded" and steps.get("clean_transcript") == "pending":
+    if done("captions") and actionable("clean_transcript"):
         return "clean_transcript"
-    if steps.get("clean_transcript") == "succeeded" and steps.get("analysis") == "pending":
+    if done("clean_transcript") and actionable("analysis"):
         return "analysis"
-    if steps.get("analysis") == "succeeded" and steps.get("brief") == "pending":
+    if done("analysis") and actionable("brief"):
         return "brief"
-    if steps.get("analysis") == "succeeded" and steps.get("source_verification") == "pending":
-        return "source_verification"
+    if done("analysis") and actionable("source_verification"):
+        if _run_verifies_sources(database_path, run_id):
+            return "source_verification"
     return None
+
+
+def next_chained_step(database_path: Path | str, run_id: int) -> str | None:
+    """Return the next step the orchestrator may launch on its own, or None to stop.
+
+    Only steps whose inputs are already satisfied without further user input are
+    chained. A failed step is never retried automatically: the user decides.
+    """
+
+    statuses = {row["status"] for row in db.list_run_steps(database_path, run_id)}
+    if "failed" in statuses:
+        return None
+    candidate = next_eligible_step(database_path, run_id)
+    if candidate is None or candidate not in CHAINED_STEPS:
+        return None
+    return candidate
+
+
+def _run_verifies_sources(database_path: Path | str, run_id: int) -> bool:
+    run = db.get_pipeline_run(database_path, run_id)
+    if run is None:
+        return False
+    try:
+        return bool(run["verify_sources"])
+    except (IndexError, KeyError):
+        return False
 
 
 def _require_run(database_path: Path | str, run_id: int):
