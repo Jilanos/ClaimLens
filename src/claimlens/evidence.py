@@ -61,8 +61,41 @@ SYSTEM_PROMPT = (
 )
 
 
+#: Sources shown to the synthesizer. Enough to describe a literature, still one prompt.
+MAX_SYNTHESIS_SOURCES = 8
+#: Kept short on purpose: this is a reading aid, not a review article.
+MAX_SYNTHESIS_WORDS = 110
+
+SYNTHESIS_SYSTEM_PROMPT = (
+    "You write one short paragraph explaining what the supplied scientific records "
+    "say about a single claim, for a careful non-specialist reader.\n"
+    "You are given the claim, the review verdict, and the records that were "
+    "retrieved. Describe the state of the nearby research even when the verdict is "
+    "unclear: what the records looked at, whether they point the same way, and how "
+    "directly they bear on this claim.\n"
+    "Rules:\n"
+    "- Say explicitly how close the records are to the claim: whether they address "
+    "it directly, address a related question, or only share a topic.\n"
+    "- When no record settles the claim, say what the nearby research does show "
+    "instead of merely reporting that the verdict is open.\n"
+    "- Use only the supplied records. Never add findings, numbers, or citations "
+    "from outside them, and never name a record that was not supplied.\n"
+    "- Note the limits you can see in the records themselves, such as small or "
+    "narrow populations, absent abstracts, or disagreement between records.\n"
+    "- Never give diagnosis, treatment, or clinical advice, and never tell the "
+    "reader the claim is true or false beyond what the records support.\n"
+    f"- Stay under {MAX_SYNTHESIS_WORDS} words, in plain prose without bullet "
+    "points or headings.\n"
+    'Return JSON only: {"synthesis": "<paragraph>"}.'
+)
+
+
 class EvidenceGradingError(RuntimeError):
     """Raised when the grading boundary cannot return usable grades."""
+
+
+class EvidenceSynthesisError(RuntimeError):
+    """Raised when the synthesis boundary cannot return usable prose."""
 
 
 @dataclass(frozen=True)
@@ -123,44 +156,158 @@ class OpenAIEvidenceGrader:
         claim: str,
         candidates: list[GradableCandidate],
     ) -> list[EvidenceGrade]:
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": build_grading_prompt(claim, candidates)},
-            ],
-            "response_format": {"type": "json_object"},
-            "temperature": 0,
-        }
-        request = Request(
-            "https://api.openai.com/v1/chat/completions",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
+        content = _chat_json(
+            api_key=self.api_key,
+            model=self.model,
+            system_prompt=SYSTEM_PROMPT,
+            user_prompt=build_grading_prompt(claim, candidates),
+            timeout_seconds=self.timeout_seconds,
+            error=EvidenceGradingError,
+            label="Evidence grading",
         )
-        try:
-            with urlopen(request, timeout=self.timeout_seconds) as response:
-                body = json.loads(response.read().decode("utf-8"))
-        except HTTPError as exc:
-            raise EvidenceGradingError(f"Evidence grading failed with HTTP {exc.code}.") from exc
-        except (URLError, TimeoutError) as exc:
-            raise EvidenceGradingError(
-                "Evidence grading failed because the network request timed out "
-                "or could not connect."
-            ) from exc
-        except json.JSONDecodeError as exc:
-            raise EvidenceGradingError("Evidence grading response was not valid JSON.") from exc
-
-        try:
-            content = body["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise EvidenceGradingError(
-                "Evidence grading response was missing message content."
-            ) from exc
         return parse_grading_json(content, expected=len(candidates))
+
+
+@dataclass(frozen=True)
+class SynthesisSource:
+    """One retrieved record as the synthesizer is allowed to see it."""
+
+    title: str
+    evidence_text: str
+    #: The grader's polarity, so the paragraph can describe agreement and disagreement.
+    polarity: str = "context"
+    publisher: str | None = None
+    published_at: str | None = None
+    adapter: str | None = None
+    evidence_text_source: str = "abstract"
+
+
+class ClaimSynthesizer(Protocol):
+    model: str
+
+    def synthesize(self, *, claim: str, verdict: str, sources: list[SynthesisSource]) -> str:
+        """Return one paragraph describing what the supplied records say about the claim."""
+
+
+class OpenAIClaimSynthesizer:
+    """Turns graded records into the paragraph a reader needs when a verdict cannot."""
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str = DEFAULT_MODEL,
+        timeout_seconds: int = 60,
+    ) -> None:
+        if not api_key:
+            raise EvidenceSynthesisError("An OpenAI API key is required for claim synthesis.")
+        self.api_key = api_key
+        self.model = model
+        self.timeout_seconds = timeout_seconds
+
+    def synthesize(self, *, claim: str, verdict: str, sources: list[SynthesisSource]) -> str:
+        if not sources:
+            raise EvidenceSynthesisError("Claim synthesis needs at least one retrieved record.")
+        content = _chat_json(
+            api_key=self.api_key,
+            model=self.model,
+            system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+            user_prompt=build_synthesis_prompt(claim, verdict, sources),
+            timeout_seconds=self.timeout_seconds,
+            error=EvidenceSynthesisError,
+            label="Claim synthesis",
+        )
+        return parse_synthesis_json(content)
+
+
+def build_synthesis_prompt(claim: str, verdict: str, sources: list[SynthesisSource]) -> str:
+    lines = [
+        f"Claim: {claim.strip()}",
+        f"Review verdict so far: {verdict or 'unknown'}",
+        "",
+        "Retrieved records:",
+    ]
+    for index, source in enumerate(sources[:MAX_SYNTHESIS_SOURCES], start=1):
+        header = f"[{index}] {source.title.strip() or 'Untitled record'}"
+        meta = " · ".join(
+            part
+            for part in (
+                source.publisher or None,
+                source.published_at or None,
+                source.adapter or None,
+                f"graded {source.polarity}",
+            )
+            if part
+        )
+        lines.append(f"{header} ({meta})")
+        if source.evidence_text_source != "abstract":
+            lines.append("No abstract available; only the title is shown.")
+        lines.append(_trim(source.evidence_text or source.title))
+        lines.append("")
+    lines.append(
+        "Write the paragraph for this claim, describing how directly these records "
+        "bear on it."
+    )
+    return "\n".join(lines)
+
+
+def parse_synthesis_json(content: str) -> str:
+    try:
+        raw = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise EvidenceSynthesisError("Claim synthesis response was not valid JSON.") from exc
+    text = " ".join(str((raw or {}).get("synthesis", "")).split()) if isinstance(raw, dict) else ""
+    if not text:
+        raise EvidenceSynthesisError("Claim synthesis response carried no paragraph.")
+    return text
+
+
+def _chat_json(
+    *,
+    api_key: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    timeout_seconds: int,
+    error: type[RuntimeError],
+    label: str,
+) -> str:
+    """One JSON-mode completion, shared by the grading and synthesis boundaries."""
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0,
+    }
+    request = Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise error(f"{label} failed with HTTP {exc.code}.") from exc
+    except (URLError, TimeoutError) as exc:
+        raise error(
+            f"{label} failed because the network request timed out or could not connect."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise error(f"{label} response was not valid JSON.") from exc
+
+    try:
+        return body["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise error(f"{label} response was missing message content.") from exc
 
 
 def build_grading_prompt(claim: str, candidates: list[GradableCandidate]) -> str:

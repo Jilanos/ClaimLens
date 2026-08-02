@@ -6,6 +6,7 @@ import html
 import json
 import logging
 import os
+import re
 import secrets
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from claimlens import db
+from claimlens import __version__, db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
 from claimlens.api_keys import (
     ApiKeyTestError,
@@ -33,9 +34,9 @@ from claimlens.auth import (
     token_digest,
     verify_password,
 )
-from claimlens.briefs import generate_brief, generate_verified_brief
+from claimlens.briefs import SIGNALS_PREFIX, generate_brief, generate_verified_brief
 from claimlens.config import AppConfig, SourceConfig
-from claimlens.evidence import OpenAIEvidenceGrader
+from claimlens.evidence import OpenAIClaimSynthesizer, OpenAIEvidenceGrader
 from claimlens.kapsule_auth import authenticate as authenticate_kapsule_account
 from claimlens.pipeline import (
     add_manual_transcript,
@@ -76,6 +77,11 @@ STEP_LABELS = {
 }
 #: Analyses shown before the history collapses into a disclosure.
 HISTORY_VISIBLE_ROWS = 8
+#: A brief line no longer than this and ending in a colon reads as a sub-heading.
+BRIEF_SUBHEAD_MAX_CHARS = 60
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+#: Run statuses that may still be overtaken by the work they describe.
+UNSETTLED_RUN_STATUSES = frozenset({"created", "running", "pending"})
 STATUS_LABELS = {
     "queued": "Queued",
     "running": "In progress",
@@ -134,11 +140,13 @@ nav.app { display:flex; align-items:center; justify-content:space-between; gap:1
   padding:7px 12px; border-radius:8px; }
 .navlinks a:hover { background:var(--surface-2); color:var(--ink); }
 .navlinks a.active { color:var(--accent-2); background:var(--accent-wash); }
+.navlinks a:focus-visible, .brand:focus-visible { outline:2px solid var(--accent);
+  outline-offset:2px; border-radius:8px; }
 .navuser { display:flex; align-items:center; gap:12px; }
 .navuser .who { font-size:13px; color:var(--muted); }
 .avatar { width:30px; height:30px; border-radius:50%; background:var(--accent-wash);
   color:var(--accent-2); display:grid; place-items:center; font-weight:700; font-size:13px; }
-main { max-width:1000px; margin:0 auto; padding:34px 24px 80px; }
+main { max-width:1320px; margin:0 auto; padding:34px 24px 80px; }
 .page-head { margin-bottom:24px; }
 .page-head h1 { font-size:26px; }
 .page-head p { color:var(--muted); margin:6px 0 0; max-width:62ch; }
@@ -235,10 +243,42 @@ ul.out li:last-child { border-bottom:0; }
 .report ul { margin:0 0 14px; padding-left:20px; color:var(--ink-2); }
 .report li { margin:5px 0; }
 .mono { font-family:var(--mono); font-size:12.5px; color:var(--muted); }
-.workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,320px); gap:24px;
-  align-items:start; }
+.workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; align-items:start; }
 .workspace-main { min-width:0; }
-.workspace-side { display:grid; gap:12px; }
+.workspace-brief { min-width:0; }
+.workspace-brief:empty { display:none; }
+.version { font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--accent-2);
+  background:var(--accent-wash); border-radius:999px; padding:2px 8px; margin-left:2px; }
+.brief { max-width:70ch; }
+.brief .brief-kicker { font-size:11px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--accent-2); margin:0 0 6px; }
+.brief .brief-title { font-size:22px; line-height:1.25; margin:0 0 18px;
+  padding-bottom:12px; border-bottom:1px solid var(--line-2); overflow-wrap:anywhere; }
+.brief .brief-section { font-size:16px; margin:22px 0 8px; }
+.brief .brief-claim { font-size:14.5px; margin:20px 0 6px; }
+.brief .brief-subhead { font-size:12px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--muted); margin:16px 0 6px; }
+.brief p { color:var(--ink-2); margin:0 0 10px; overflow-wrap:anywhere; }
+.brief ul.brief-list { margin:0 0 12px; padding-left:18px; color:var(--ink-2); }
+.brief ul.brief-list li { margin:4px 0; }
+.brief ul.brief-list li.sub { list-style:none; margin-left:-4px; color:var(--muted);
+  font-size:13.5px; }
+.claim-signals { display:flex; flex-wrap:wrap; gap:6px; list-style:none; padding:0;
+  margin:0 0 12px; }
+.claim-signals .signal { display:inline-flex; align-items:center; gap:6px; font-size:12px;
+  font-weight:600; padding:3px 10px; border-radius:999px; background:var(--surface-2);
+  color:var(--ink-2); border:1px solid var(--line-2); }
+.claim-signals .signal::before { content:""; width:8px; height:8px; flex:none;
+  background:currentColor; }
+.claim-signals .supporting { color:var(--ok); background:var(--ok-wash); }
+.claim-signals .supporting::before { clip-path:polygon(50% 0,100% 100%,0 100%); }
+.claim-signals .contradicting { color:var(--bad); background:var(--bad-wash); }
+.claim-signals .contradicting::before { clip-path:polygon(50% 100%,100% 0,0 0); }
+.claim-signals .verdict::before { border-radius:50%; }
+.claim-signals .verdict.ok { color:var(--ok); background:var(--ok-wash); }
+.claim-signals .verdict.bad { color:var(--bad); background:var(--bad-wash); }
+.claim-signals .verdict.warn { color:var(--warn); background:var(--warn-wash); }
+.claim-signals .verdict.idle { color:var(--muted); }
 .workspace-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .workspace-title h2 { font-size:18px; }
 .workspace-url { margin:5px 0 0; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
@@ -284,9 +324,19 @@ ul.out li:last-child { border-bottom:0; }
   border-top:1px solid color-mix(in srgb,var(--warn) 26%,transparent); }
 .recovery-panel h4 { margin:0 0 4px; font-size:14px; }
 .recovery-panel p { margin:0; color:var(--ink-2); font-size:13px; }
+/* Desktop reads the run and the brief side by side; anything narrower stacks them,
+   so no layout ever needs horizontal scrolling. */
+@media (min-width:1080px) {
+  .workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }
+  .report { margin:0; }
+}
 @media (max-width:720px) {
-  .workspace { grid-template-columns:1fr; gap:16px; }
-  .workspace-side { order:-1; }
+  /* The bar wraps rather than scrolls sideways, so version and Recent analyses stay
+     reachable on a phone and by keyboard in the same order as on desktop. */
+  nav.app { flex-wrap:wrap; height:auto; gap:8px; padding:10px 14px; }
+  .navlinks { order:3; width:100%; }
+  .navlinks a { padding:8px 10px; }
+  .workspace { gap:16px; }
   .stepper { grid-template-columns:1fr; }
   .step { padding:12px 14px 12px 42px; min-height:56px; }
   .step:not(:last-child)::after { top:42px; left:26px; right:auto; width:2px;
@@ -412,6 +462,18 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
             if parsed.path == "/login":
                 self._send_html(render_login_page(context=context))
                 return
+            if parsed.path == "/history":
+                self._send_html(
+                    render_history_page(
+                        database_path,
+                        user_id=context.user_id,
+                        guest_token=context.guest_token,
+                        context=context,
+                        status_filter=query.get("status", [""])[0],
+                        csrf_token=context.csrf_token,
+                    )
+                )
+                return
             if parsed.path == "/options":
                 self._send_html(
                     render_options_page(database_path, config, context=context),
@@ -448,6 +510,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 guest_token=context.guest_token,
                 context=context,
                 source_config=config.sources,
+                briefs_path=config.paths.briefs,
             )
             self._send_html(body)
 
@@ -467,6 +530,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     guest_token=context.guest_token,
                     context=context,
                     source_config=config.sources,
+                    briefs_path=config.paths.briefs,
                 )
                 self._send_html(body, status=400)
                 return
@@ -479,6 +543,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     guest_token=context.guest_token,
                     context=context,
                     source_config=config.sources,
+                    briefs_path=config.paths.briefs,
                 )
                 self._send_html(body, status=403)
                 return
@@ -575,6 +640,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     guest_token=context.guest_token,
                     context=context,
                     source_config=config.sources,
+                    briefs_path=config.paths.briefs,
                 )
                 self._send_html(body, status=400)
                 return
@@ -631,6 +697,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 guest_token=context.guest_token,
                 csrf_token=context.csrf_token,
                 source_config=config.sources,
+                briefs_path=config.paths.briefs,
             )
             if payload is None:
                 self._send_json({"error": "Run not found."}, status=404)
@@ -947,6 +1014,83 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
     return ThreadingHTTPServer((host, port), Handler)
 
 
+def _gated_step(step: str | None, source_config: SourceConfig | None) -> str | None:
+    """Hide a step the deployment has switched off, so no view can offer it."""
+
+    if step == "source_verification" and source_config is not None:
+        return step if source_config.advanced_source_verification else None
+    return step
+
+
+def reconcile_run_state(
+    database_path: Path | str,
+    run_id: int,
+    *,
+    source_config: SourceConfig | None = None,
+):
+    """Settle a run whose stored status outlived the work that was producing it.
+
+    A stored `running` is a claim made by a worker that may have died, or by a request
+    that finished in another tab. Every read path goes through here first, so a reload
+    shows what the database can actually prove rather than the last thing written.
+    """
+
+    run = db.get_pipeline_run(database_path, run_id)
+    if run is None or run["status"] not in UNSETTLED_RUN_STATUSES:
+        return run
+    jobs = db.latest_jobs_for_run(database_path, run_id)
+    if any(row["status"] in {"queued", "running"} for row in jobs):
+        return run
+
+    step_rows = db.list_run_steps(database_path, run_id)
+    for row in step_rows:
+        # Nothing is executing, so a step still marked running was abandoned. Leaving it
+        # there would strand the run; failing it puts the retry back in the user's hands.
+        if row["status"] == "running":
+            db.set_step_status(
+                database_path,
+                run_id=run_id,
+                step=row["step"],
+                status="failed",
+                failure_message="The step stopped before it finished. Launch it again to resume.",
+            )
+    statuses = {row["step"]: row["status"] for row in db.list_run_steps(database_path, run_id)}
+    failed = next((step for step, status in statuses.items() if status == "failed"), None)
+    if failed is not None:
+        db.set_run_status(
+            database_path,
+            run_id=run_id,
+            status="failed",
+            current_step=failed,
+            failure_message=run["failure_message"],
+        )
+        return db.get_pipeline_run(database_path, run_id)
+
+    pending = _gated_step(next_eligible_step(database_path, run_id), source_config)
+    if pending is not None:
+        if run["status"] != "pending":
+            db.set_run_status(
+                database_path,
+                run_id=run_id,
+                status="pending",
+                current_step=pending,
+            )
+        return db.get_pipeline_run(database_path, run_id)
+
+    terminal = (
+        "completed_with_warnings"
+        if "completed_with_warnings" in statuses.values()
+        else "succeeded"
+    )
+    db.set_run_status(
+        database_path,
+        run_id=run_id,
+        status=terminal,
+        current_step=run["current_step"],
+    )
+    return db.get_pipeline_run(database_path, run_id)
+
+
 def render_process_page(
     database_path: Path | str,
     *,
@@ -958,15 +1102,9 @@ def render_process_page(
     context: WebContext | None = None,
     source_config: SourceConfig | None = None,
     status_filter: str = "",
+    briefs_path: Path | str | None = None,
 ) -> str:
-    runs = (
-        db.list_visible_pipeline_runs(database_path, user_id=user_id, guest_token=guest_token)
-        if user_id is not None or guest_token
-        else db.list_pipeline_runs(database_path)
-    )
-    allowed_filters = {"running", "succeeded", "failed", "completed_with_warnings"}
-    if status_filter in allowed_filters:
-        runs = [row for row in runs if row["status"] == status_filter]
+    _ = status_filter  # The archive moved to /history; the filter lives there now.
     selected_run = (
         db.get_visible_pipeline_run(
             database_path,
@@ -979,6 +1117,12 @@ def render_process_page(
         if run_id
         else None
     )
+    if selected_run is not None:
+        selected_run = reconcile_run_state(
+            database_path,
+            selected_run["id"],
+            source_config=source_config,
+        )
     notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
     create_card = _create_card(
         csrf_token=csrf_token,
@@ -988,9 +1132,10 @@ def render_process_page(
     active_workspace = ""
     if selected_run is not None:
         step_rows = db.list_run_steps(database_path, selected_run["id"])
-        next_step = next_eligible_step(database_path, selected_run["id"])
-        if source_config is not None and not source_config.advanced_source_verification:
-            next_step = None if next_step == "source_verification" else next_step
+        next_step = _gated_step(
+            next_eligible_step(database_path, selected_run["id"]),
+            source_config,
+        )
         active_workspace = _active_workspace(
             database_path,
             selected_run,
@@ -999,17 +1144,12 @@ def render_process_page(
             csrf_token=csrf_token,
             user_id=user_id,
             source_config=source_config,
+            briefs_path=briefs_path,
+            guest_token=guest_token,
         )
-    history_card = _history_card(
-        runs,
-        selected_run["id"] if selected_run is not None else None,
-        status_filter,
-    )
-    # Work in progress comes first; the launcher and the archive stay out of its way.
+    # Work in progress comes first; the launcher stays out of its way.
     sections = (
-        f"{active_workspace}\n{create_card}\n{history_card}"
-        if selected_run is not None
-        else f"{create_card}\n{history_card}"
+        f"{active_workspace}\n{create_card}" if selected_run is not None else create_card
     )
     body = f"""
 <main>
@@ -1028,6 +1168,43 @@ def render_process_page(
         context=context,
         csrf_token=csrf_token,
         active="process",
+    )
+
+
+def render_history_page(
+    database_path: Path | str,
+    *,
+    user_id: int | None = None,
+    guest_token: str | None = None,
+    context: WebContext | None = None,
+    status_filter: str = "",
+    csrf_token: str = "",
+) -> str:
+    """The archive, reachable from the top bar rather than buried under the workspace."""
+
+    runs = (
+        db.list_visible_pipeline_runs(database_path, user_id=user_id, guest_token=guest_token)
+        if user_id is not None or guest_token
+        else db.list_pipeline_runs(database_path)
+    )
+    allowed_filters = {"running", "succeeded", "failed", "completed_with_warnings"}
+    if status_filter in allowed_filters:
+        runs = [row for row in runs if row["status"] == status_filter]
+    body = f"""
+<main>
+  <div class="page-head">
+    <h1>Recent analyses</h1>
+    <p>Every analysis you have started, newest first.</p>
+  </div>
+  {_history_card(runs, None, status_filter)}
+</main>
+"""
+    return _page_shell(
+        "ClaimLens Recent Analyses",
+        body,
+        context=context,
+        csrf_token=csrf_token,
+        active="history",
     )
 
 
@@ -1094,6 +1271,8 @@ def _active_workspace(
     csrf_token: str,
     user_id: int | None,
     source_config: SourceConfig | None,
+    briefs_path: Path | str | None = None,
+    guest_token: str | None = None,
 ) -> str:
     step_by_name = {row["step"]: row for row in step_rows}
     captions_row = step_by_name.get("captions")
@@ -1110,28 +1289,31 @@ def _active_workspace(
     video_id = html.escape(selected_run["video_id"] or "")
     video_url = html.escape(selected_run["source_url"] or selected_run["video_id"] or "")
     step_rows_html = "\n".join(_step_row(row) for row in step_rows)
-    jobs = db.latest_jobs_for_run(database_path, selected_run["id"])
-    # The jobs table lives here only. The live payload updates this tbody in place, so
-    # nothing may render a second copy elsewhere on the page.
+    # The business timeline is never behind a disclosure: it is the answer to "where is
+    # my analysis". Only the row-level diagnostics fold away.
     diagnostics = f"""
+    <div id="pipeline-stepper" class="stepper" aria-label="Analysis steps">{
+        _stepper(step_rows)
+    }</div>
     <details class="diagnostic">
       <summary>Execution details</summary>
       <div class="diagnostic-body">
-        <div id="pipeline-stepper" class="stepper">{_stepper(step_rows)}</div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Step</th><th>Status</th><th>Details</th><th>Output</th></tr></thead>
             <tbody id="pipeline-steps">{step_rows_html}</tbody>
           </table>
         </div>
-        <h3>Background actions</h3>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Action</th><th>Status</th><th>Message</th></tr></thead>
-          <tbody id="pipeline-jobs">{_jobs_rows(jobs)}</tbody>
-        </table></div>
       </div>
     </details>
 """
+    brief_html = _brief_panel(
+        database_path,
+        briefs_path,
+        run_id=selected_run["id"],
+        user_id=user_id,
+        guest_token=guest_token,
+    )
     return f"""
   <section class="workspace" aria-label="Active analysis workspace">
     <div class="workspace-main">
@@ -1156,19 +1338,49 @@ def _active_workspace(
       </div>
       <div id="pipeline-outputs">{_outputs(database_path, selected_run["video_id"])}</div>
     </div>
+    <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
   </section>
+"""
+
+
+def _brief_panel(
+    database_path: Path | str,
+    briefs_path: Path | str | None,
+    *,
+    run_id: int,
+    user_id: int | None,
+    guest_token: str | None,
+) -> str:
+    """Show the finished brief beside the run, as soon as there is one to read."""
+
+    if briefs_path is None:
+        return ""
+    path = _brief_path_for_run(
+        database_path,
+        briefs_path,
+        run_id,
+        user_id=user_id,
+        guest_token=guest_token,
+    )
+    if path is None:
+        return ""
+    # Offset by one: the page owns the h1, and the brief's own title labels this panel.
+    content = render_brief_html(path.read_text(encoding="utf-8"), heading_offset=1)
+    return f"""
+      <div class="card report">
+        <div class="card-head"><span class="sub">Result</span>
+          <a href="/brief/download?run_id={run_id}"
+            class="btn btn-ghost btn-sm">Download .md</a></div>
+        <div class="card-body"><article class="brief" aria-label="Analysis brief">{
+        content
+    }</article></div>
+      </div>
 """
 
 
 def _action_html(selected_run, next_step: str | None, failed_captions: bool) -> str:
     label, message = _active_action(selected_run, next_step, failed_captions)
     return f"<h3>{html.escape(label)}</h3><p>{html.escape(message)}</p>"
-
-
-def _jobs_rows(jobs) -> str:
-    if not jobs:
-        return '<tr><td colspan="3" class="mono">No background action yet.</td></tr>'
-    return "".join(_job_row(row) for row in jobs)
 
 
 def _active_action(selected_run, next_step: str | None, failed_captions: bool) -> tuple[str, str]:
@@ -1431,8 +1643,38 @@ def _evidence_grader(
 ) -> OpenAIEvidenceGrader | None:
     """Build the grader when a key is reachable, else verify sources without grading."""
 
+    api_key = _openai_key(config, database_path, form, user_id=user_id)
+    if not api_key:
+        LOGGER.info("No OpenAI key available; source verification will not grade evidence")
+        return None
+    return OpenAIEvidenceGrader(api_key=api_key)
+
+
+def _claim_synthesizer(
+    config: AppConfig,
+    database_path: Path | str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
+) -> OpenAIClaimSynthesizer | None:
+    """Build the synthesizer when a key is reachable; the brief degrades without it."""
+
+    api_key = _openai_key(config, database_path, form, user_id=user_id)
+    if not api_key:
+        LOGGER.info("No OpenAI key available; claims will carry no evidence synthesis")
+        return None
+    return OpenAIClaimSynthesizer(api_key=api_key)
+
+
+def _openai_key(
+    config: AppConfig,
+    database_path: Path | str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
+) -> str | None:
     try:
-        api_key = resolve_api_key(
+        return resolve_api_key(
             database_path,
             config,
             provider="openai",
@@ -1442,12 +1684,8 @@ def _evidence_grader(
             ),
         )
     except Exception:
-        LOGGER.info("Could not resolve an OpenAI key for evidence grading")
+        LOGGER.info("Could not resolve an OpenAI key for the evidence boundaries")
         return None
-    if not api_key:
-        LOGGER.info("No OpenAI key available; source verification will not grade evidence")
-        return None
-    return OpenAIEvidenceGrader(api_key=api_key)
 
 
 def _openai_key_available(
@@ -1665,6 +1903,7 @@ def _run_action(
             max_results=config.pipeline.source_verification_max_results,
             timeout_seconds=config.pipeline.source_verification_timeout_seconds,
             grader=_evidence_grader(config, database_path, form, user_id=user_id),
+            synthesizer=_claim_synthesizer(config, database_path, form, user_id=user_id),
         )
         path = generate_verified_brief(
             database_path,
@@ -1763,6 +2002,7 @@ def run_status_payload(
     guest_token: str | None,
     csrf_token: str = "",
     source_config: SourceConfig | None = None,
+    briefs_path: Path | str | None = None,
 ) -> dict | None:
     """Return the safe, renderable state needed by the live Process page."""
 
@@ -1774,11 +2014,11 @@ def run_status_payload(
     )
     if run is None:
         return None
+    # Poll and reload agree because both settle the run before reading it.
+    run = reconcile_run_state(database_path, run_id, source_config=source_config) or run
     step_rows = db.list_run_steps(database_path, run_id)
     jobs = db.latest_jobs_for_run(database_path, run_id)
-    next_step = next_eligible_step(database_path, run_id)
-    if source_config is not None and not source_config.advanced_source_verification:
-        next_step = None if next_step == "source_verification" else next_step
+    next_step = _gated_step(next_eligible_step(database_path, run_id), source_config)
     captions_row = next((row for row in step_rows if row["step"] == "captions"), None)
     failed_captions = captions_row is not None and captions_row["status"] == "failed"
     state = {
@@ -1816,7 +2056,6 @@ def run_status_payload(
         "pipeline_status_html": _status_badge(run["status"]),
         "stepper_html": _stepper(step_rows),
         "steps_html": "\n".join(_step_row(row) for row in step_rows),
-        "jobs_html": _jobs_rows(jobs),
         "action_html": _action_html(run, next_step, failed_captions),
         "controls_html": _controls(
             database_path,
@@ -1828,6 +2067,16 @@ def run_status_payload(
         ),
         "recovery_html": _manual_transcript_form(run_id, csrf_token) if failed_captions else "",
         "outputs_html": _outputs(database_path, run["video_id"]),
+        # Null rather than empty: a poll that cannot see briefs must not blank the one
+        # the page already rendered.
+        "brief_html": _brief_panel(
+            database_path,
+            briefs_path,
+            run_id=run_id,
+            user_id=user_id,
+            guest_token=guest_token,
+        )
+        or None,
     }
 
 
@@ -1849,11 +2098,11 @@ def _live_status_script(run_id: int) -> str:
     "pipeline-status": "pipeline_status_html",
     "pipeline-stepper": "stepper_html",
     "pipeline-steps": "steps_html",
-    "pipeline-jobs": "jobs_html",
     "pipeline-action": "action_html",
     "pipeline-controls": "controls_html",
     "pipeline-recovery": "recovery_html",
-    "pipeline-outputs": "outputs_html"
+    "pipeline-outputs": "outputs_html",
+    "pipeline-brief": "brief_html"
   }};
   let signature = null;
   let inFlight = false;
@@ -1966,11 +2215,7 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
             f"({_verification_counts(database_path, verification['id'])})"
             "</li>"
         )
-    preview = ""
-    if cleaned is not None:
-        preview_text = html.escape(cleaned["text"][:1200])
-        preview = f'<h3>Cleaned transcript preview</h3><div class="preview">{preview_text}</div>'
-    if not links and not preview:
+    if not links:
         return ""
     result_status = (
         "completed_with_warnings"
@@ -1989,14 +2234,17 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
         f"<span>Evidence snippets</span></div>"
         f'<div class="summary-item"><strong>{html.escape(report_label)}</strong>'
         f"<span>Report status</span></div></div>"
-        f'<ul class="out">{"".join(links)}</ul>{preview}</div></div>'
+        f'<ul class="out">{"".join(links)}</ul></div></div>'
     )
 
 
 def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = None) -> str:
     logged_in = context is not None and context.user_id is not None
     analyses_cls = ' class="active"' if active == "process" else ""
+    history_cls = ' class="active"' if active == "history" else ""
     links = f'<a href="/"{analyses_cls}>Analyses</a>'
+    # The archive is a top-bar destination, not a card competing with the live run.
+    links += f'<a href="/history"{history_cls}>Recent analyses</a>'
     if logged_in:
         options_cls = ' class="active"' if active == "options" else ""
         links += f'<a href="/options"{options_cls}>Options</a>'
@@ -2013,7 +2261,8 @@ def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = No
         user = '<a href="/login" class="btn btn-ghost btn-sm">Login</a>'
     return (
         '<nav class="app">'
-        f'<a class="brand" href="/"><span class="mark">{LOGO_MARK}</span> ClaimLens</a>'
+        f'<a class="brand" href="/"><span class="mark">{LOGO_MARK}</span> ClaimLens'
+        f'<span class="version">v{html.escape(__version__)}</span></a>'
         f'<div class="navlinks">{links}</div>'
         f'<div class="navuser">{user}</div>'
         "</nav>"
@@ -2252,16 +2501,6 @@ def _step_row(row) -> str:
     )
 
 
-def _job_row(row) -> str:
-    return (
-        "<tr>"
-        f'<td class="name">{html.escape(_step_label(row["action"]))}</td>'
-        f'<td class="status">{_status_badge(row["status"])}</td>'
-        f"<td>{html.escape(row['message'] or '')}</td>"
-        "</tr>"
-    )
-
-
 def _int_value(value: str) -> int | None:
     try:
         return int(value)
@@ -2289,7 +2528,7 @@ def render_brief_page(
     if path is None:
         content = '<div class="notice">No report is available for this run.</div>'
     else:
-        content = _markdown_to_html(path.read_text(encoding="utf-8"))
+        content = render_brief_html(path.read_text(encoding="utf-8"))
         if run_id is not None:
             download = (
                 f'<a href="/brief/download?run_id={run_id}" '
@@ -2299,7 +2538,7 @@ def render_brief_page(
 <main>
   <div class="card report">
     <div class="card-head"><h2>Verification brief</h2>{download}</div>
-    <div class="card-body">{content}</div>
+    <div class="card-body"><article class="brief">{content}</article></div>
   </div>
 </main>
 """
@@ -2346,36 +2585,126 @@ def _brief_path_for_run(
     return path if path.exists() else None
 
 
-def _markdown_to_html(markdown: str) -> str:
-    lines = []
+def render_brief_html(markdown: str, *, heading_offset: int = 0) -> str:
+    """Render a stored brief as semantic HTML.
+
+    The artifact stays Markdown so it can be downloaded unchanged; the reader gets a
+    laid-out document instead of markup. Three shapes get special treatment: the product
+    heading becomes a kicker above the video title, a `Signals:` bullet becomes the
+    per-claim signal row, and a short line ending in a colon becomes a sub-heading.
+
+    `heading_offset` pushes every heading down a level so the brief can be embedded under
+    a page that already owns the `h1`. Styling hangs off classes, not levels.
+    """
+
+    out: list[str] = []
     in_list = False
+    headings_seen = 0
+    title_used = False
+
+    def heading(level: int, css: str, text: str) -> str:
+        tag = f"h{min(6, max(1, level + heading_offset))}"
+        return f'<{tag} class="{css}">{_inline_html(text)}</{tag}>'
+
+    def close_list() -> None:
+        nonlocal in_list
+        if in_list:
+            out.append("</ul>")
+            in_list = False
+
     for raw in markdown.splitlines():
         line = raw.strip()
         if not line:
-            if in_list:
-                lines.append("</ul>")
-                in_list = False
+            close_list()
             continue
         if line.startswith("#"):
-            if in_list:
-                lines.append("</ul>")
-                in_list = False
+            close_list()
             level = min(6, len(line) - len(line.lstrip("#")))
-            text = html.escape(line[level:].strip())
-            lines.append(f"<h{level}>{text}</h{level}>")
-        elif line.startswith("- "):
+            text = line[level:].strip()
+            headings_seen += 1
+            if headings_seen == 1 and level == 1:
+                out.append(f'<p class="brief-kicker">{_inline_html(text)}</p>')
+                continue
+            if not title_used and headings_seen == 2 and level == 2:
+                title_used = True
+                out.append(heading(1, "brief-title", text))
+                continue
+            out.append(heading(level, "brief-section" if level == 2 else "brief-claim", text))
+            continue
+        if line.startswith("- "):
+            item = line[2:]
+            indented = len(raw) - len(raw.lstrip(" ")) >= 2
+            if not indented and item.startswith(SIGNALS_PREFIX):
+                close_list()
+                out.append(_signals_html(item[len(SIGNALS_PREFIX) :]))
+                continue
             if not in_list:
-                lines.append("<ul>")
+                out.append('<ul class="brief-list">')
                 in_list = True
-            lines.append(f"<li>{html.escape(line[2:])}</li>")
+            item_class = ' class="sub"' if indented else ""
+            out.append(f"<li{item_class}>{_inline_html(item)}</li>")
+            continue
+        close_list()
+        if line.endswith(":") and len(line) <= BRIEF_SUBHEAD_MAX_CHARS:
+            out.append(heading(4, "brief-subhead", line[:-1]))
+            continue
+        out.append(f"<p>{_inline_html(line)}</p>")
+    close_list()
+    return "\n".join(out)
+
+
+def _inline_html(text: str) -> str:
+    """Escape brief text, keeping Markdown links as real links to http(s) targets."""
+
+    parts: list[str] = []
+    index = 0
+    for match in MARKDOWN_LINK_RE.finditer(text):
+        parts.append(html.escape(text[index : match.start()]))
+        label, url = match.group(1), match.group(2)
+        if url.startswith(("http://", "https://")):
+            parts.append(
+                f'<a href="{html.escape(url, quote=True)}" target="_blank" '
+                f'rel="noopener noreferrer">{html.escape(label)}</a>'
+            )
         else:
-            if in_list:
-                lines.append("</ul>")
-                in_list = False
-            lines.append(f"<p>{html.escape(line)}</p>")
-    if in_list:
-        lines.append("</ul>")
-    return "\n".join(lines)
+            parts.append(html.escape(match.group(0)))
+        index = match.end()
+    parts.append(html.escape(text[index:]))
+    return "".join(parts)
+
+
+def _signals_html(text: str) -> str:
+    """Render the per-claim signals as labelled pills, never as icons alone."""
+
+    items = []
+    for part in text.split("·"):
+        label = part.strip()
+        if not label:
+            continue
+        lowered = label.lower()
+        if lowered.startswith("verdict"):
+            kind = f"verdict {_verdict_class(lowered)}"
+        elif "contradicting" in lowered:
+            kind = "contradicting"
+        elif "supporting" in lowered:
+            kind = "supporting"
+        else:
+            kind = "neutral"
+        items.append(f'<li class="signal {kind}">{html.escape(label)}</li>')
+    return f'<ul class="claim-signals">{"".join(items)}</ul>'
+
+
+def _verdict_class(lowered: str) -> str:
+    for verdict, css in (
+        ("supported", "ok"),
+        ("contradicted", "bad"),
+        ("mixed", "warn"),
+        ("unclear", "idle"),
+        ("not_checked", "idle"),
+    ):
+        if verdict in lowered:
+            return css
+    return "idle"
 
 
 def _check_rate_limit(database_path: Path | str, identity: str, config: AppConfig) -> None:

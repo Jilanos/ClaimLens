@@ -7,10 +7,19 @@ import pytest
 from claimlens import db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript
 from claimlens.briefs import generate_verified_brief
-from claimlens.evidence import EvidenceGrade, EvidenceGradingError
+from claimlens.evidence import (
+    EvidenceGrade,
+    EvidenceGradingError,
+    EvidenceSynthesisError,
+    SynthesisSource,
+    build_synthesis_prompt,
+    parse_synthesis_json,
+)
 from claimlens.pipeline import create_run
 from claimlens.verification import (
     ADAPTER_MIN_INTERVAL_SECONDS,
+    COOLDOWN_MAX_WAIT_SECONDS,
+    SEARCH_RETRY_ATTEMPTS,
     SOURCE_COOLDOWNS,
     SOURCE_LAST_REQUEST,
     SemanticScholarAdapter,
@@ -25,7 +34,7 @@ from claimlens.verification import (
     grade_candidates,
     verify_sources,
 )
-from claimlens.web import render_process_page
+from claimlens.web import render_brief_html, render_process_page
 
 
 @dataclass(frozen=True)
@@ -705,3 +714,371 @@ def test_process_page_shows_source_verification_state(tmp_path):
     assert "Evidence snippets" in html
     assert "Report status" in html
     assert "Not available" in html
+
+
+def instant_clock(monkeypatch):
+    """A clock that only moves when the code under test decides to wait.
+
+    Retry and cooldown behaviour is then observable through the recorded waits, with no
+    real delay in the suite.
+    """
+
+    now = [1000.0]
+    slept: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr("claimlens.verification.time.monotonic", lambda: now[0])
+    monkeypatch.setattr("claimlens.verification._sleep", fake_sleep)
+    SOURCE_COOLDOWNS.clear()
+    SOURCE_LAST_REQUEST.clear()
+    return now, slept
+
+
+def test_an_explicit_cooldown_delays_the_next_request_instead_of_skipping_it(monkeypatch):
+    now, slept = instant_clock(monkeypatch)
+    SOURCE_COOLDOWNS["semantic_scholar"] = now[0] + 5
+
+    class Waited:
+        name = "semantic_scholar"
+        called_at: float | None = None
+
+        def search(self, query):
+            self.called_at = now[0]
+            return [
+                SourceCandidate(
+                    title="After the cooldown",
+                    url="https://example.test/after",
+                    publisher="Journal",
+                    published_at="2024",
+                    abstract_or_snippet="Findings.",
+                    adapter=self.name,
+                )
+            ]
+
+    adapter = Waited()
+    result = _search_all([adapter], rate_limit_query())
+
+    assert slept == [5.0]
+    assert adapter.called_at == 1005.0
+    assert result.outcomes[0]["status"] == "candidates"
+    assert result.limits == []
+    SOURCE_COOLDOWNS.clear()
+
+
+def test_a_cooldown_longer_than_the_wait_budget_is_reported_as_a_durable_limit(monkeypatch):
+    now, slept = instant_clock(monkeypatch)
+    SOURCE_COOLDOWNS["semantic_scholar"] = now[0] + COOLDOWN_MAX_WAIT_SECONDS + 30
+
+    class NeverCalled:
+        name = "semantic_scholar"
+        calls = 0
+
+        def search(self, query):
+            self.calls += 1
+            return []
+
+    adapter = NeverCalled()
+    result = _search_all([adapter], rate_limit_query())
+
+    assert adapter.calls == 0
+    assert slept == []
+    assert result.outcomes[0]["status"] == "rate_limited"
+    assert result.errors == []
+    assert "was not checked" in result.limits[0]
+    SOURCE_COOLDOWNS.clear()
+
+
+def test_retry_after_is_honoured_within_a_bounded_number_of_replays(monkeypatch):
+    _now, slept = instant_clock(monkeypatch)
+
+    class LimitedTwice:
+        name = "semantic_scholar"
+        calls = 0
+
+        def search(self, query):
+            self.calls += 1
+            if self.calls <= 2:
+                raise SourceRateLimitError("limited", retry_after_seconds=2)
+            return [
+                SourceCandidate(
+                    title="Recovered",
+                    url="https://example.test/recovered",
+                    publisher="Journal",
+                    published_at="2024",
+                    abstract_or_snippet="Findings.",
+                    adapter=self.name,
+                )
+            ]
+
+    adapter = LimitedTwice()
+    result = _search_all([adapter], rate_limit_query())
+
+    assert adapter.calls == 3
+    # Each replay waited exactly the provider's own retry-after, and never longer.
+    assert slept == [2.0, 2.0]
+    assert result.outcomes[0]["attempts"] == 3
+    assert result.outcomes[0]["recovered_from_rate_limit"] is True
+    SOURCE_COOLDOWNS.clear()
+
+
+def test_a_recovered_rate_limit_leaves_no_provider_error_in_the_report(tmp_path, monkeypatch):
+    database, _run_id = prepared_database(tmp_path)
+    instant_clock(monkeypatch)
+
+    class LimitedOnce:
+        name = "semantic_scholar"
+        calls = 0
+
+        def search(self, query):
+            self.calls += 1
+            if self.calls == 1:
+                raise SourceRateLimitError("limited", retry_after_seconds=1)
+            return [
+                SourceCandidate(
+                    title="Supportive paper",
+                    url="https://example.test/support",
+                    publisher="Journal",
+                    published_at="2024",
+                    abstract_or_snippet="Vitamin D is associated with improved bone health.",
+                    adapter=self.name,
+                    metadata={"assessment_polarity": "supports"},
+                )
+            ]
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[LimitedOnce()],
+        max_results=2,
+        timeout_seconds=1,
+    )
+
+    verification = db.latest_verification_run(database, "abc123XYZ_")
+    assert verification["status"] == "succeeded"
+    assert verification["failure_message"] is None
+    analysis = db.latest_analysis(database, "abc123XYZ_")
+    rationales = [
+        row["rationale"] for row in db.verified_claims_for_summary(database, analysis["id"])
+    ]
+    assert all("Adapter errors" not in text for text in rationales)
+    assert all("Provider limits" not in text for text in rationales)
+    SOURCE_COOLDOWNS.clear()
+
+
+def test_exhausted_retries_explain_the_limit_without_claiming_full_coverage(tmp_path, monkeypatch):
+    database, _run_id = prepared_database(tmp_path)
+    instant_clock(monkeypatch)
+
+    class AlwaysLimited:
+        name = "semantic_scholar"
+        calls = 0
+
+        def search(self, query):
+            self.calls += 1
+            raise SourceRateLimitError("limited", retry_after_seconds=1)
+
+    adapter = AlwaysLimited()
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[adapter],
+        max_results=2,
+        timeout_seconds=1,
+    )
+
+    assert adapter.calls == SEARCH_RETRY_ATTEMPTS
+    verification = db.latest_verification_run(database, "abc123XYZ_")
+    assert verification["status"] == "completed_with_warnings"
+    analysis = db.latest_analysis(database, "abc123XYZ_")
+    rationale = db.verified_claims_for_summary(database, analysis["id"])[0]["rationale"]
+    assert "not fully checked" in rationale
+    assert "Coverage for this claim is therefore incomplete." in rationale
+    outcomes = json.loads(verification["source_adapters_json"])
+    assert outcomes[0]["attempts"] == SEARCH_RETRY_ATTEMPTS
+    SOURCE_COOLDOWNS.clear()
+
+
+class PolarityAdapter:
+    """Retrieval whose graded polarity is fixed by the test, one candidate per entry."""
+
+    name = "test_adapter"
+
+    def __init__(self, polarities):
+        self.polarities = polarities
+
+    def search(self, query):
+        return [
+            SourceCandidate(
+                title=f"Paper {index}",
+                url=f"https://example.test/paper-{index}",
+                publisher="Journal",
+                published_at="2024",
+                abstract_or_snippet=f"Finding {index} about a nearby question.",
+                adapter=self.name,
+                external_id=f"paper-{index}",
+                metadata={"assessment_polarity": polarity},
+            )
+            for index, polarity in enumerate(self.polarities, start=1)
+        ]
+
+
+class StubSynthesizer:
+    model = "stub-synthesizer"
+
+    def __init__(self, error=None):
+        self.error = error
+        self.calls = []
+
+    def synthesize(self, *, claim, verdict, sources):
+        if self.error:
+            raise self.error
+        self.calls.append((claim, verdict, [source.polarity for source in sources]))
+        return (
+            "The retrieved records study a related question rather than this claim "
+            "directly, and they point the same way on that narrower point."
+        )
+
+
+def verified_markdown(tmp_path, database, *, polarities, synthesizer=None):
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[PolarityAdapter(polarities)],
+        max_results=5,
+        timeout_seconds=1,
+        synthesizer=synthesizer,
+    )
+    return generate_verified_brief(
+        database,
+        video_id="abc123XYZ_",
+        briefs_path=tmp_path / "briefs",
+    ).read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("polarities", "expected"),
+    [
+        (["supports", "supports"], "2 supporting · 0 contradicting · Verdict: supported"),
+        (["contradicts"], "0 supporting · 1 contradicting · Verdict: contradicted"),
+        (["supports", "contradicts"], "1 supporting · 1 contradicting · Verdict: mixed"),
+        (["context", "context"], "0 supporting · 0 contradicting · Verdict: unclear"),
+    ],
+)
+def test_every_claim_leads_with_a_compact_signal_line(tmp_path, polarities, expected):
+    database, _run_id = prepared_database(tmp_path)
+
+    markdown = verified_markdown(tmp_path, database, polarities=polarities)
+
+    assert f"- Signals: {expected}" in markdown
+
+
+def test_an_unclear_claim_still_explains_what_the_nearby_research_shows(tmp_path):
+    """The failure this fixes: 'unclear' told the reader nothing about the literature."""
+
+    database, _run_id = prepared_database(tmp_path)
+    synthesizer = StubSynthesizer()
+
+    markdown = verified_markdown(
+        tmp_path,
+        database,
+        polarities=["context", "context"],
+        synthesizer=synthesizer,
+    )
+
+    assert "Verdict: unclear" in markdown
+    assert "What the research says:" in markdown
+    assert "study a related question rather than this claim directly" in markdown
+    # The synthesizer saw the retrieved records and the verdict it has to explain.
+    assert synthesizer.calls[0][1] == "unclear"
+    assert synthesizer.calls[0][2] == ["context", "context"]
+    # Caution is preserved next to the synthesis.
+    assert "Human Review Disclaimer" in markdown
+
+
+def test_a_claim_without_a_synthesis_says_so_instead_of_implying_one(tmp_path):
+    database, _run_id = prepared_database(tmp_path)
+    synthesizer = StubSynthesizer(error=EvidenceSynthesisError("no paragraph"))
+
+    markdown = verified_markdown(
+        tmp_path,
+        database,
+        polarities=["supports"],
+        synthesizer=synthesizer,
+    )
+
+    assert "No written synthesis was produced for this claim" in markdown
+    # A missing paragraph is a gap in the report, not a failed verification run.
+    assert db.latest_verification_run(database, "abc123XYZ_")["status"] == "succeeded"
+
+
+def test_the_synthesis_is_stored_with_the_claim_it_explains(tmp_path):
+    database, _run_id = prepared_database(tmp_path)
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[PolarityAdapter(["supports"])],
+        max_results=5,
+        timeout_seconds=1,
+        synthesizer=StubSynthesizer(),
+    )
+
+    analysis = db.latest_analysis(database, "abc123XYZ_")
+    claim = db.verified_claims_for_summary(database, analysis["id"])[0]
+    assert "related question" in claim["evidence_synthesis"]
+
+
+def test_the_synthesis_prompt_only_offers_the_records_that_were_retrieved():
+    prompt = build_synthesis_prompt(
+        "Vitamin D improves bone health",
+        "unclear",
+        [
+            SynthesisSource(
+                title="Trial of vitamin D",
+                evidence_text="Supplementation improved bone mineral density.",
+                polarity="context",
+                publisher="Journal",
+                published_at="2024",
+                adapter="pubmed",
+            ),
+            SynthesisSource(
+                title="Title only record",
+                evidence_text="Title only record",
+                evidence_text_source="title_fallback",
+            ),
+        ],
+    )
+
+    assert "Review verdict so far: unclear" in prompt
+    assert "graded context" in prompt
+    assert "No abstract available; only the title is shown." in prompt
+    assert "how directly these records bear on it" in prompt
+
+
+def test_synthesis_parsing_rejects_an_empty_paragraph():
+    assert parse_synthesis_json('{"synthesis": "  A  paragraph. "}') == "A paragraph."
+    with pytest.raises(EvidenceSynthesisError):
+        parse_synthesis_json('{"synthesis": ""}')
+    with pytest.raises(EvidenceSynthesisError):
+        parse_synthesis_json("not json")
+
+
+def test_claim_signals_render_as_labelled_pills_without_emoji(tmp_path):
+    database, _run_id = prepared_database(tmp_path)
+    markdown = verified_markdown(
+        tmp_path,
+        database,
+        polarities=["supports", "contradicts"],
+        synthesizer=StubSynthesizer(),
+    )
+
+    rendered = render_brief_html(markdown)
+
+    assert '<ul class="claim-signals">' in rendered
+    assert '<li class="signal supporting">1 supporting</li>' in rendered
+    assert '<li class="signal contradicting">1 contradicting</li>' in rendered
+    assert '<li class="signal verdict warn">Verdict: mixed' in rendered
+    # Meaning never rides on a pictogram.
+    assert all(ord(char) < 128 or char in "·—’" for char in rendered)

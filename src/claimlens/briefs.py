@@ -7,6 +7,12 @@ from pathlib import Path
 
 from claimlens import db
 
+#: The product heading, kept apart from the video title in every brief.
+PRODUCT_TITLE = "# ClaimLens Brief"
+TECHNICAL_SECTION = "## Technical details"
+#: Recognised by the HTML renderer, which turns the line into accessible signal pills.
+SIGNALS_PREFIX = "Signals: "
+SYNTHESIS_HEADING = "What the research says:"
 SOURCE_STATUS = "not_advanced_source_verified"
 VERIFIED_SOURCE_STATUS = "advanced_source_verified"
 VERIFICATION_WARNING_STATUS = "advanced_source_verified_with_warnings"
@@ -31,14 +37,10 @@ def render_markdown_brief(
 ) -> str:
     display_title = title or video_id
     sections = [
-        f"# ClaimLens Brief: {display_title}",
-        "",
-        f"- Video ID: {video_id}",
-        f"- Video: {source_url}",
-        f"- Report language: {report_language}",
-        "- Source verification: Not advanced-source-verified.",
-        "- Claim verdicts: Not checked in the base MVP.",
-        *_metadata_lines(metadata or {}),
+        # The product name and the video title are separate headings so a reader never
+        # mistakes one for the other.
+        PRODUCT_TITLE,
+        f"## {display_title}",
         "",
         "## Summary",
         summary,
@@ -54,6 +56,16 @@ def render_markdown_brief(
         "",
         "## Editorial Notes",
         _bullets(editorial_notes or ["No editorial notes were returned by analysis."]),
+        "",
+        # Technical details close the brief: they answer "where did this come from",
+        # which is a question a reader asks after the content, not before it.
+        TECHNICAL_SECTION,
+        f"- Video ID: {video_id}",
+        f"- Video: {source_url}",
+        f"- Report language: {report_language}",
+        "- Source verification: Not advanced-source-verified.",
+        "- Claim verdicts: Not checked in the base MVP.",
+        *_metadata_lines(metadata or {}),
         "",
     ]
     return "\n".join(sections)
@@ -182,20 +194,9 @@ def render_verified_markdown_brief(
         if warning
         else "Advanced-source-verified with PubMed/Semantic Scholar candidates."
     )
-    title_prefix = (
-        "ClaimLens Source Verification Attempt"
-        if warning
-        else "ClaimLens Source-Verified Brief"
-    )
     sections = [
-        f"# {title_prefix}: {title or video_id}",
-        "",
-        f"- Video ID: {video_id}",
-        f"- Video: {source_url}",
-        f"- Report language: {report_language}",
-        f"- Source verification: {verification_label}",
-        "- Review status: Human review required for health/science claims.",
-        *_metadata_lines(metadata or {}),
+        PRODUCT_TITLE,
+        f"## {title or video_id}",
         "",
         "## Summary",
         summary,
@@ -210,9 +211,6 @@ def render_verified_markdown_brief(
     sections.extend(
         [
             "",
-            "## Adapter outcomes",
-            _adapter_outcome_bullets(adapter_results or []),
-            "",
             "## Analysis coverage",
             _bullets(editorial_notes or ["No transcript coverage limitations were recorded."]),
             "",
@@ -222,6 +220,17 @@ def render_verified_markdown_brief(
                 "It does not replace expert judgment, clinical guidance, diagnosis, "
                 "or medical advice."
             ),
+            "",
+            TECHNICAL_SECTION,
+            f"- Video ID: {video_id}",
+            f"- Video: {source_url}",
+            f"- Report language: {report_language}",
+            f"- Source verification: {verification_label}",
+            "- Review status: Human review required for health/science claims.",
+            *_metadata_lines(metadata or {}),
+            "",
+            "### Adapter outcomes",
+            _adapter_outcome_bullets(adapter_results or []),
             "",
         ]
     )
@@ -260,12 +269,23 @@ def _metadata_lines(metadata: dict[str, str | int | None]) -> list[str]:
 def _claim_section(claim, evidence: list) -> list[str]:
     supporting = [item for item in evidence if item["polarity"] == "supports"]
     contradicting = [item for item in evidence if item["polarity"] == "contradicts"]
+    # The signals line leads: counts and verdict answer "what happened here" before the
+    # reader spends attention on prose.
+    signals = (
+        f"- {SIGNALS_PREFIX}{len(supporting)} supporting"
+        f" · {len(contradicting)} contradicting"
+        f" · Verdict: {claim['verdict']}{_confidence_suffix(claim)}"
+    )
     section = [
         "",
         f"### {claim['claim']}",
-        f"- Verdict: {claim['verdict']}{_confidence_suffix(claim)}",
+        signals,
+        "",
+        SYNTHESIS_HEADING,
+        _row_value(claim, "evidence_synthesis") or _synthesis_fallback(claim, evidence),
+        "",
         f"- Transcript excerpt: {claim['transcript_excerpt'] or 'No excerpt stored.'}",
-        f"- Rationale: {claim['rationale'] or 'No rationale stored.'}",
+        f"- Review note: {claim['rationale'] or 'No rationale stored.'}",
         "",
         "Supporting evidence:",
         _evidence_bullets(supporting),
@@ -274,6 +294,25 @@ def _claim_section(claim, evidence: list) -> list[str]:
         _evidence_bullets(contradicting),
     ]
     return section
+
+
+def _synthesis_fallback(claim, evidence: list) -> str:
+    """Say what is known when no synthesis was produced, without implying a verdict."""
+
+    if evidence:
+        return (
+            "No written synthesis was produced for this claim; read the graded sources "
+            "below and treat the verdict as provisional."
+        )
+    if str(claim["verdict"]) == "not_checked":
+        return (
+            "No sources were retrieved for this claim, so the research literature was "
+            "not consulted here."
+        )
+    return (
+        "Sources were retrieved but none of them settled this claim, and no written "
+        "synthesis of the nearby research was produced."
+    )
 
 
 def _confidence_suffix(claim) -> str:

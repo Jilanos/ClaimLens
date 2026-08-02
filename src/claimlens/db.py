@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS claims (
     verdict TEXT NOT NULL DEFAULT 'not_checked',
     confidence REAL,
     rationale TEXT,
+    evidence_synthesis TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -352,6 +353,7 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
     )
     _add_column_if_missing(connection, "videos", "author", "TEXT")
     _add_column_if_missing(connection, "claims", "transcript_excerpt", "TEXT")
+    _add_column_if_missing(connection, "claims", "evidence_synthesis", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "report_language", "TEXT")
     _add_column_if_missing(connection, "pipeline_runs", "user_id", "INTEGER")
     _add_column_if_missing(connection, "pipeline_runs", "guest_token", "TEXT")
@@ -1154,6 +1156,20 @@ def update_claim_verdict(
                 WHERE id = ?
                 """,
                 (verdict, rationale, confidence, claim_id),
+            )
+
+
+def update_claim_evidence_synthesis(
+    database_path: Path | str,
+    *,
+    claim_id: int,
+    synthesis: str | None,
+) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                "UPDATE claims SET evidence_synthesis = ? WHERE id = ?",
+                (synthesis, claim_id),
             )
 
 

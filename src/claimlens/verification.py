@@ -17,9 +17,12 @@ from urllib.request import Request, urlopen
 
 from claimlens import db
 from claimlens.evidence import (
+    ClaimSynthesizer,
     EvidenceGrader,
     EvidenceGradingError,
+    EvidenceSynthesisError,
     GradableCandidate,
+    SynthesisSource,
 )
 
 VERDICTS = {"supported", "contradicted", "mixed", "unclear", "not_checked"}
@@ -41,6 +44,9 @@ ADAPTER_MIN_INTERVAL_SECONDS = {"semantic_scholar": 1.3, "pubmed": 0.4}
 SEARCH_RETRY_ATTEMPTS = 4
 SEARCH_RETRY_BASE_DELAY_SECONDS = 3
 SEARCH_RETRY_MAX_DELAY_SECONDS = 12
+#: Longest an explicit provider cooldown may be waited out before the claim gives up on
+#: that provider. Waiting is the point; waiting forever would stall the whole run.
+COOLDOWN_MAX_WAIT_SECONDS = 15
 SOURCE_LAST_REQUEST: dict[str, float] = {}
 _THROTTLE_LOCK = threading.Lock()
 #: Adapter outcomes that mean we failed to consult a provider, as opposed to
@@ -102,6 +108,26 @@ class AdapterSearchResult:
     candidates: list[SourceCandidate]
     errors: list[str]
     outcomes: list[dict]
+    #: Temporary provider limits we could not wait out. Reported apart from `errors`
+    #: because a throttled provider is a bounded gap, not a broken adapter.
+    limits: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RetryReport:
+    """What one adapter call cost in attempts and waiting, for observability."""
+
+    attempts: int = 0
+    rate_limit_hits: int = 0
+    waited_seconds: float = 0.0
+
+    def as_outcome_fields(self) -> dict:
+        return {
+            "attempts": self.attempts,
+            "rate_limit_hits": self.rate_limit_hits,
+            "waited_seconds": round(self.waited_seconds, 2),
+            "recovered_from_rate_limit": self.rate_limit_hits > 0,
+        }
 
 
 class SourceAdapter(Protocol):
@@ -353,6 +379,7 @@ def verify_sources(
     max_results: int = 5,
     timeout_seconds: int = 20,
     grader: EvidenceGrader | None = None,
+    synthesizer: ClaimSynthesizer | None = None,
 ) -> int:
     analysis = db.latest_analysis(database_path, video_id)
     if analysis is None:
@@ -431,12 +458,30 @@ def verify_sources(
             reported_errors = search_result.errors + grading_errors
             if reported_errors:
                 rationale = f"{rationale} Adapter errors: {'; '.join(reported_errors)}"
+            if search_result.limits:
+                # A provider limit is a coverage gap, and saying so is the honest
+                # alternative to implying the claim was checked everywhere.
+                rationale = (
+                    f"{rationale} Provider limits: {'; '.join(search_result.limits)} "
+                    "Coverage for this claim is therefore incomplete."
+                )
             db.update_claim_verdict(
                 database_path,
                 claim_id=claim["id"],
                 verdict=assessment.verdict,
                 rationale=rationale,
                 confidence=assessment.confidence,
+            )
+            db.update_claim_evidence_synthesis(
+                database_path,
+                claim_id=claim["id"],
+                synthesis=_synthesize_claim(
+                    synthesizer,
+                    claim=claim,
+                    verdict=assessment.verdict,
+                    candidates=candidates,
+                    adapter_results=adapter_results,
+                ),
             )
             for snippet in assessment.evidence:
                 source_id = source_ids_by_url.get(snippet.source_url)
@@ -480,6 +525,55 @@ def verify_sources(
     return verification_run_id
 
 
+def _synthesize_claim(
+    synthesizer: ClaimSynthesizer | None,
+    *,
+    claim,
+    verdict: str,
+    candidates: list[SourceCandidate],
+    adapter_results: list[dict],
+) -> str | None:
+    """Describe what the retrieved records say, including when the verdict stays open.
+
+    A missing paragraph is recorded but never degrades the run: the brief already has a
+    fallback that says the synthesis is absent, which is honest and cheap.
+    """
+
+    if synthesizer is None or not candidates:
+        return None
+    try:
+        return synthesizer.synthesize(
+            claim=claim["claim"],
+            verdict=verdict,
+            sources=[
+                SynthesisSource(
+                    title=candidate.title,
+                    evidence_text=candidate.abstract_or_snippet or candidate.title,
+                    polarity=_candidate_polarity(candidate),
+                    publisher=candidate.publisher,
+                    published_at=candidate.published_at,
+                    adapter=candidate.adapter,
+                    evidence_text_source=str(
+                        candidate.metadata.get("evidence_text_source", "abstract")
+                    ),
+                )
+                for candidate in candidates
+            ],
+        )
+    except EvidenceSynthesisError as exc:
+        LOGGER.warning("Claim synthesis failed for claim %s: %s", claim["id"], exc)
+        adapter_results.append(
+            {
+                "claim_id": claim["id"],
+                "adapter": "evidence_synthesis",
+                "status": "unavailable",
+                "candidate_count": 0,
+                "message": str(exc),
+            }
+        )
+        return None
+
+
 def default_adapters(
     *,
     semantic_scholar_key: str | None,
@@ -498,13 +592,19 @@ def default_adapters(
 def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSearchResult:
     candidates: list[SourceCandidate] = []
     errors: list[str] = []
+    limits: list[str] = []
     outcomes: list[dict] = []
     for adapter in adapters:
         query_text = build_claim_query(query.claim)
-        cooldown_remaining = SOURCE_COOLDOWNS.get(adapter.name, 0.0) - time.monotonic()
-        if cooldown_remaining > 0:
-            message = f"Provider cooldown active; retry after {int(cooldown_remaining) + 1}s."
-            errors.append(f"{adapter.name}: {message}")
+        report = RetryReport()
+        unwaited = _await_cooldown(adapter.name, report)
+        if unwaited > 0:
+            message = (
+                f"Provider cooldown of {int(unwaited) + 1}s exceeds the "
+                f"{COOLDOWN_MAX_WAIT_SECONDS}s wait budget, so this claim was not checked "
+                f"against {adapter.name}."
+            )
+            limits.append(f"{adapter.name}: {message}")
             outcomes.append(
                 {
                     "adapter": adapter.name,
@@ -512,12 +612,15 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
                     "candidate_count": 0,
                     "message": message,
                     "query": query_text,
+                    **report.as_outcome_fields(),
                 }
             )
             continue
         try:
-            adapter_candidates = _search_with_retry(adapter, query)
+            adapter_candidates = _search_with_retry(adapter, query, report)
             candidates.extend(adapter_candidates)
+            # A limit we waited out is history, not a finding: it stays in the outcome
+            # for observability and never reaches the reader as an adapter error.
             outcomes.append(
                 {
                     "adapter": adapter.name,
@@ -525,6 +628,7 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
                     "candidate_count": len(adapter_candidates),
                     "message": None if adapter_candidates else "No candidates returned.",
                     "query": query_text,
+                    **report.as_outcome_fields(),
                 }
             )
         except SourceRateLimitError as exc:
@@ -533,13 +637,17 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
                 SOURCE_COOLDOWNS.get(adapter.name, 0.0),
                 time.monotonic() + delay,
             )
-            message = f"Rate limited (HTTP 429); retry after {delay}s."
+            message = (
+                f"Still rate limited after {report.attempts} attempt(s) and "
+                f"{report.waited_seconds:.0f}s of waiting, so this claim was not fully "
+                f"checked against {adapter.name}; the provider asks for {delay}s more."
+            )
             LOGGER.warning(
                 "Source adapter rate limited for claim %s: %s",
                 query.claim_id,
                 adapter.name,
             )
-            errors.append(f"{adapter.name}: {message}")
+            limits.append(f"{adapter.name}: {message}")
             outcomes.append(
                 {
                     "adapter": adapter.name,
@@ -547,6 +655,7 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
                     "candidate_count": 0,
                     "message": message,
                     "query": query_text,
+                    **report.as_outcome_fields(),
                 }
             )
         except Exception as exc:
@@ -560,20 +669,52 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
                     "candidate_count": 0,
                     "message": message,
                     "query": query_text,
+                    **report.as_outcome_fields(),
                 }
             )
-    return AdapterSearchResult(candidates=candidates, errors=errors, outcomes=outcomes)
+    return AdapterSearchResult(
+        candidates=candidates,
+        errors=errors,
+        outcomes=outcomes,
+        limits=limits,
+    )
 
 
-def _search_with_retry(adapter: SourceAdapter, query: SourceQuery) -> list[SourceCandidate]:
+def _await_cooldown(adapter_name: str, report: RetryReport) -> float:
+    """Wait out a known provider cooldown before emitting a request.
+
+    Returns the cooldown seconds we refused to wait, so the caller can report a durable
+    limit instead of hammering a provider that already told us to stop.
+    """
+
+    remaining = SOURCE_COOLDOWNS.get(adapter_name, 0.0) - time.monotonic()
+    if remaining <= 0:
+        return 0.0
+    if remaining > COOLDOWN_MAX_WAIT_SECONDS:
+        return remaining
+    LOGGER.info("Waiting out a %.1fs cooldown before calling %s", remaining, adapter_name)
+    _sleep(remaining)
+    report.waited_seconds += remaining
+    SOURCE_COOLDOWNS.pop(adapter_name, None)
+    return 0.0
+
+
+def _search_with_retry(
+    adapter: SourceAdapter,
+    query: SourceQuery,
+    report: RetryReport | None = None,
+) -> list[SourceCandidate]:
     """Pace requests to a provider and retry its 429s before giving up on the claim."""
 
+    report = report if report is not None else RetryReport()
     attempts = max(1, SEARCH_RETRY_ATTEMPTS)
     for attempt in range(1, attempts + 1):
+        report.attempts = attempt
         _throttle(adapter.name)
         try:
             return adapter.search(query)
         except SourceRateLimitError as exc:
+            report.rate_limit_hits += 1
             if attempt == attempts:
                 raise
             delay = min(
@@ -591,7 +732,8 @@ def _search_with_retry(adapter: SourceAdapter, query: SourceQuery) -> list[Sourc
                 attempts,
                 delay,
             )
-            time.sleep(delay)
+            report.waited_seconds += delay
+            _sleep(delay)
     raise SourceRateLimitError("Rate limit retries were exhausted.")
 
 
@@ -604,8 +746,15 @@ def _throttle(adapter_name: str) -> None:
     with _THROTTLE_LOCK:
         wait = SOURCE_LAST_REQUEST.get(adapter_name, 0.0) + interval - time.monotonic()
         if wait > 0:
-            time.sleep(wait)
+            _sleep(wait)
         SOURCE_LAST_REQUEST[adapter_name] = time.monotonic()
+
+
+def _sleep(seconds: float) -> None:
+    """The one waiting boundary, so retry behaviour is testable without real delay."""
+
+    if seconds > 0:
+        time.sleep(seconds)
 
 
 def _candidate_polarity(candidate: SourceCandidate) -> str:

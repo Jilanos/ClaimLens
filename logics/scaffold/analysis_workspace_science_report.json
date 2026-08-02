@@ -1,0 +1,156 @@
+{
+  "title": "Rendre l'analyse ClaimLens lisible, scientifique et fiable en production",
+  "references": [
+    "Feedback utilisateur du 2026-08-02 sur l'espace d'analyse et Semantic Scholar",
+    "logics/product/prod_015_focused_english_language_claimlens_analysis_workspace.md"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Analysis workspace and evidence quality",
+    "needs": [
+      "Suivre une analyse en cours sans avoir à ouvrir des détails techniques, et obtenir l'état réellement actuel après rafraîchissement.",
+      "Lire immédiatement un brief clair et mis en page dans l'interface, plutôt qu'un document Markdown brut.",
+      "Comprendre ce que la recherche scientifique proche d'un claim indique, même lorsqu'elle ne permet pas de trancher strictement le verdict.",
+      "Éviter les erreurs visibles de cooldown et de rate limit Semantic Scholar pendant une analyse normale."
+    ],
+    "context": [
+      "La clé Semantic Scholar de production est attendue et ne constitue pas un défaut à traiter dans ce périmètre.",
+      "Le précédent espace d'analyse (req_011) est terminé ; cette demande affine ses décisions d'ergonomie et de fiabilité.",
+      "Le produit reste en anglais côté interface, avec une expérience desktop prioritaire et responsive."
+    ],
+    "acceptance_criteria": [
+      "AC1: L'en-tête de l'application affiche le numéro de version courant et inclut un accès Recent analyses dans la barre supérieure ; cet accès n'est plus présenté sous l'espace de travail.",
+      "AC2: Pendant toute analyse non terminale, la chaîne complète des étapes métier est visible en permanence. Les données Step, Status, Details et Output sont placées dans un panneau dépliable ; Background actions et Cleaned transcript preview ne sont plus visibles dans l'interface.",
+      "AC3: Après un rechargement de page, l'interface récupère et affiche sans état périmé le statut terminal, les étapes terminées et les résultats du dernier run concerné.",
+      "AC4: Une analyse terminée affiche directement un brief HTML accessible et mis en page. Sur écran desktop, le brief exploite une colonne droite de la vue à deux colonnes ; le titre ClaimLens et le titre de la vidéo sont visuellement distincts, et les métadonnées techniques sont en bas du brief.",
+      "AC5: Chaque checked claim présente d'abord un résumé compact et non décoratif des signaux supporting, contradicting et du verdict, suivi d'un texte LLM sourcé expliquant ce que la recherche voisine indique, y compris lorsque le verdict demeure unclear.",
+      "AC6: Les appels Semantic Scholar respectent automatiquement retry-after et cooldown, avec attente et retry bornés. Les rate limits transitoires ne sont plus exposées comme Adapter errors dans un résultat normalement récupérable.",
+      "AC7: Les tests couvrent les états de rafraîchissement, le rendu desktop et mobile, le brief HTML, le résumé scientifique des claims et le comportement de retry/cooldown des providers."
+    ]
+  },
+  "product": {
+    "title": "Espace d'analyse et brief scientifique orientés lecture",
+    "overview": "Faire de ClaimLens une vue d'analyse à deux colonnes, immédiatement lisible et fiable, qui transforme les sources proches en explications scientifiques utiles.",
+    "goals": [
+      "Donner une lecture continue de l'avancement réel sans exposer les diagnostics par défaut.",
+      "Mettre le brief final et les conclusions scientifiques au centre de la décision utilisateur.",
+      "Épuiser proprement les limites temporaires des fournisseurs avant de les présenter comme des échecs."
+    ],
+    "non_goals": [
+      "Modifier la politique éditoriale de prudence, ni présenter le brief comme un avis médical ou clinique.",
+      "Changer la clé de production Semantic Scholar ou les autres fournisseurs de recherche hors stratégie commune de retry.",
+      "Ajouter une application frontend ou un système de traduction complet."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Rendre l'état de l'analyse continu et exact après rafraîchissement",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Analysis progress UX",
+      "request_acs": ["AC2", "AC3"],
+      "problem": [
+        "La progression détaillée est cachée ou parasitée par des actions de fond inutiles.",
+        "Un rafraîchissement peut laisser l'utilisateur sur un état de job périmé alors que l'analyse est terminée."
+      ],
+      "scope_in": [
+        "Chaîne d'étapes métier toujours visible pendant le run.",
+        "Panneau dépliable pour Step, Status, Details et Output.",
+        "Suppression des zones Background actions et Cleaned transcript preview.",
+        "Réconciliation du job et du résultat au chargement, au polling et à la transition terminale."
+      ],
+      "scope_out": ["Refonte du moteur de traitement ou du modèle de jobs."],
+      "acceptance_criteria": [
+        "AC1: La timeline métier reste visible sans interaction pendant un run actif.",
+        "AC2: Les diagnostics sont consultables dans un seul panneau repliable et ne masquent jamais la timeline.",
+        "AC3: Recharger pendant ou après un run affiche l'état serveur le plus récent et le résultat lorsqu'il existe.",
+        "AC4: Les vues supprimées ne sont plus rendues ni annoncées aux lecteurs d'écran."
+      ]
+    },
+    {
+      "title": "Recomposer la navigation et le brief HTML en espace desktop à deux colonnes",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Results presentation",
+      "request_acs": ["AC1", "AC4"],
+      "problem": [
+        "La largeur desktop est sous-exploitée et le brief Markdown rend le résultat peu lisible.",
+        "Les accès et métadonnées ne suivent pas la hiérarchie de lecture attendue."
+      ],
+      "scope_in": [
+        "Version et Recent analyses dans la barre supérieure.",
+        "Disposition desktop à deux colonnes avec brief dans la colonne droite.",
+        "Brief HTML sémantique, accessible et responsive affiché immédiatement après succès.",
+        "Distinction visuelle entre ClaimLens et le titre vidéo ; métadonnées techniques placées en fin de brief."
+      ],
+      "scope_out": ["Export PDF, partage externe et refonte de l'identité de marque."],
+      "acceptance_criteria": [
+        "AC1: L'en-tête contient la version et Recent analyses, y compris au clavier et sur mobile.",
+        "AC2: À une largeur desktop définie par les tests, l'espace actif et le brief occupent deux colonnes lisibles sans défilement horizontal.",
+        "AC3: Le résultat n'est pas présenté comme du Markdown brut et conserve une structure HTML sémantique.",
+        "AC4: Les métadonnées techniques suivent le contenu éditorial du brief et le titre produit reste distinct du titre vidéo."
+      ]
+    },
+    {
+      "title": "Expliquer les claims par une synthèse scientifique sourcée",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Evidence interpretation",
+      "request_acs": ["AC5"],
+      "problem": [
+        "Les listes Checked Claims sont trop denses et un verdict unclear ne renseigne pas l'utilisateur sur l'état de la science disponible."
+      ],
+      "scope_in": [
+        "En-tête compact par claim avec signaux supporting, contradicting et verdict, avec icônes sobres accessibles.",
+        "Synthèse LLM fondée sur les articles récupérés, exprimant portée, convergence, limites et absence éventuelle de lien direct.",
+        "Sources et limites éditoriales conservées à côté de la synthèse."
+      ],
+      "scope_out": ["Diagnostic, conseil médical, changement du corpus externe disponible."],
+      "acceptance_criteria": [
+        "AC1: Les signaux de chaque claim sont compréhensibles au premier coup d'œil sans dépendre d'émojis seuls.",
+        "AC2: Un claim unclear avec des articles récupérés inclut une synthèse de ce que dit la recherche proche plutôt qu'un simple constat d'absence de verdict.",
+        "AC3: La synthèse distingue explicitement le niveau de lien avec le claim et préserve les avertissements de prudence.",
+        "AC4: Les tests couvrent supporting, contradicting, mixed et unclear avec preuves proches mais non décisives."
+      ]
+    },
+    {
+      "title": "Respecter les cooldowns Semantic Scholar avant de signaler une erreur provider",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Provider resilience",
+      "request_acs": ["AC6"],
+      "problem": [
+        "Les cooldowns et HTTP 429 Semantic Scholar deviennent des Adapter errors visibles, malgré un délai de reprise connu."
+      ],
+      "scope_in": [
+        "Lecture de retry-after et cooldown provider.",
+        "Attente asynchrone, retry borné et observabilité des tentatives.",
+        "Distinction entre limite temporaire récupérée et erreur définitive dans le résultat utilisateur."
+      ],
+      "scope_out": ["Contourner les quotas provider, augmenter le quota, ou masquer un échec final non récupérable."],
+      "acceptance_criteria": [
+        "AC1: Un cooldown explicite retarde la prochaine requête avant son émission.",
+        "AC2: Une réponse 429 avec retry-after est rejouée dans une limite configurable et testée sans attente réelle.",
+        "AC3: Une reprise réussie ne laisse aucun Adapter error de rate limit dans le rapport final.",
+        "AC4: Après épuisement des tentatives, le résultat explique la limite durable sans prétendre à une vérification complète."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrer la lisibilité et la fiabilité du brief ClaimLens",
+    "plan": [
+      "Cartographier les contrats de job, de polling, de rapport et de provider avant toute modification d'interface.",
+      "Livrer puis vérifier la réconciliation d'état et la timeline permanente, afin que la nouvelle mise en page repose sur un état fiable.",
+      "Implémenter la navigation supérieure et le brief HTML responsive à deux colonnes.",
+      "Faire évoluer le contrat de vérification et le rendu vers la synthèse scientifique par claim.",
+      "Ajouter la stratégie de cooldown/retry Semantic Scholar et vérifier que les erreurs récupérables ne remontent plus au brief.",
+      "Exécuter les tests ciblés et complets, les contrôles d'accessibilité et les validations Logics avant closeout.",
+      "ADR 009 checkpoint: mettre à jour les docs Logics touchés à chaque vague significative et laisser le dépôt prêt à être commit sans imposer de commit."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/analysis_workspace_science_report.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

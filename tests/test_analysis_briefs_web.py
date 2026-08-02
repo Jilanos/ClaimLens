@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 
-from claimlens import db
+from claimlens import __version__, db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, parse_analysis_json
 from claimlens.api_keys import save_supadata_api_key
 from claimlens.auth import hash_password
@@ -12,7 +12,10 @@ from claimlens.web import (
     HISTORY_VISIBLE_ROWS,
     WebContext,
     _run_job,
+    reconcile_run_state,
+    render_brief_html,
     render_brief_page,
+    render_history_page,
     render_options_page,
     render_process_page,
     run_status_payload,
@@ -117,7 +120,7 @@ def test_live_script_is_present_even_without_an_active_job(tmp_path):
     assert "visibilitychange" in rendered
 
 
-def test_live_payload_covers_every_dynamic_region_without_duplicating_jobs(tmp_path):
+def test_live_payload_covers_every_dynamic_region(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(
         database,
@@ -153,16 +156,17 @@ def test_live_payload_covers_every_dynamic_region_without_duplicating_jobs(tmp_p
         "pipeline-status",
         "pipeline-stepper",
         "pipeline-steps",
-        "pipeline-jobs",
         "pipeline-action",
         "pipeline-controls",
         "pipeline-recovery",
         "pipeline-outputs",
+        "pipeline-brief",
     ):
         assert f'id="{region}"' in rendered
-    # The jobs table is rendered once, and the results region never carries a second copy.
-    assert rendered.count('id="pipeline-jobs"') == 1
-    assert "Background actions" not in payload["outputs_html"]
+    # Background actions are internal plumbing and are no longer shown or announced.
+    assert "Background actions" not in rendered
+    assert "pipeline-jobs" not in rendered
+    assert "jobs_html" not in payload
     assert "Paste a transcript fallback" in payload["recovery_html"]
     assert "Transcript recovery needed" in payload["action_html"]
 
@@ -202,7 +206,7 @@ def test_history_collapses_older_analyses(tmp_path):
     for index in range(HISTORY_VISIBLE_ROWS + 3):
         create_run(database, f"https://www.youtube.com/watch?v=video{index:06d}")
 
-    rendered = render_process_page(database, csrf_token="csrf")
+    rendered = render_history_page(database, csrf_token="csrf")
 
     assert "Show 3 older" in rendered
 
@@ -467,7 +471,9 @@ def test_render_brief_page_renders_generated_markdown(tmp_path):
 
     rendered = render_brief_page(database, tmp_path / "briefs", run_id=run_id)
 
-    assert "<h1>ClaimLens Brief: abc123XYZ_</h1>" in rendered
+    # The product name is a kicker; the video title is the document heading.
+    assert '<p class="brief-kicker">ClaimLens Brief</p>' in rendered
+    assert '<h1 class="brief-title">abc123XYZ_</h1>' in rendered
     assert "Report language: fr" in rendered
 
 
@@ -504,8 +510,8 @@ def test_render_process_page_shows_step_status_failure_and_controls(tmp_path):
 
     html = render_process_page(database, run_id=run_id)
 
-    assert "captions" in html
-    assert "failed" in html
+    assert "Get captions" in html
+    assert "Needs attention" in html
     assert "Subtitles are unavailable." in html
     assert "Paste a transcript fallback" in html
 
@@ -744,3 +750,240 @@ def test_report_access_is_scoped_by_owner(tmp_path):
 
     assert "No report is available" in denied
     assert "Private" in allowed
+
+
+def completed_run(tmp_path, database, *, guest_token="guest"):
+    """A run whose steps are all done, as it looks after the worker thread exits."""
+
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token=guest_token,
+    )
+    run = db.get_pipeline_run(database, run_id)
+    store_cleaned_fixture(database, run["video_id"])
+    analyze_cleaned_transcript(database, video_id=run["video_id"], client=Client())
+    for step in ("captions", "clean_transcript", "analysis", "brief"):
+        db.set_step_status(database, run_id=run_id, step=step, status="succeeded")
+    generate_brief(database, video_id=run["video_id"], briefs_path=tmp_path / "briefs")
+    return run_id
+
+
+def test_the_step_timeline_is_visible_without_opening_anything(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(database, run_id=run_id, step="captions", status="running")
+    db.create_job(database, run_id=run_id, action="captions")
+
+    rendered = render_process_page(database, run_id=run_id, csrf_token="csrf")
+
+    stepper = rendered.index('id="pipeline-stepper"')
+    details = rendered.index('<details class="diagnostic">')
+    # The timeline is rendered before, and therefore outside, the disclosure.
+    assert stepper < details
+    assert rendered.count("<details class=\"diagnostic\">") == 1
+    assert "Get captions" in rendered
+
+
+def test_the_removed_diagnostic_views_are_no_longer_rendered(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = completed_run(tmp_path, database)
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        csrf_token="csrf",
+        briefs_path=tmp_path / "briefs",
+    )
+
+    assert "Background actions" not in rendered
+    assert "Cleaned transcript preview" not in rendered
+    assert 'class="preview"' not in rendered
+
+
+def test_a_reload_settles_a_run_the_worker_finished_without_saying_so(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = completed_run(tmp_path, database)
+    # The stale claim a dead worker leaves behind.
+    db.set_run_status(database, run_id=run_id, status="running", current_step="brief")
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        csrf_token="csrf",
+        briefs_path=tmp_path / "briefs",
+    )
+
+    assert db.get_pipeline_run(database, run_id)["status"] == "succeeded"
+    assert "Analysis complete" in rendered
+    assert 'id="pipeline-brief"' in rendered
+    # Embedded under the page heading, the brief title sits one level down.
+    assert '<h2 class="brief-title">' in rendered
+
+
+def test_a_reload_makes_an_abandoned_step_retryable_instead_of_stuck(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        guest_token="guest",
+    )
+    db.set_step_status(database, run_id=run_id, step="captions", status="running")
+    db.set_run_status(database, run_id=run_id, status="running", current_step="captions")
+
+    run = reconcile_run_state(database, run_id)
+
+    assert run["status"] == "failed"
+    steps = {row["step"]: row["status"] for row in db.list_run_steps(database, run_id)}
+    assert steps["captions"] == "failed"
+    assert next_eligible_step(database, run_id) == "captions"
+
+
+def test_polling_and_reloading_report_the_same_settled_state(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = completed_run(tmp_path, database)
+    db.set_run_status(database, run_id=run_id, status="running", current_step="brief")
+
+    payload = run_status_payload(
+        database,
+        run_id=run_id,
+        user_id=None,
+        guest_token="guest",
+        csrf_token="csrf",
+        briefs_path=tmp_path / "briefs",
+    )
+
+    assert payload is not None
+    assert payload["active"] is False
+    assert "Analysis complete" in payload["action_html"]
+    assert payload["brief_html"] and "brief-title" in payload["brief_html"]
+
+
+def test_the_top_bar_carries_the_version_and_the_archive_link(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_", guest_token="guest")
+    context = WebContext(
+        user_id=None,
+        email=None,
+        csrf_token="csrf",
+        guest_token="guest",
+        session_token=None,
+    )
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        csrf_token="csrf",
+        guest_token="guest",
+        context=context,
+    )
+
+    assert f'<span class="version">v{__version__}</span>' in rendered
+    assert '<a href="/history"' in rendered
+    # The archive is no longer a card underneath the workspace.
+    assert '<div class="history-list">' not in rendered
+    assert 'id="status-filter"' not in rendered
+
+
+def test_the_archive_page_lists_analyses_and_keeps_the_status_filter(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_", guest_token="guest")
+
+    rendered = render_history_page(database, guest_token="guest", csrf_token="csrf")
+
+    assert "Recent analyses" in rendered
+    assert 'id="status-filter"' in rendered
+    assert 'href="/?run_id=' in rendered
+
+
+def test_the_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = completed_run(tmp_path, database)
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        csrf_token="csrf",
+        briefs_path=tmp_path / "briefs",
+    )
+
+    assert 'class="workspace-main"' in rendered
+    assert 'class="workspace-brief"' in rendered
+    # One column below the breakpoint, two above it, and never a horizontal scroll.
+    assert ".workspace { display:grid; grid-template-columns:minmax(0,1fr);" in rendered
+    assert "@media (min-width:1080px) {" in rendered
+    assert ".workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }" in rendered
+
+
+def test_the_brief_is_rendered_as_html_and_never_as_raw_markdown(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = completed_run(tmp_path, database)
+
+    rendered = render_process_page(
+        database,
+        run_id=run_id,
+        guest_token="guest",
+        csrf_token="csrf",
+        briefs_path=tmp_path / "briefs",
+    )
+    brief = rendered[rendered.index('id="pipeline-brief"') :]
+
+    assert '<article class="brief"' in brief
+    assert '<h3 class="brief-section">Summary</h3>' in brief
+    assert "<li>Point one</li>" in brief
+    assert "## Summary" not in brief
+    assert "- Point one" not in brief
+
+
+def test_technical_metadata_follows_the_editorial_content_of_the_brief():
+    markdown = render_markdown_brief(
+        video_id="video123",
+        title="A long video title",
+        source_url="https://www.youtube.com/watch?v=video123",
+        metadata={"Channel": "A channel"},
+        summary="Summary.",
+        key_points=["Point"],
+        notable_claims=["Claim"],
+        caveats=[],
+        editorial_notes=[],
+    )
+    rendered = render_brief_html(markdown)
+
+    assert rendered.index("Summary") < rendered.index("Technical details")
+    assert rendered.index("Editorial Notes") < rendered.index("Technical details")
+    assert rendered.index("Technical details") < rendered.index("Video ID: video123")
+    # Product name and video title never read as one string.
+    assert '<p class="brief-kicker">ClaimLens Brief</p>' in rendered
+    assert '<h1 class="brief-title">A long video title</h1>' in rendered
+
+
+def test_brief_html_links_sources_and_escapes_everything_else():
+    rendered = render_brief_html(
+        "- [Paper &<title>](https://example.test/paper), pubmed\n"
+        "- [Local](file:///etc/passwd)\n"
+        '- Cited text: "<script>alert(1)</script>"\n'
+    )
+
+    assert '<a href="https://example.test/paper"' in rendered
+    assert 'rel="noopener noreferrer">Paper &amp;&lt;title&gt;</a>' in rendered
+    # Only http(s) becomes a link; anything else stays inert text.
+    assert '<a href="file:' not in rendered
+    assert "[Local](file:///etc/passwd)" in rendered
+    assert "<script>" not in rendered
+
+
+def test_the_top_bar_stays_usable_on_a_phone_and_by_keyboard(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    rendered = render_process_page(database, csrf_token="csrf")
+
+    # Real anchors, so tab order and activation come from the browser.
+    assert '<a href="/history"' in rendered
+    assert ".navlinks a:focus-visible" in rendered
+    # The bar wraps instead of pushing the page sideways.
+    assert "nav.app { flex-wrap:wrap; height:auto; gap:8px; padding:10px 14px; }" in rendered
+    assert ".navlinks { order:3; width:100%; }" in rendered
