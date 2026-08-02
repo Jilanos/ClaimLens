@@ -10,7 +10,8 @@ The refined MVP is local-first:
 4. Clean the transcript for LLM input.
 5. Use OpenAI to generate a structured analysis.
 6. Generate a Markdown brief.
-7. Optionally verify notable claims against PubMed and Semantic Scholar.
+7. Optionally verify notable claims against PubMed and Semantic Scholar, grading each
+   retrieved abstract as supporting, contradicting, or contextual.
 8. Inspect progress on a local HTML process page with guarded POST actions, live async job status,
    and report viewing/download.
 9. Optionally log in to reuse encrypted per-user API keys and manage them from Options.
@@ -141,6 +142,28 @@ existing Kapsule email/password credentials. The Kapsule database is read-only f
 first successful Kapsule login provisions a local ClaimLens user row so ClaimLens-owned API keys,
 runs, and sessions remain isolated in the ClaimLens database.
 
+### How a claim gets a verdict
+
+Retrieval alone cannot decide anything: finding a paper about tendons says nothing about whether it
+backs a claim about tendons. Verification therefore runs in two stages.
+
+1. **Retrieve.** PubMed and Semantic Scholar are queried per claim. Semantic Scholar withholds many
+   abstracts, so its `tldr` summary is used as a second-best evidence text; a record with neither is
+   flagged as title-only. Requests to each provider are paced, and a rate-limited provider is retried
+   with backoff before the claim gives up on it.
+2. **Grade.** Each retrieved abstract is graded against the claim as `supports`, `contradicts`, or
+   `context`, with a one-sentence rationale and a confidence. Only supporting and contradicting
+   grades become evidence; everything else stays a linked source. The grader is deliberately strict:
+   sharing a topic is not support, a quantified claim needs a comparable figure, and anything
+   uncertain falls back to `context`. Over-claiming support is the worst error for health content.
+
+The claim verdict follows from the grades — `supported`, `contradicted`, `mixed`, or `unclear` when
+sources were found but none settled the question. Grading needs an OpenAI key. Without one, sources
+are still retrieved and linked, and every verdict stays `unclear`.
+
+A provider that returns nothing for a claim is a normal outcome and does not degrade the run; only a
+provider that could not be reached does.
+
 Advanced source verification is disabled by default. Every `[sources]` flag below also reads an
 environment variable that takes precedence over the file, because a container ships a read-only TOML:
 set `CLAIMLENS_ADVANCED_SOURCE_VERIFICATION=true` to expose the per-analysis opt-in on the launcher
@@ -214,8 +237,8 @@ Implemented:
 - SQLite-backed web action limits keyed by authenticated account or guest token, so Caddy's proxy IP
   does not pool every user's action quota.
 - Orphaned in-process jobs are marked interrupted at application startup and can be retried.
-- Conservative source verification: adapter errors are logged and source verdicts no longer rely
-  on title/snippet keyword polarity alone.
+- Conservative source verification: adapter errors are logged, and verdicts come from grading the
+  retrieved abstracts rather than from title/snippet keyword polarity.
 
 Manual smoke test:
 
@@ -241,13 +264,18 @@ are unavailable and the base MVP does not use audio fallback.
 ```bash
 export SEMANTIC_SCHOLAR_API_KEY=...
 export NCBI_API_KEY=...
+export OPENAI_API_KEY=...        # grades the retrieved abstracts
 claimlens verify-sources "W7DVR9TlpOs" --database data/claimlens.sqlite3
 claimlens brief "W7DVR9TlpOs" --verified --database data/claimlens.sqlite3
 ```
 
+Pass `--no-grading` to retrieve and link sources without judging them; every verdict then stays
+`unclear`. `--openai-api-key` overrides the environment for the grading step only.
+
 This writes `outputs/briefs/<video_id>.verified.md` when usable candidates are retrieved, or
-`outputs/briefs/<video_id>.verification-attempt.md` when adapter warnings make the result incomplete.
-The verified brief includes a human-review
+`outputs/briefs/<video_id>.verification-attempt.md` when a provider could not be reached. Each piece
+of evidence is rendered with the grader's reason and the cited text, and the claim line carries the
+mean grading confidence. The verified brief includes a human-review
 disclaimer because PubMed/Semantic Scholar snippets are review aids, not final medical advice or
 scientific authority.
 

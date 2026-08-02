@@ -263,7 +263,7 @@ def _claim_section(claim, evidence: list) -> list[str]:
     section = [
         "",
         f"### {claim['claim']}",
-        f"- Verdict: {claim['verdict']}",
+        f"- Verdict: {claim['verdict']}{_confidence_suffix(claim)}",
         f"- Transcript excerpt: {claim['transcript_excerpt'] or 'No excerpt stored.'}",
         f"- Rationale: {claim['rationale'] or 'No rationale stored.'}",
         "",
@@ -276,16 +276,35 @@ def _claim_section(claim, evidence: list) -> list[str]:
     return section
 
 
+def _confidence_suffix(claim) -> str:
+    try:
+        confidence = claim["confidence"]
+    except (IndexError, KeyError):
+        return ""
+    if confidence is None:
+        return ""
+    return f" (mean grading confidence {float(confidence):.2f})"
+
+
 def _evidence_bullets(items: list) -> str:
     if not items:
         return "- None recorded."
-    return "\n".join(
-        (
-            f"- \"{item['snippet']}\" "
-            f"([{item['source_title']}]({item['source_url']}), {item['source_adapter']})"
-        )
-        for item in items
-    )
+    bullets = []
+    for item in items:
+        source = f"[{item['source_title']}]({item['source_url']}), {item['source_adapter']}"
+        bullets.append(f"- {source}")
+        rationale = _row_value(item, "rationale")
+        if rationale:
+            bullets.append(f"  - Why: {rationale}")
+        bullets.append(f"  - Cited text: \"{item['snippet']}\"")
+    return "\n".join(bullets)
+
+
+def _row_value(row, key: str) -> str:
+    try:
+        return str(row[key] or "").strip()
+    except (IndexError, KeyError):
+        return ""
 
 
 def _adapter_outcome_bullets(items: list[dict]) -> str:

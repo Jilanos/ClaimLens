@@ -35,6 +35,7 @@ from claimlens.auth import (
 )
 from claimlens.briefs import generate_brief, generate_verified_brief
 from claimlens.config import AppConfig, SourceConfig
+from claimlens.evidence import OpenAIEvidenceGrader
 from claimlens.kapsule_auth import authenticate as authenticate_kapsule_account
 from claimlens.pipeline import (
     add_manual_transcript,
@@ -1421,6 +1422,34 @@ def _mark_run_awaiting_input(
         )
 
 
+def _evidence_grader(
+    config: AppConfig,
+    database_path: Path | str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
+) -> OpenAIEvidenceGrader | None:
+    """Build the grader when a key is reachable, else verify sources without grading."""
+
+    try:
+        api_key = resolve_api_key(
+            database_path,
+            config,
+            provider="openai",
+            context=KeyContext(
+                user_id=user_id,
+                request_keys={"openai": form.get("openai_api_key", [""])[0]},
+            ),
+        )
+    except Exception:
+        LOGGER.info("Could not resolve an OpenAI key for evidence grading")
+        return None
+    if not api_key:
+        LOGGER.info("No OpenAI key available; source verification will not grade evidence")
+        return None
+    return OpenAIEvidenceGrader(api_key=api_key)
+
+
 def _openai_key_available(
     config: AppConfig,
     database_path: Path | str,
@@ -1635,6 +1664,7 @@ def _run_action(
             adapters=adapters,
             max_results=config.pipeline.source_verification_max_results,
             timeout_seconds=config.pipeline.source_verification_timeout_seconds,
+            grader=_evidence_grader(config, database_path, form, user_id=user_id),
         )
         path = generate_verified_brief(
             database_path,

@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Protocol
 from urllib.error import HTTPError, URLError
@@ -15,6 +16,11 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from claimlens import db
+from claimlens.evidence import (
+    EvidenceGrader,
+    EvidenceGradingError,
+    GradableCandidate,
+)
 
 VERDICTS = {"supported", "contradicted", "mixed", "unclear", "not_checked"}
 POLARITIES = {"supports", "contradicts", "context"}
@@ -25,6 +31,21 @@ HUMAN_REVIEW_DISCLAIMER = (
 DEFAULT_ADAPTERS = ("pubmed", "semantic_scholar")
 LOGGER = logging.getLogger(__name__)
 SOURCE_COOLDOWNS: dict[str, float] = {}
+
+#: Minimum seconds between requests to a provider. Semantic Scholar answers 429 to
+#: back-to-back calls even with an API key, so pacing is what makes it usable at all;
+#: NCBI allows a few requests per second.
+ADAPTER_MIN_INTERVAL_SECONDS = {"semantic_scholar": 1.3, "pubmed": 0.4}
+#: Attempts per adapter and claim, including the first. Above this the cooldown trips.
+#: Semantic Scholar enforces a rolling window, so retries need seconds, not milliseconds.
+SEARCH_RETRY_ATTEMPTS = 4
+SEARCH_RETRY_BASE_DELAY_SECONDS = 3
+SEARCH_RETRY_MAX_DELAY_SECONDS = 12
+SOURCE_LAST_REQUEST: dict[str, float] = {}
+_THROTTLE_LOCK = threading.Lock()
+#: Adapter outcomes that mean we failed to consult a provider, as opposed to
+#: consulting it and learning it has nothing on this claim.
+DEGRADED_OUTCOMES = frozenset({"rate_limited", "error", "failed"})
 
 
 class VerificationError(RuntimeError):
@@ -174,7 +195,10 @@ class SemanticScholarAdapter:
         params = {
             "query": build_claim_query(query.claim),
             "limit": str(query.max_results),
-            "fields": "title,url,abstract,venue,year,externalIds,authors",
+            "fields": (
+                "title,url,abstract,venue,year,externalIds,authors,"
+                "tldr,citationCount,publicationTypes,isOpenAccess"
+            ),
         }
         url = f"https://api.semanticscholar.org/graph/v1/paper/search?{urlencode(params)}"
         headers = {"x-api-key": self.api_key} if self.api_key else None
@@ -183,16 +207,33 @@ class SemanticScholarAdapter:
         for paper in body.get("data", [])[: query.max_results]:
             title = paper.get("title") or "Semantic Scholar paper"
             paper_url = paper.get("url") or _semantic_scholar_fallback_url(paper)
+            # Semantic Scholar withholds many abstracts; its tldr is a usable
+            # second-best so the grader sees findings rather than a bare title.
+            abstract = _clean_text(paper.get("abstract"))
+            tldr = _clean_text((paper.get("tldr") or {}).get("text"))
+            evidence_text = abstract or tldr or title
+            if abstract:
+                text_source = "abstract"
+            elif tldr:
+                text_source = "tldr"
+            else:
+                text_source = "title_fallback"
             candidates.append(
                 SourceCandidate(
                     title=title,
                     url=paper_url,
                     publisher=paper.get("venue") or "Semantic Scholar",
                     published_at=str(paper["year"]) if paper.get("year") else None,
-                    abstract_or_snippet=paper.get("abstract") or title,
+                    abstract_or_snippet=evidence_text,
                     adapter=self.name,
                     external_id=_external_id(paper),
-                    metadata={"externalIds": paper.get("externalIds", {})},
+                    metadata={
+                        "externalIds": paper.get("externalIds", {}),
+                        "evidence_text_source": text_source,
+                        "citation_count": paper.get("citationCount"),
+                        "publication_types": paper.get("publicationTypes") or [],
+                        "is_open_access": bool(paper.get("isOpenAccess")),
+                    },
                 )
             )
         return candidates
@@ -204,6 +245,7 @@ def assess_claim_evidence(
     candidates: list[SourceCandidate],
 ) -> ClaimAssessment:
     evidence: list[EvidenceSnippet] = []
+    confidences: list[float] = []
     for candidate in candidates:
         snippet = candidate.abstract_or_snippet or candidate.title
         polarity = _candidate_polarity(candidate)
@@ -214,29 +256,33 @@ def assess_claim_evidence(
                 source_url=candidate.url,
                 polarity=polarity,
                 snippet=_trim(snippet),
-                rationale=f"{candidate.adapter} candidate supplied explicit evidence polarity.",
+                rationale=_candidate_rationale(candidate),
             )
         )
+        graded = _candidate_confidence(candidate)
+        if graded is not None:
+            confidences.append(graded)
 
     supports = sum(1 for item in evidence if item.polarity == "supports")
     contradicts = sum(1 for item in evidence if item.polarity == "contradicts")
+    confidence = round(sum(confidences) / len(confidences), 3) if confidences else None
     if supports and contradicts:
         verdict = "mixed"
-        rationale = "Available snippets include both supporting and contradicting evidence."
-        confidence = None
+        rationale = (
+            f"Graded evidence is split: {supports} supporting and "
+            f"{contradicts} contradicting source(s)."
+        )
     elif supports:
         verdict = "supported"
-        rationale = "Available evidence was marked as supporting by the assessment boundary."
-        confidence = None
+        rationale = f"{supports} retrieved source(s) were graded as supporting the claim."
     elif contradicts:
         verdict = "contradicted"
-        rationale = "Available evidence was marked as contradicting by the assessment boundary."
-        confidence = None
+        rationale = f"{contradicts} retrieved source(s) were graded as contradicting the claim."
     elif candidates:
         verdict = "unclear"
         rationale = (
-            "Sources were found, but this conservative review-aid boundary did not classify "
-            "them as clearly supporting or contradicting the claim."
+            "Sources were found, but none of them directly supported or contradicted the "
+            "claim, so this conservative review aid leaves the verdict open."
         )
         confidence = None
     else:
@@ -252,6 +298,53 @@ def assess_claim_evidence(
     )
 
 
+def grade_candidates(
+    *,
+    claim: str,
+    candidates: list[SourceCandidate],
+    grader: EvidenceGrader,
+) -> list[SourceCandidate]:
+    """Return the candidates with the grader's verdict folded into their metadata.
+
+    `assess_claim_evidence` reads polarity from metadata, so grading stays a separate,
+    optional stage: without a grader every candidate remains context.
+    """
+
+    if not candidates:
+        return candidates
+    grades = grader.grade(
+        claim=claim,
+        candidates=[
+            GradableCandidate(
+                title=candidate.title,
+                evidence_text=candidate.abstract_or_snippet or candidate.title,
+                publisher=candidate.publisher,
+                published_at=candidate.published_at,
+                adapter=candidate.adapter,
+                evidence_text_source=str(
+                    candidate.metadata.get("evidence_text_source", "abstract")
+                ),
+            )
+            for candidate in candidates
+        ],
+    )
+    graded: list[SourceCandidate] = []
+    for candidate, grade in zip(candidates, grades, strict=False):
+        metadata = dict(candidate.metadata)
+        metadata.update(
+            {
+                "assessment_polarity": grade.polarity,
+                "assessment_rationale": grade.rationale,
+                "assessment_confidence": grade.confidence,
+                "assessment_model": getattr(grader, "model", "unknown"),
+            }
+        )
+        graded.append(replace(candidate, metadata=metadata))
+    # A short grade list must not silently drop candidates.
+    graded.extend(candidates[len(graded) :])
+    return graded
+
+
 def verify_sources(
     database_path: Path | str,
     *,
@@ -259,6 +352,7 @@ def verify_sources(
     adapters: list[SourceAdapter],
     max_results: int = 5,
     timeout_seconds: int = 20,
+    grader: EvidenceGrader | None = None,
 ) -> int:
     analysis = db.latest_analysis(database_path, video_id)
     if analysis is None:
@@ -289,6 +383,27 @@ def verify_sources(
                 {"claim_id": claim["id"], **outcome} for outcome in search_result.outcomes
             )
             candidates = search_result.candidates
+            grading_errors: list[str] = []
+            if grader is not None and candidates:
+                try:
+                    candidates = grade_candidates(
+                        claim=claim["claim"],
+                        candidates=candidates,
+                        grader=grader,
+                    )
+                except EvidenceGradingError as exc:
+                    # Retrieval already succeeded; degrade to ungraded rather than lose it.
+                    LOGGER.warning("Evidence grading failed for claim %s: %s", claim["id"], exc)
+                    grading_errors.append(f"evidence_grading: {exc}")
+                    adapter_results.append(
+                        {
+                            "claim_id": claim["id"],
+                            "adapter": "evidence_grading",
+                            "status": "failed",
+                            "candidate_count": 0,
+                            "message": str(exc),
+                        }
+                    )
             source_ids_by_url: dict[str, int] = {}
             for candidate in candidates:
                 source_id = db.upsert_source(
@@ -313,11 +428,9 @@ def verify_sources(
 
             assessment = assess_claim_evidence(claim=claim["claim"], candidates=candidates)
             rationale = assessment.rationale
-            if search_result.errors:
-                rationale = (
-                    f"{rationale} Adapter errors: "
-                    f"{'; '.join(search_result.errors)}"
-                )
+            reported_errors = search_result.errors + grading_errors
+            if reported_errors:
+                rationale = f"{rationale} Adapter errors: {'; '.join(reported_errors)}"
             db.update_claim_verdict(
                 database_path,
                 claim_id=claim["id"],
@@ -339,14 +452,14 @@ def verify_sources(
                     rationale=snippet.rationale,
                 )
         has_candidates = any(item["candidate_count"] > 0 for item in adapter_results)
-        has_warnings = any(item["status"] != "candidates" for item in adapter_results)
+        # A provider legitimately having nothing on a claim is an outcome, not an
+        # incident. Only a provider we failed to reach degrades the run.
+        degraded = [item for item in adapter_results if item["status"] in DEGRADED_OUTCOMES]
         verification_status = (
-            "succeeded" if has_candidates and not has_warnings else "completed_with_warnings"
+            "succeeded" if has_candidates and not degraded else "completed_with_warnings"
         )
         warning_messages = [
-            f"{item['adapter']}: {item['message']}"
-            for item in adapter_results
-            if item.get("message")
+            f"{item['adapter']}: {item['message']}" for item in degraded if item.get("message")
         ]
         db.finish_verification_run(
             database_path,
@@ -403,7 +516,7 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
             )
             continue
         try:
-            adapter_candidates = adapter.search(query)
+            adapter_candidates = _search_with_retry(adapter, query)
             candidates.extend(adapter_candidates)
             outcomes.append(
                 {
@@ -452,9 +565,74 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
     return AdapterSearchResult(candidates=candidates, errors=errors, outcomes=outcomes)
 
 
+def _search_with_retry(adapter: SourceAdapter, query: SourceQuery) -> list[SourceCandidate]:
+    """Pace requests to a provider and retry its 429s before giving up on the claim."""
+
+    attempts = max(1, SEARCH_RETRY_ATTEMPTS)
+    for attempt in range(1, attempts + 1):
+        _throttle(adapter.name)
+        try:
+            return adapter.search(query)
+        except SourceRateLimitError as exc:
+            if attempt == attempts:
+                raise
+            delay = min(
+                max(
+                    1,
+                    exc.retry_after_seconds
+                    or SEARCH_RETRY_BASE_DELAY_SECONDS * 2 ** (attempt - 1),
+                ),
+                SEARCH_RETRY_MAX_DELAY_SECONDS,
+            )
+            LOGGER.info(
+                "Retrying %s after rate limit (attempt %s/%s, waiting %ss)",
+                adapter.name,
+                attempt,
+                attempts,
+                delay,
+            )
+            time.sleep(delay)
+    raise SourceRateLimitError("Rate limit retries were exhausted.")
+
+
+def _throttle(adapter_name: str) -> None:
+    """Space out calls to one provider, across every thread that verifies concurrently."""
+
+    interval = ADAPTER_MIN_INTERVAL_SECONDS.get(adapter_name, 0.0)
+    if interval <= 0:
+        return
+    with _THROTTLE_LOCK:
+        wait = SOURCE_LAST_REQUEST.get(adapter_name, 0.0) + interval - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        SOURCE_LAST_REQUEST[adapter_name] = time.monotonic()
+
+
 def _candidate_polarity(candidate: SourceCandidate) -> str:
     polarity = str(candidate.metadata.get("assessment_polarity", "context"))
     return polarity if polarity in POLARITIES else "context"
+
+
+def _candidate_rationale(candidate: SourceCandidate) -> str:
+    rationale = str(candidate.metadata.get("assessment_rationale", "")).strip()
+    if rationale:
+        return rationale
+    return f"{candidate.adapter} candidate supplied explicit evidence polarity."
+
+
+def _candidate_confidence(candidate: SourceCandidate) -> float | None:
+    value = candidate.metadata.get("assessment_confidence")
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if number != number:  # NaN
+        return None
+    return max(0.0, min(1.0, number))
+
+
+def _clean_text(value: object) -> str:
+    return " ".join(str(value).split()) if value else ""
 
 
 def _read_json(url: str, *, timeout: int, headers: dict[str, str] | None = None) -> dict:

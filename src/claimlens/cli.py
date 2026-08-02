@@ -21,6 +21,7 @@ from claimlens.db import (
     upsert_transcript,
     upsert_video,
 )
+from claimlens.evidence import OpenAIEvidenceGrader
 from claimlens.pipeline import (
     PipelineError,
     clean_run_transcript,
@@ -158,6 +159,12 @@ def build_parser() -> argparse.ArgumentParser:
     verify_parser.add_argument("--briefs-dir", type=Path, help="Override brief output directory.")
     verify_parser.add_argument("--semantic-scholar-api-key", help="Semantic Scholar API key.")
     verify_parser.add_argument("--ncbi-api-key", help="NCBI/PubMed API key.")
+    verify_parser.add_argument("--openai-api-key", help="OpenAI API key used to grade evidence.")
+    verify_parser.add_argument(
+        "--no-grading",
+        action="store_true",
+        help="Retrieve sources without grading them as supporting or contradicting.",
+    )
     verify_parser.add_argument(
         "--max-results",
         type=int,
@@ -369,6 +376,16 @@ def _verify_sources(args: argparse.Namespace) -> int:
     if not adapters:
         print("No source-verification adapters are enabled in configuration.")
         return 1
+    grader = None
+    if not args.no_grading:
+        grading_key = args.openai_api_key or config.api_keys.openai
+        if grading_key:
+            grader = OpenAIEvidenceGrader(api_key=grading_key)
+        else:
+            print(
+                "No OpenAI key available: sources will be retrieved but not graded as "
+                "supporting or contradicting. Pass --openai-api-key to grade them."
+            )
     try:
         verification_run_id = verify_sources(
             database_path,
@@ -376,6 +393,7 @@ def _verify_sources(args: argparse.Namespace) -> int:
             adapters=adapters,
             max_results=args.max_results or config.pipeline.source_verification_max_results,
             timeout_seconds=config.pipeline.source_verification_timeout_seconds,
+            grader=grader,
         )
         briefs_dir = args.briefs_dir or config.paths.briefs
         path = generate_verified_brief(
