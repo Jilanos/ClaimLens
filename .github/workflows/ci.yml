@@ -50,8 +50,46 @@ jobs:
           set -euo pipefail
           docker run --detach --rm --name claimlens-ci -p 8765:8765 claimlens:ci
           trap 'docker logs claimlens-ci; docker stop claimlens-ci' EXIT
-          for attempt in {1..15}; do
-            curl --fail --silent http://127.0.0.1:8765/health && break
+          for attempt in $(seq 1 15); do
+            if curl --fail --silent http://127.0.0.1:8765/health; then
+              break
+            fi
+            if [ "$attempt" -eq 15 ]; then
+              echo "The container never answered /health." >&2
+              exit 1
+            fi
             sleep 1
           done
-          docker top claimlens-ci -eo user,args | grep -q '^10001 .*claimlens serve'
+          docker exec -i claimlens-ci python - <<'PY'
+          """Assert the server runs unprivileged, reading /proc inside the container.
+
+          `docker top` renders through the host's ps, whose column layout the runner does
+          not guarantee, so the same image passed or failed depending on the machine.
+          """
+
+          import os
+          import sys
+
+          APP_UID = 10001
+
+
+          def is_app_server(pid: str) -> bool:
+              try:
+                  with open(f"/proc/{pid}/cmdline", "rb") as handle:
+                      argv = handle.read().decode().split("\0")
+                  owner = os.stat(f"/proc/{pid}").st_uid
+              except OSError:
+                  # The process exited between listing and reading it.
+                  return False
+              return (
+                  owner == APP_UID
+                  and "serve" in argv
+                  and any("claimlens" in argument for argument in argv)
+              )
+
+
+          pids = [entry for entry in os.listdir("/proc") if entry.isdigit()]
+          if not any(is_app_server(pid) for pid in pids):
+              sys.exit(f"No 'claimlens serve' process is running as uid {APP_UID}.")
+          print(f"'claimlens serve' runs as uid {APP_UID}.")
+          PY
