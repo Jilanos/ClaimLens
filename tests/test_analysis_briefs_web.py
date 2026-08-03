@@ -894,7 +894,7 @@ def test_the_completed_workspace_gives_the_brief_the_full_width(tmp_path):
         ".workspace.complete .report-complete { width:100%; max-width:none; margin:0; }"
         in rendered
     )
-    assert ".workspace.complete .report-complete .brief { max-width:92ch; }" in rendered
+    assert ".workspace.complete .report-complete .brief { max-width:none; }" in rendered
     # The completed identity, status, and Results summary are recoverable, not gone.
     assert '<details class="workspace-details">' in rendered
     assert "<summary" in rendered

@@ -302,7 +302,7 @@ ul.out li:last-child { border-bottom:0; }
 .workspace.complete .card-body { padding:12px 16px; }
 .workspace.complete .report-complete { width:100%; max-width:none; margin:0; }
 .workspace.complete .report-complete .card-body { padding:34px 40px; }
-.workspace.complete .report-complete .brief { max-width:92ch; }
+.workspace.complete .report-complete .brief { max-width:none; }
 .workspace-complete-note { margin:0; color:var(--muted); font-size:13px; }
 .workspace-details { background:var(--surface); border:1px solid var(--line);
   border-radius:var(--radius); box-shadow:var(--shadow); }
