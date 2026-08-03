@@ -617,6 +617,9 @@ def test_render_options_page_masks_saved_keys(tmp_path):
         ),
     )
 
+    assert "<h1>API keys</h1>" in rendered
+    assert ">API keys</a>" in rendered
+
     assert "sk-u...cret" in rendered
     assert "encrypted-value" not in rendered
 

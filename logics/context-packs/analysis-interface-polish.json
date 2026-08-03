@@ -1,0 +1,314 @@
+{
+  "budgets": {
+    "max_docs": 16,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [
+    "logics/backlog/item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density.md",
+    "logics/backlog/item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile.md",
+    "logics/product/prod_021_claimlens_analysis_interface_polish.md",
+    "logics/request/req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view.md",
+    "logics/scaffold/analysis-interface-polish.json",
+    "logics/tasks/task_021_deliver_the_claimlens_analysis_interface_polish.md"
+  ],
+  "command": "logics-manager sync context-pack req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile task_021_deliver_the_claimlens_analysis_interface_polish --mode diff-first --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+          "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ],
+        "task": [
+          "task_021_deliver_the_claimlens_analysis_interface_polish"
+        ]
+      },
+      "path": "logics/product/prod_021_claimlens_analysis_interface_polish.md",
+      "ref": "prod_021_claimlens_analysis_interface_polish",
+      "sections": {
+        "Goals": [
+          "- Improve page labels and explanatory copy.",
+          "- Prioritize the completed brief over execution mechanics.",
+          "- Improve history scanability with the video title.",
+          "- Increase the visual presence of the existing brand mark."
+        ],
+        "Key product decisions": [
+          "- Use structured input as the source of truth for generated docs.",
+          "- Keep generated write paths local and repo-bounded."
+        ],
+        "Overview": [
+          "Make the analysis workspace clearer during review, while preserving evidence and transcript access."
+        ],
+        "References": [
+          "- Product back-reference: `req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view`",
+          "- Task back-reference: `task_021_deliver_the_claimlens_analysis_interface_polish`"
+        ]
+      },
+      "status": "Proposed",
+      "title": "ClaimLens analysis interface polish"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, polish the claimlens analysis interface and completed-run reading view, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Polish the ClaimLens analysis interface and completed-run reading view",
+        "use when": "You need to implement or review the scaffolded workflow for Polish the ClaimLens analysis interface and completed-run reading view."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+          "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ]
+      },
+      "path": "logics/request/req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view.md",
+      "ref": "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The Analyses description is a single unconstrained desktop line and accurately describes the workflow in English.",
+          "- Options is labelled API keys in navigation, page heading, and document title.",
+          "- Recent analyses shows a video title after the video identifier.",
+          "- The redundant history and launcher copy, and the Close analysis button, are absent.",
+          "- When a saved brief is available, the active area hides operational diagnostics and presents a compact completion summary beside the brief.",
+          "- The 54px brand tile keeps its dimensions while its SVG artwork grows to 40px."
+        ],
+        "Needs": [
+          "- Replace the analyses description with concise, fluent English.",
+          "- Rename the Options destination and page to API keys.",
+          "- Show each video's title in Recent analyses.",
+          "- Remove redundant copy and the Close analysis control.",
+          "- Use a compact completed-analysis view once the brief is available.",
+          "- Enlarge the mark artwork inside its existing square tile."
+        ]
+      },
+      "status": "Draft",
+      "title": "Polish the ClaimLens analysis interface and completed-run reading view"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, refine analysis labels, history metadata, and completed workspace density, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Refine analysis labels, history metadata, and completed workspace density",
+        "use when": "Implementing the scaffolded slice for Refine analysis labels, history metadata, and completed workspace density."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ],
+        "task": [
+          "task_021_deliver_the_claimlens_analysis_interface_polish"
+        ]
+      },
+      "path": "logics/backlog/item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density.md",
+      "ref": "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- All requested labels and copy are updated.",
+          "- History rows display title metadata.",
+          "- A persisted brief selects the compact completed view without diagnostic controls."
+        ],
+        "Problem": [
+          "- The interface uses vague labels, repeats low-value copy, and leaves a full operational workspace open after a brief is ready."
+        ]
+      },
+      "status": "Ready",
+      "title": "Refine analysis labels, history metadata, and completed workspace density"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, increase the artwork size inside the claimlens brand tile, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Increase the artwork size inside the ClaimLens brand tile",
+        "use when": "Implementing the scaffolded slice for Increase the artwork size inside the ClaimLens brand tile."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ],
+        "task": [
+          "task_021_deliver_the_claimlens_analysis_interface_polish"
+        ]
+      },
+      "path": "logics/backlog/item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile.md",
+      "ref": "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The tile remains 54px by 54px and the SVG is 40px by 40px."
+        ],
+        "Problem": [
+          "- The lens, play symbol, and check appear undersized within the existing square mark."
+        ]
+      },
+      "status": "Ready",
+      "title": "Increase the artwork size inside the ClaimLens brand tile"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+          "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ],
+        "task": [
+          "task_021_deliver_the_claimlens_analysis_interface_polish"
+        ]
+      },
+      "path": "logics/product/prod_021_claimlens_analysis_interface_polish.md",
+      "ref": "prod_021_claimlens_analysis_interface_polish",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "ClaimLens analysis interface polish"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Deliver the ClaimLens analysis interface polish",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+          "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile"
+        ],
+        "prod": [
+          "prod_021_claimlens_analysis_interface_polish"
+        ],
+        "req": [
+          "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view"
+        ],
+        "task": [
+          "task_021_deliver_the_claimlens_analysis_interface_polish"
+        ]
+      },
+      "path": "logics/tasks/task_021_deliver_the_claimlens_analysis_interface_polish.md",
+      "ref": "task_021_deliver_the_claimlens_analysis_interface_polish",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- (no validation recorded yet)"
+        ]
+      },
+      "status": "Ready",
+      "title": "Deliver the ClaimLens analysis interface polish"
+    }
+  ],
+  "estimates": {
+    "char_count": 7941,
+    "companion_doc_count": 1,
+    "doc_count": 5
+  },
+  "generated_at": "2026-08-03T11:09:17Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view",
+      "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+      "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile",
+      "task_021_deliver_the_claimlens_analysis_interface_polish"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "diff-first",
+  "profile": "normal",
+  "ref": "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view,item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density,item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile,task_021_deliver_the_claimlens_analysis_interface_polish",
+  "refs": [
+    "req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view",
+    "item_091_refine_analysis_labels_history_metadata_and_completed_workspace_density",
+    "item_092_increase_the_artwork_size_inside_the_claimlens_brand_tile",
+    "task_021_deliver_the_claimlens_analysis_interface_polish"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_021_deliver_the_claimlens_analysis_interface_polish.md",
+      "ref": "task_021_deliver_the_claimlens_analysis_interface_polish"
+    }
+  ]
+}

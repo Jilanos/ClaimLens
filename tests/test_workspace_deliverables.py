@@ -291,12 +291,31 @@ def test_the_client_itself_polls_paints_announces_and_recovers(tmp_path):
 # --- item_088: a simpler bar and launcher --------------------------------------------
 
 
-def test_the_brand_mark_is_eighty_percent_larger():
-    # 30px was the first size; 1.8x of it is 54px, and the svg grew with the tile.
+def test_the_brand_mark_keeps_its_tile_and_enlarges_its_contents():
+    # The square remains 54px while the lens and its symbols grow inside it.
     assert ".brand .mark { width:54px; height:54px;" in STYLES
-    assert ".brand .mark svg { width:31px; height:31px; }" in STYLES
+    assert ".brand .mark svg { width:40px; height:40px; }" in STYLES
     # The bar wraps rather than scrolls sideways at phone width.
     assert "nav.app { flex-wrap:wrap;" in STYLES
+
+
+def test_analysis_copy_and_navigation_use_the_requested_labels(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    rendered = render_process_page(database)
+
+    assert "ClaimLens turns a video link" in rendered
+    assert "Track transcript extraction" not in rendered
+    assert "Runs through to the brief on its own" not in rendered
+
+
+def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, VIDEO_URL, guest_token="guest")
+
+    rendered = render_history_page(database, guest_token="guest")
+
+    assert f'href="/?run_id={run_id}"' in rendered
+    assert f"{VIDEO_ID}</a><small>{VIDEO_ID} · Analysis #{run_id}" in rendered
 
 
 def test_the_launcher_no_longer_asks_for_a_report_language(tmp_path):
@@ -505,19 +524,23 @@ def test_brief_download_serves_html_or_markdown_on_request(tmp_path):
 # --- item_090: close and reopen -------------------------------------------------------
 
 
-def test_a_finished_analysis_offers_to_close_itself(tmp_path):
+def test_a_finished_analysis_is_compact_and_has_no_close_control(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
-    run_id = finished_run(database)
+    briefs = tmp_path / "briefs"
+    run_id = finished_run(database, briefs_path=briefs)
 
     rendered = render_process_page(
         database,
         run_id=run_id,
         guest_token="guest",
         csrf_token="csrf",
+        briefs_path=briefs,
     )
 
-    assert 'value="close_analysis"' in rendered
-    assert "Close analysis" in rendered
+    assert 'value="close_analysis"' not in rendered
+    assert "Close analysis" not in rendered
+    assert '<section class="workspace complete"' in rendered
+    assert "Execution details" not in rendered
 
 
 def test_an_unfinished_analysis_cannot_be_closed(tmp_path):
@@ -612,7 +635,7 @@ def test_reopening_brings_the_result_back_to_the_workspace(tmp_path):
         briefs_path=briefs,
     )
 
-    assert "Active analysis" in rendered
+    assert "Analysis complete" in rendered
     assert "Analysis closed" not in rendered
     assert "A video title" in rendered or "Concise summary" in rendered
 

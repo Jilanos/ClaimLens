@@ -1,0 +1,106 @@
+{
+  "title": "Polish the ClaimLens analysis interface and completed-run reading view",
+  "references": [
+    "src/claimlens/web.py",
+    "tests/test_workspace_deliverables.py"
+  ],
+  "request": {
+    "complexity": "Low",
+    "theme": "Interface refinement",
+    "needs": [
+      "Replace the analyses description with concise, fluent English.",
+      "Rename the Options destination and page to API keys.",
+      "Show each video's title in Recent analyses.",
+      "Remove redundant copy and the Close analysis control.",
+      "Use a compact completed-analysis view once the brief is available.",
+      "Enlarge the mark artwork inside its existing square tile."
+    ],
+    "context": [
+      "Video metadata is already stored in the videos table.",
+      "Completed runs remain readable through the brief and result links.",
+      "The live-status client must not restore a removed control."
+    ],
+    "acceptance_criteria": [
+      "The Analyses description is a single unconstrained desktop line and accurately describes the workflow in English.",
+      "Options is labelled API keys in navigation, page heading, and document title.",
+      "Recent analyses shows a video title after the video identifier.",
+      "The redundant history and launcher copy, and the Close analysis button, are absent.",
+      "When a saved brief is available, the active area hides operational diagnostics and presents a compact completion summary beside the brief.",
+      "The 54px brand tile keeps its dimensions while its SVG artwork grows to 40px."
+    ]
+  },
+  "product": {
+    "title": "ClaimLens analysis interface polish",
+    "overview": "Make the analysis workspace clearer during review, while preserving evidence and transcript access.",
+    "goals": [
+      "Improve page labels and explanatory copy.",
+      "Prioritize the completed brief over execution mechanics.",
+      "Improve history scanability with the video title.",
+      "Increase the visual presence of the existing brand mark."
+    ],
+    "non_goals": [
+      "Change the analysis pipeline or scientific-review logic.",
+      "Delete or migrate existing analysis records.",
+      "Change the dimensions or colours of the brand tile."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Refine analysis labels, history metadata, and completed workspace density",
+      "priority": "High — directly improves the primary analysis and review workflow.",
+      "complexity": "Low",
+      "theme": "Interface refinement",
+      "request_acs": ["AC1", "AC2", "AC3", "AC4", "AC5"],
+      "problem": [
+        "The interface uses vague labels, repeats low-value copy, and leaves a full operational workspace open after a brief is ready."
+      ],
+      "scope_in": [
+        "Analyses, Recent analyses, API keys, and completed-workspace rendering.",
+        "Tests for the visible text and compact completed state."
+      ],
+      "scope_out": [
+        "Pipeline execution and data model changes beyond selecting already stored video titles."
+      ],
+      "acceptance_criteria": [
+        "All requested labels and copy are updated.",
+        "History rows display title metadata.",
+        "A persisted brief selects the compact completed view without diagnostic controls."
+      ]
+    },
+    {
+      "title": "Increase the artwork size inside the ClaimLens brand tile",
+      "priority": "Medium — a contained visual adjustment with no functional dependency.",
+      "complexity": "Low",
+      "theme": "Brand refinement",
+      "request_acs": ["AC6"],
+      "problem": [
+        "The lens, play symbol, and check appear undersized within the existing square mark."
+      ],
+      "scope_in": [
+        "Increase the SVG dimensions in the existing header brand tile.",
+        "Protect the tile dimensions with a regression test."
+      ],
+      "scope_out": [
+        "Redrawing the logo or changing its tile dimensions."
+      ],
+      "acceptance_criteria": [
+        "The tile remains 54px by 54px and the SVG is 40px by 40px."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Deliver the ClaimLens analysis interface polish",
+    "plan": [
+      "Inspect the existing page, history, navigation, and brand-mark renderers.",
+      "Implement the requested copy, title metadata, API keys naming, and compact completed view.",
+      "Remove the close-control live region so polling cannot restore the retired button.",
+      "Enlarge the mark artwork without changing the tile.",
+      "Run targeted UI tests, the full test suite, lint, and Logics validation."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/analysis-interface-polish.json",
+    "mode": "diff-first",
+    "profile": "normal"
+  }
+}

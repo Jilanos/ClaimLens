@@ -96,7 +96,6 @@ LIVE_REGIONS = {
     "pipeline-action": "action_html",
     "pipeline-controls": "controls_html",
     "pipeline-recovery": "recovery_html",
-    "pipeline-close": "close_html",
     "pipeline-outputs": "outputs_html",
     "pipeline-brief": "brief_html",
 }
@@ -184,7 +183,7 @@ nav.app { display:flex; align-items:center; justify-content:space-between; gap:1
    with it and wraps on a phone, so nothing else in the top bar had to give way. */
 .brand .mark { width:54px; height:54px; border-radius:16px; display:grid; place-items:center;
   background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; flex:none; }
-.brand .mark svg { width:31px; height:31px; }
+.brand .mark svg { width:40px; height:40px; }
 .navlinks { display:flex; align-items:center; gap:6px; }
 .navlinks a { color:var(--ink-2); text-decoration:none; font-weight:500; font-size:14px;
   padding:7px 12px; border-radius:8px; }
@@ -199,7 +198,7 @@ nav.app { display:flex; align-items:center; justify-content:space-between; gap:1
 main { max-width:1320px; margin:0 auto; padding:34px 24px 80px; }
 .page-head { margin-bottom:24px; }
 .page-head h1 { font-size:26px; }
-.page-head p { color:var(--muted); margin:6px 0 0; max-width:62ch; }
+.page-head p { color:var(--muted); margin:6px 0 0; }
 .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
   box-shadow:var(--shadow); }
 .card + .card { margin-top:20px; }
@@ -297,6 +296,10 @@ ul.out li:last-child { border-bottom:0; }
 .workspace-main { min-width:0; }
 .workspace-brief { min-width:0; }
 .workspace-brief:empty { display:none; }
+.workspace.complete { gap:16px; }
+.workspace.complete .card-head { padding:12px 16px; }
+.workspace.complete .card-body { padding:12px 16px; }
+.workspace-complete-note { margin:0; color:var(--muted); font-size:13px; }
 .version { font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--accent-2);
   background:var(--accent-wash); border-radius:999px; padding:2px 8px; margin-left:2px; }
 .brief { max-width:70ch; }
@@ -1354,7 +1357,8 @@ def render_process_page(
 <main>
   <div class="page-head">
     <h1>Analyses</h1>
-    <p>Track transcript extraction, claim analysis, and evidence review in one workspace.</p>
+    <p>ClaimLens turns a video link into an analysed transcript, extracted claims, and evidence
+      reviews grounded in scientific publications—built mainly for science and health topics.</p>
   </div>
   {notice_html}
   {sections}
@@ -1393,7 +1397,6 @@ def render_history_page(
 <main>
   <div class="page-head">
     <h1>Recent analyses</h1>
-    <p>Every analysis you have started, newest first.</p>
   </div>
   {_history_card(runs, None, status_filter, csrf_token=csrf_token)}
 </main>
@@ -1451,7 +1454,6 @@ def _create_card(
     return f"""
   <div class="card">
     <div class="card-head"><h2>New analysis</h2>
-      <span class="sub">Runs through to the brief on its own</span></div>
     <div class="card-body">{form}</div>
   </div>
 """
@@ -1483,6 +1485,11 @@ def _active_workspace(
     recovery = _manual_transcript_form(selected_run["id"], csrf_token) if failed_captions else ""
     video_id = html.escape(selected_run["video_id"] or "")
     video_url = html.escape(selected_run["source_url"] or selected_run["video_id"] or "")
+    video = db.get_video(database_path, selected_run["video_id"])
+    video_title_value = (video["title"] if video is not None else None) or (
+        selected_run["video_id"] or "Untitled video"
+    )
+    video_title = html.escape(video_title_value)
     step_rows_html = "\n".join(_step_row(row) for row in step_rows)
     # The business timeline is never behind a disclosure: it is the answer to "where is
     # my analysis". Only the row-level diagnostics fold away.
@@ -1509,6 +1516,30 @@ def _active_workspace(
         user_id=user_id,
         guest_token=guest_token,
     )
+    # Once the brief exists, the work is complete: retain the run identity and its
+    # results, but remove the long operational timeline from the reading view.
+    if brief_html:
+        return f"""
+  <section class="workspace complete" aria-label="Completed analysis workspace">
+    <div class="workspace-main">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="workspace-title"><h2>Analysis complete</h2>
+              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}</p>
+          </div>
+        </div>
+        <div class="card-body"><p class="workspace-complete-note">The brief and available
+          evidence are ready to review.</p></div>
+      </div>
+      <div id="pipeline-outputs">{
+        _outputs(database_path, selected_run["video_id"], run_id=selected_run["id"])
+    }</div>
+    </div>
+    <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
+  </section>
+"""
     return f"""
   <section class="workspace" aria-label="Active analysis workspace">
     <div class="workspace-main">
@@ -1519,11 +1550,9 @@ def _active_workspace(
               <span id="pipeline-status">{_status_badge(selected_run["status"])}</span>
               <p id="{LIVE_CONNECTION_REGION}" class="connection" role="status"
                 aria-live="polite" hidden></p></div>
-            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_url}</p>
+            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}
+              · {video_url}</p>
           </div>
-          <div class="card-actions" id="pipeline-close">{
-        _close_html(database_path, selected_run, csrf_token)
-    }</div>
         </div>
         <div class="card-body">
           <div class="workspace-action">
@@ -1714,10 +1743,12 @@ def _history_card(
                 label="Reopen",
                 css="btn btn-ghost btn-sm",
             )
+        title = html.escape(row["video_title"] or row["video_id"] or "Untitled video")
         return (
             f'<div class="history-row"{current}><div><a href="/?run_id={row["id"]}">'
             f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
-            f"<small>Analysis #{row['id']} · {html.escape(row['started_at'] or '')}</small></div>"
+            f"<small>{title} · Analysis #{row['id']} · "
+            f"{html.escape(row['started_at'] or '')}</small></div>"
             f'<div class="history-actions">{actions}</div></div>'
         )
 
@@ -2395,7 +2426,6 @@ def run_status_payload(
             source_config=source_config,
         ),
         "recovery_html": _manual_transcript_form(run_id, csrf_token) if failed_captions else "",
-        "close_html": _close_html(database_path, run, csrf_token),
         "outputs_html": _outputs(database_path, run["video_id"], run_id=run_id),
         # Null rather than empty: a poll that cannot see briefs must not blank the one
         # the page already rendered.
@@ -2534,7 +2564,7 @@ def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = No
     links += f'<a href="/history"{history_cls}>Recent analyses</a>'
     if logged_in:
         options_cls = ' class="active"' if active == "options" else ""
-        links += f'<a href="/options"{options_cls}>Options</a>'
+        links += f'<a href="/options"{options_cls}>API keys</a>'
         initial = html.escape((context.email or "?")[:1].upper())
         user = (
             f'<span class="who">{html.escape(context.email or "")}</span>'
@@ -2609,7 +2639,7 @@ def render_options_page(
 ) -> str:
     if context.user_id is None:
         return _page_shell(
-            "ClaimLens Options",
+            "ClaimLens API Keys",
             '<main><div class="notice">Login is required.</div></main>',
             context=context,
             csrf_token=context.csrf_token,
@@ -2674,7 +2704,7 @@ def render_options_page(
     body = f"""
 <main>
   <div class="page-head">
-    <h1>Options</h1>
+    <h1>API keys</h1>
     <p>Your API keys are encrypted at rest and only power your own analyses.</p>
   </div>
   {secret_notice}
@@ -2683,7 +2713,7 @@ def render_options_page(
 </main>
 """
     return _page_shell(
-        "ClaimLens Options",
+        "ClaimLens API Keys",
         body,
         context=context,
         csrf_token=context.csrf_token,

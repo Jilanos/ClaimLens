@@ -745,7 +745,13 @@ def latest_pipeline_run_for_video(database_path: Path | str, video_id: str) -> s
 def list_pipeline_runs(database_path: Path | str) -> list[sqlite3.Row]:
     with closing(connect(database_path)) as connection:
         return connection.execute(
-            "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT 100",
+            """
+            SELECT pipeline_runs.*, videos.title AS video_title
+            FROM pipeline_runs
+            LEFT JOIN videos ON videos.id = pipeline_runs.video_id
+            ORDER BY pipeline_runs.id DESC
+            LIMIT 100
+            """,
         ).fetchall()
 
 
@@ -759,9 +765,11 @@ def list_visible_pipeline_runs(
         if user_id is not None:
             return connection.execute(
                 """
-                SELECT * FROM pipeline_runs
-                WHERE user_id = ?
-                ORDER BY id DESC
+                SELECT pipeline_runs.*, videos.title AS video_title
+                FROM pipeline_runs
+                LEFT JOIN videos ON videos.id = pipeline_runs.video_id
+                WHERE pipeline_runs.user_id = ?
+                ORDER BY pipeline_runs.id DESC
                 LIMIT 100
                 """,
                 (user_id,),
@@ -769,9 +777,11 @@ def list_visible_pipeline_runs(
         if guest_token:
             return connection.execute(
                 """
-                SELECT * FROM pipeline_runs
-                WHERE user_id IS NULL AND guest_token = ?
-                ORDER BY id DESC
+                SELECT pipeline_runs.*, videos.title AS video_title
+                FROM pipeline_runs
+                LEFT JOIN videos ON videos.id = pipeline_runs.video_id
+                WHERE pipeline_runs.user_id IS NULL AND pipeline_runs.guest_token = ?
+                ORDER BY pipeline_runs.id DESC
                 LIMIT 100
                 """,
                 (guest_token,),
