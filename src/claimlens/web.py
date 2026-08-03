@@ -26,6 +26,7 @@ from claimlens.api_keys import (
     save_user_api_key,
     validate_provider_api_key,
 )
+from claimlens.assets import LIVE_STATUS_JS
 from claimlens.auth import (
     guest_csrf_token,
     hash_password,
@@ -86,6 +87,29 @@ BRIEF_SUBHEAD_MAX_CHARS = 60
 MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 #: Run statuses that may still be overtaken by the work they describe.
 UNSETTLED_RUN_STATUSES = frozenset({"created", "running", "pending"})
+#: Regions a poll may repaint, mapped to the payload key that carries their HTML. The page
+#: hands this map to the browser client, so the server alone decides what is live.
+LIVE_REGIONS = {
+    "pipeline-status": "pipeline_status_html",
+    "pipeline-stepper": "stepper_html",
+    "pipeline-steps": "steps_html",
+    "pipeline-action": "action_html",
+    "pipeline-controls": "controls_html",
+    "pipeline-recovery": "recovery_html",
+    "pipeline-close": "close_html",
+    "pipeline-outputs": "outputs_html",
+    "pipeline-brief": "brief_html",
+}
+LIVE_CONNECTION_REGION = "pipeline-connection"
+LIVE_OFFLINE_MESSAGE = "Live updates are unavailable. Retrying automatically."
+LIVE_ACTIVE_DELAY_MS = 2000
+LIVE_IDLE_DELAY_MS = 15000
+LIVE_ERROR_DELAY_MS = 5000
+#: One failed poll is noise; a second in a row is worth telling the reader about.
+LIVE_ERRORS_BEFORE_NOTICE = 2
+LIVE_STATUS_ASSET = "/static/live-status.js"
+#: Job states that still have work in flight.
+LIVE_JOB_STATUSES = frozenset({"queued", "running"})
 STATUS_LABELS = {
     "queued": "Queued",
     "running": "In progress",
@@ -152,13 +176,15 @@ body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--s
 h1,h2,h3 { margin:0; text-wrap:balance; letter-spacing:-.01em; }
 a { color:var(--accent-2); }
 nav.app { display:flex; align-items:center; justify-content:space-between; gap:16px;
-  padding:0 24px; height:60px; background:var(--surface); border-bottom:1px solid var(--line);
+  padding:0 24px; height:72px; background:var(--surface); border-bottom:1px solid var(--line);
   position:sticky; top:0; z-index:20; }
 .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px;
   letter-spacing:-.02em; color:var(--ink); text-decoration:none; }
-.brand .mark { width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+/* The mark carries the brand, so it is 1.8x its first size (30px -> 54px). The bar grew
+   with it and wraps on a phone, so nothing else in the top bar had to give way. */
+.brand .mark { width:54px; height:54px; border-radius:16px; display:grid; place-items:center;
   background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; flex:none; }
-.brand .mark svg { width:17px; height:17px; }
+.brand .mark svg { width:31px; height:31px; }
 .navlinks { display:flex; align-items:center; gap:6px; }
 .navlinks a { color:var(--ink-2); text-decoration:none; font-weight:500; font-size:14px;
   padding:7px 12px; border-radius:8px; }
@@ -247,7 +273,7 @@ tr:last-child td { border-bottom:0; }
 ul.out { list-style:none; padding:0; margin:0; }
 ul.out li { padding:11px 4px; border-bottom:1px solid var(--line-2); font-size:14px; }
 ul.out li:last-child { border-bottom:0; }
-.auth-wrap { min-height:calc(100vh - 60px); display:grid; place-items:center; padding:40px 20px; }
+.auth-wrap { min-height:calc(100vh - 72px); display:grid; place-items:center; padding:40px 20px; }
 .auth-card { width:100%; max-width:420px; }
 .auth-card .card-body { padding:28px; display:grid; gap:16px; }
 .auth-logo { display:grid; place-items:center; gap:12px; text-align:center; margin-bottom:4px; }
@@ -316,6 +342,14 @@ ul.out li:last-child { border-bottom:0; }
   border-radius:var(--radius-sm); padding:12px; }
 .summary-item strong { display:block; font-size:19px; line-height:1.2; }
 .summary-item span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+/* Says out loud that the view stopped updating itself, instead of looking merely quiet. */
+.connection { margin:0; font-size:12.5px; font-weight:600; color:var(--warn);
+  background:var(--warn-wash); border-radius:999px; padding:3px 10px; }
+.connection[hidden] { display:none; }
+.transcript { white-space:pre-wrap; overflow-wrap:anywhere; font-family:var(--mono);
+  font-size:13px; line-height:1.65; color:var(--ink-2); margin:0; }
+.card-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.history-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .history-list { display:grid; gap:8px; }
 .history-row { display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:12px 4px;
@@ -373,6 +407,23 @@ ul.out li:last-child { border-bottom:0; }
   .navuser .who { display:none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+"""
+
+#: Appended to `STYLES` for the exported brief: no app chrome, and it prints as a document.
+STANDALONE_BRIEF_STYLES = """
+body { background:var(--surface); }
+main { padding:32px 20px 56px; }
+.report { box-shadow:none; border:0; }
+.report .card-body { padding:0; }
+.brief { max-width:none; }
+@media print {
+  :root { color-scheme:light; }
+  body { background:#fff; }
+  main { padding:0; max-width:none; }
+  a { color:inherit; text-decoration:underline; }
+  .brief .brief-title, .brief .brief-section, .brief .brief-claim { break-after:avoid; }
+  .brief ul.brief-list, .claim-signals { break-inside:avoid; }
+}
 """
 
 
@@ -479,6 +530,10 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
             if parsed.path == "/health":
                 self._send_text("ok\n")
                 return
+            if parsed.path == LIVE_STATUS_ASSET:
+                # Same-origin asset: the production CSP keeps script-src 'self'.
+                self._send_asset(LIVE_STATUS_JS, content_type="text/javascript; charset=utf-8")
+                return
             if parsed.path == "/health/jobs":
                 self._send_json(db.job_metrics(database_path))
                 return
@@ -525,6 +580,31 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     run_id=run_id,
                     user_id=context.user_id,
                     guest_token=context.guest_token,
+                    as_html=query.get("format", [""])[0] == "html",
+                )
+                return
+            if parsed.path == "/transcript":
+                status, run, transcript = resolve_transcript(
+                    database_path,
+                    run_id,
+                    user_id=context.user_id,
+                    guest_token=context.guest_token,
+                )
+                self._send_html(
+                    render_transcript_page(
+                        database_path,
+                        run=run,
+                        transcript=transcript,
+                        context=context,
+                    ),
+                    status=status,
+                )
+                return
+            if parsed.path == "/transcript/download":
+                self._send_transcript_download(
+                    database_path,
+                    run_id=run_id,
+                    context=context,
                 )
                 return
             body = render_process_page(
@@ -608,14 +688,14 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 }:
                     self._handle_options_action(form, context)
                     return
-                if action == "create":
+                if action in {"close_analysis", "reopen_analysis"}:
+                    run_id = self._handle_visibility_action(action, form, context)
+                elif action == "create":
                     run_id = create_run(
                         database_path,
                         form.get("video_url", [""])[0],
-                        report_language=form.get(
-                            "report_language",
-                            [config.pipeline.report_language],
-                        )[0],
+                        # The report language is a deployment setting, not a per-run choice.
+                        report_language=config.pipeline.report_language,
                         fetch_metadata=True,
                         user_id=context.user_id,
                         guest_token=None if context.user_id is not None else context.guest_token,
@@ -672,9 +752,39 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 return
 
             self.send_response(303)
-            self.send_header("Location", f"/?run_id={run_id}")
+            # Closing an analysis clears the desk, so it lands on an empty workspace.
+            self.send_header("Location", f"/?run_id={run_id}" if run_id is not None else "/")
             self._set_pending_guest_cookie(config)
             self.end_headers()
+
+        def _handle_visibility_action(
+            self,
+            action: str,
+            form: dict[str, list[str]],
+            context: WebContext,
+        ) -> int | None:
+            """Close or reopen one owned run, and say where the browser should land."""
+
+            run_id = int(form.get("run_id", [""])[0])
+            run = db.get_visible_pipeline_run(
+                database_path,
+                run_id,
+                user_id=context.user_id,
+                guest_token=context.guest_token,
+            )
+            if run is None:
+                raise ValueError("Run not found.")
+            if action == "reopen_analysis":
+                db.reopen_pipeline_run(database_path, run_id)
+                return run_id
+            # Settle first: only the database can say the chain has really stopped.
+            run = reconcile_run_state(database_path, run_id, source_config=config.sources) or run
+            if not _run_is_closable(database_path, run):
+                raise ValueError(
+                    "This analysis is still working. Wait until it finishes before closing it."
+                )
+            db.close_pipeline_run(database_path, run_id)
+            return None
 
         def log_message(self, format: str, *args: object) -> None:
             LOGGER.info("web access %s - %s", self.address_string(), format % args)
@@ -730,6 +840,18 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 return
             self._send_json(payload)
 
+        def _send_asset(self, body: str, *, content_type: str) -> None:
+            """Serve a shipped asset. No cookie: an asset must not mint an identity."""
+
+            encoded = body.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(encoded)))
+            # The URL carries the release version, so a cached copy cannot outlive a deploy.
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.end_headers()
+            self.wfile.write(encoded)
+
         def _send_json(self, payload: dict, *, status: int = 200) -> None:
             encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
             self.send_response(status)
@@ -747,6 +869,7 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
             run_id: int | None,
             user_id: int | None,
             guest_token: str | None,
+            as_html: bool = False,
         ) -> None:
             path = _brief_path_for_run(
                 database_path,
@@ -761,12 +884,58 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                     status=404,
                 )
                 return
-            data = path.read_bytes()
+            if as_html:
+                # A self-contained document: readable and printable with only a browser.
+                data = render_standalone_brief(
+                    path.read_text(encoding="utf-8"),
+                    title=f"ClaimLens brief · {path.stem}",
+                ).encode("utf-8")
+                content_type = "text/html; charset=utf-8"
+                filename = f"{path.stem}.html"
+            else:
+                data = path.read_bytes()
+                content_type = "text/markdown; charset=utf-8"
+                filename = path.name
             self.send_response(200)
-            self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            self.send_header("Content-Type", content_type)
             self.send_header(
                 "Content-Disposition",
-                f'attachment; filename="{path.name.replace(chr(34), "")}"',
+                f'attachment; filename="{filename.replace(chr(34), "")}"',
+            )
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _send_transcript_download(
+            self,
+            database_path: Path | str,
+            *,
+            run_id: int | None,
+            context: WebContext,
+        ) -> None:
+            status, run, transcript = resolve_transcript(
+                database_path,
+                run_id,
+                user_id=context.user_id,
+                guest_token=context.guest_token,
+            )
+            if status != 200 or transcript is None or run is None:
+                self._send_html(
+                    render_transcript_page(
+                        database_path,
+                        run=run,
+                        transcript=None,
+                        context=context,
+                    ),
+                    status=status,
+                )
+                return
+            data = _transcript_document(transcript["text"]).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header(
+                "Content-Disposition",
+                f'attachment; filename="{_transcript_filename(run)}"',
             )
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -1150,13 +1319,17 @@ def render_process_page(
             source_config=source_config,
         )
     notice_html = f'<div class="notice">{html.escape(notice)}</div>' if notice else ""
+    # A closed run keeps its place in the history, not on the workspace.
+    closed = selected_run is not None and bool(selected_run["closed_at"])
     create_card = _create_card(
         csrf_token=csrf_token,
         source_config=source_config,
-        collapsed=selected_run is not None,
+        collapsed=selected_run is not None and not closed,
     )
     active_workspace = ""
-    if selected_run is not None:
+    if closed:
+        active_workspace = _closed_card(selected_run, csrf_token)
+    elif selected_run is not None:
         step_rows = db.list_run_steps(database_path, selected_run["id"])
         next_step = _gated_step(
             next_eligible_step(database_path, selected_run["id"]),
@@ -1186,7 +1359,7 @@ def render_process_page(
   {notice_html}
   {sections}
 </main>
-{_live_status_script(selected_run["id"]) if selected_run is not None else ""}
+{_live_status_mount(selected_run["id"]) if selected_run is not None and not closed else ""}
 """
     return _page_shell(
         "ClaimLens Analyses",
@@ -1222,7 +1395,7 @@ def render_history_page(
     <h1>Recent analyses</h1>
     <p>Every analysis you have started, newest first.</p>
   </div>
-  {_history_card(runs, None, status_filter)}
+  {_history_card(runs, None, status_filter, csrf_token=csrf_token)}
 </main>
 """
     return _page_shell(
@@ -1260,10 +1433,6 @@ def _create_card(
             <span>YouTube video URL</span>
             <input name="video_url" type="url" required
               placeholder="https://www.youtube.com/watch?v=...">
-          </label>
-          <label class="field" style="flex:0 0 160px">
-            <span>Report language</span>
-            <input name="report_language" value="en">
           </label>
           <button type="submit" class="btn btn-primary">Start analysis</button>
         </div>
@@ -1347,9 +1516,14 @@ def _active_workspace(
         <div class="card-head">
           <div>
             <div class="workspace-title"><h2>Active analysis</h2>
-              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span>
+              <p id="{LIVE_CONNECTION_REGION}" class="connection" role="status"
+                aria-live="polite" hidden></p></div>
             <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_url}</p>
           </div>
+          <div class="card-actions" id="pipeline-close">{
+        _close_html(database_path, selected_run, csrf_token)
+    }</div>
         </div>
         <div class="card-body">
           <div class="workspace-action">
@@ -1362,10 +1536,77 @@ def _active_workspace(
           {diagnostics}
         </div>
       </div>
-      <div id="pipeline-outputs">{_outputs(database_path, selected_run["video_id"])}</div>
+      <div id="pipeline-outputs">{
+        _outputs(database_path, selected_run["video_id"], run_id=selected_run["id"])
+    }</div>
     </div>
     <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
   </section>
+"""
+
+
+def _run_is_closable(database_path: Path | str, run) -> bool:
+    """True once nothing in the chain can still move on its own.
+
+    `pending` counts as working: the chain paused for the user and resumes without a new
+    analysis. Only a settled run, with no queued or running job behind it, can be closed.
+    """
+
+    if run["closed_at"]:
+        return False
+    if run["status"] in UNSETTLED_RUN_STATUSES:
+        return False
+    jobs = db.latest_jobs_for_run(database_path, run["id"])
+    return not any(row["status"] in LIVE_JOB_STATUSES for row in jobs)
+
+
+def _close_html(database_path: Path | str, run, csrf_token: str) -> str:
+    if not _run_is_closable(database_path, run):
+        return ""
+    return f"""
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">
+          <input type="hidden" name="run_id" value="{run["id"]}">
+          <input type="hidden" name="action" value="close_analysis">
+          <button type="submit" class="btn btn-ghost btn-sm">Close analysis</button>
+        </form>
+"""
+
+
+def _reopen_form(run_id: int, csrf_token: str, *, label: str, css: str) -> str:
+    return (
+        '<form method="post">'
+        f'<input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">'
+        f'<input type="hidden" name="run_id" value="{run_id}">'
+        '<input type="hidden" name="action" value="reopen_analysis">'
+        f'<button type="submit" class="{css}">{html.escape(label)}</button>'
+        "</form>"
+    )
+
+
+def _closed_card(selected_run, csrf_token: str) -> str:
+    """What a closed run shows instead of the workspace: how to get it back."""
+
+    reopen = _reopen_form(
+        selected_run["id"],
+        csrf_token,
+        label="Reopen analysis",
+        css="btn btn-primary",
+    )
+    return f"""
+  <div class="card">
+    <div class="card-head"><h2>Analysis closed</h2>{
+        _status_badge(selected_run["status"])
+    }</div>
+    <div class="card-body">
+      <p>Analysis #{selected_run["id"]} is closed. Nothing was deleted: it stays in
+        Recent analyses with its transcript and its brief.</p>
+      <div class="card-actions" style="margin-top:14px">
+        {reopen}
+        <a class="btn btn-ghost" href="/history">Recent analyses</a>
+      </div>
+    </div>
+  </div>
 """
 
 
@@ -1395,8 +1636,12 @@ def _brief_panel(
     return f"""
       <div class="card report">
         <div class="card-head"><span class="sub">Result</span>
-          <a href="/brief/download?run_id={run_id}"
-            class="btn btn-ghost btn-sm">Download .md</a></div>
+          <div class="card-actions">
+            <a href="/brief/download?run_id={run_id}&amp;format=html"
+              class="btn btn-ghost btn-sm">Download HTML</a>
+            <a href="/brief/download?run_id={run_id}"
+              class="btn btn-ghost btn-sm">Download Markdown</a>
+          </div></div>
         <div class="card-body"><article class="brief" aria-label="Analysis brief">{
         content
     }</article></div>
@@ -1441,7 +1686,13 @@ def _active_action(selected_run, next_step: str | None, failed_captions: bool) -
     )
 
 
-def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
+def _history_card(
+    runs,
+    selected_run_id: int | None,
+    status_filter: str,
+    *,
+    csrf_token: str = "",
+) -> str:
     options = "".join(
         f'<option value="{value}"{" selected" if value == status_filter else ""}>{label}</option>'
         for value, label in [
@@ -1454,11 +1705,20 @@ def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
     )
     def row_html(row) -> str:
         current = ' aria-current="true"' if row["id"] == selected_run_id else ""
+        # A closed analysis is reachable in one click, so closing it costs nothing.
+        actions = _status_badge(row["status"])
+        if row["closed_at"]:
+            actions += '<span class="badge idle">Closed</span>' + _reopen_form(
+                row["id"],
+                csrf_token,
+                label="Reopen",
+                css="btn btn-ghost btn-sm",
+            )
         return (
             f'<div class="history-row"{current}><div><a href="/?run_id={row["id"]}">'
             f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
             f"<small>Analysis #{row['id']} · {html.escape(row['started_at'] or '')}</small></div>"
-            f"{_status_badge(row['status'])}</div>"
+            f'<div class="history-actions">{actions}</div></div>'
         )
 
     if not runs:
@@ -1476,9 +1736,10 @@ def _history_card(runs, selected_run_id: int | None, status_filter: str) -> str:
     return f"""
   <div class="card">
     <div class="card-head"><h2>Recent analyses</h2>
-      <form method="get"><label class="sr-only" for="status-filter">Filter analyses</label>
-        <select id="status-filter" class="history-filter" name="status"
-          onchange="this.form.submit()">{options}</select></form>
+      <form method="get" class="card-actions">
+        <label class="sr-only" for="status-filter">Filter analyses</label>
+        <select id="status-filter" class="history-filter" name="status">{options}</select>
+        <button type="submit" class="btn btn-ghost btn-sm">Filter</button></form>
     </div>
     <div class="card-body">{listing}</div>
   </div>
@@ -2118,7 +2379,9 @@ def run_status_payload(
     }
     return {
         "signature": json.dumps(state, sort_keys=True, separators=(",", ":")),
-        "active": any(row["status"] in {"queued", "running"} for row in jobs),
+        # Work in flight. A chain briefly has none between two jobs, which is why the
+        # client also keeps the active rhythm for as long as the signature keeps changing.
+        "active": any(row["status"] in LIVE_JOB_STATUSES for row in jobs),
         "pipeline_status_html": _status_badge(run["status"]),
         "stepper_html": _stepper(step_rows),
         "steps_html": "\n".join(_step_row(row) for row in step_rows),
@@ -2132,7 +2395,8 @@ def run_status_payload(
             source_config=source_config,
         ),
         "recovery_html": _manual_transcript_form(run_id, csrf_token) if failed_captions else "",
-        "outputs_html": _outputs(database_path, run["video_id"]),
+        "close_html": _close_html(database_path, run, csrf_token),
+        "outputs_html": _outputs(database_path, run["video_id"], run_id=run_id),
         # Null rather than empty: a poll that cannot see briefs must not blank the one
         # the page already rendered.
         "brief_html": _brief_panel(
@@ -2146,75 +2410,26 @@ def run_status_payload(
     }
 
 
-def _live_status_script(run_id: int) -> str:
-    """Poll the run state and patch every dynamic region, with no page reload.
+def _live_status_mount(run_id: int) -> str:
+    """Mount the tracking client and hand it this run's configuration.
 
-    Polling never stops on a completed run: the chain, a retry, or another tab can make
-    the run active again. It backs off while idle and pauses on a hidden tab instead.
+    Nothing executable is inlined, so the production CSP keeps `script-src 'self'`. The
+    region map travels in a data attribute, which keeps the server the only place that
+    decides what a poll may repaint.
     """
 
+    regions = html.escape(json.dumps(LIVE_REGIONS, separators=(",", ":")), quote=True)
     return f"""
-<script>
-(() => {{
-  const endpoint = "/api/run-status?run_id={run_id}";
-  const ACTIVE_DELAY = 2000;
-  const IDLE_DELAY = 15000;
-  const ERROR_DELAY = 5000;
-  const REGION_KEYS = {{
-    "pipeline-status": "pipeline_status_html",
-    "pipeline-stepper": "stepper_html",
-    "pipeline-steps": "steps_html",
-    "pipeline-action": "action_html",
-    "pipeline-controls": "controls_html",
-    "pipeline-recovery": "recovery_html",
-    "pipeline-outputs": "outputs_html",
-    "pipeline-brief": "brief_html"
-  }};
-  let signature = null;
-  let inFlight = false;
-  let timer = null;
-
-  function schedule(delay) {{
-    if (timer !== null) window.clearTimeout(timer);
-    timer = window.setTimeout(refresh, delay);
-  }}
-
-  function paint(state) {{
-    for (const [id, key] of Object.entries(REGION_KEYS)) {{
-      const node = document.getElementById(id);
-      if (!node || typeof state[key] !== "string") continue;
-      // Never clobber a field the user is typing in, e.g. a pasted transcript.
-      if (node.contains(document.activeElement)) continue;
-      node.innerHTML = state[key];
-    }}
-  }}
-
-  async function refresh() {{
-    if (inFlight) return;
-    if (document.hidden) {{ schedule(IDLE_DELAY); return; }}
-    inFlight = true;
-    try {{
-      const response = await fetch(endpoint, {{cache: "no-store", credentials: "same-origin"}});
-      if (!response.ok) {{ schedule(ERROR_DELAY); return; }}
-      const state = await response.json();
-      if (state.signature !== signature) {{
-        paint(state);
-        signature = state.signature;
-      }}
-      schedule(state.active ? ACTIVE_DELAY : IDLE_DELAY);
-    }} catch (_error) {{
-      schedule(ERROR_DELAY);
-    }} finally {{
-      inFlight = false;
-    }}
-  }}
-
-  document.addEventListener("visibilitychange", () => {{
-    if (!document.hidden) schedule(0);
-  }});
-  refresh();
-}})();
-</script>
+<div id="live-config" hidden
+  data-endpoint="/api/run-status?run_id={run_id}"
+  data-regions="{regions}"
+  data-connection-region="{LIVE_CONNECTION_REGION}"
+  data-offline-message="{html.escape(LIVE_OFFLINE_MESSAGE, quote=True)}"
+  data-active-delay="{LIVE_ACTIVE_DELAY_MS}"
+  data-idle-delay="{LIVE_IDLE_DELAY_MS}"
+  data-error-delay="{LIVE_ERROR_DELAY_MS}"
+  data-errors-before-notice="{LIVE_ERRORS_BEFORE_NOTICE}"></div>
+<script src="{LIVE_STATUS_ASSET}?v={quote(__version__)}" defer></script>
 """
 
 
@@ -2240,7 +2455,9 @@ def _manual_transcript_form(run_id: int, csrf_token: str) -> str:
     """
 
 
-def _outputs(database_path: Path | str, video_id: str) -> str:
+def _outputs(database_path: Path | str, video_id: str, *, run_id: int) -> str:
+    """The deliverables of one run, as things to read rather than paths on a server."""
+
     cleaned = db.get_cleaned_transcript(database_path, video_id)
     brief = db.latest_brief_artifact(database_path, video_id)
     verification = db.latest_verification_run(database_path, video_id)
@@ -2265,14 +2482,18 @@ def _outputs(database_path: Path | str, video_id: str) -> str:
             "<li>Source video: "
             f'<a href="{html.escape(video["url"])}">{html.escape(video["title"])}</a></li>'
         )
-    if cleaned is not None and cleaned["output_path"]:
-        links.append(f"<li>Cleaned transcript: {html.escape(cleaned['output_path'])}</li>")
-    if brief is not None:
-        run = db.latest_pipeline_run_for_video(database_path, video_id)
-        run_id = run["id"] if run is not None else ""
+    if cleaned is not None and (cleaned["text"] or "").strip():
+        # The transcript is read through the app: a server path is not an action a
+        # browser can take, and it is not the reader's to know.
         links.append(
-            f'<li>Markdown brief: <a href="/brief?run_id={run_id}">view</a> '
-            f'<a href="/brief/download?run_id={run_id}">download</a></li>'
+            f'<li>Cleaned transcript: <a href="/transcript?run_id={run_id}">Read transcript</a> '
+            f'· <a href="/transcript/download?run_id={run_id}">Download text</a></li>'
+        )
+    if brief is not None:
+        links.append(
+            f'<li>Analysis brief: <a href="/brief?run_id={run_id}">Read brief</a> '
+            f'· <a href="/brief/download?run_id={run_id}&amp;format=html">Download HTML</a> '
+            f'· <a href="/brief/download?run_id={run_id}">Download Markdown</a></li>'
         )
     if verification is not None:
         links.append(
@@ -2562,9 +2783,20 @@ def _step_row(row) -> str:
         f'<td class="name">{html.escape(_step_label(row["step"]))}</td>'
         f'<td class="status">{_status_badge(row["status"])}</td>'
         f"<td>{html.escape(row['failure_message'] or '')}</td>"
-        f'<td class="mono">{html.escape(row["output_path"] or "")}</td>'
+        f'<td class="mono">{html.escape(_output_name(row["output_path"]))}</td>'
         "</tr>"
     )
+
+
+def _output_name(output_path: str | None) -> str:
+    """Name the artifact a step produced, without publishing the server's layout."""
+
+    raw = (output_path or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("sqlite:"):
+        return raw
+    return Path(raw).name
 
 
 def _int_value(value: str) -> int | None:
@@ -2597,8 +2829,11 @@ def render_brief_page(
         content = render_brief_html(path.read_text(encoding="utf-8"))
         if run_id is not None:
             download = (
+                '<div class="card-actions">'
+                f'<a href="/brief/download?run_id={run_id}&amp;format=html" '
+                'class="btn btn-ghost btn-sm">Download HTML</a>'
                 f'<a href="/brief/download?run_id={run_id}" '
-                'class="btn btn-ghost btn-sm">Download .md</a>'
+                'class="btn btn-ghost btn-sm">Download Markdown</a></div>'
             )
     body = f"""
 <main>
@@ -2616,6 +2851,135 @@ def render_brief_page(
         active="process",
         nav=context is not None,
     )
+
+
+def resolve_transcript(
+    database_path: Path | str,
+    run_id: int | None,
+    *,
+    user_id: int | None,
+    guest_token: str | None,
+) -> tuple[int, object | None, object | None]:
+    """Authorize a transcript request and return `(status, run, cleaned transcript)`.
+
+    403 and 404 are kept apart on purpose: an owner who mistypes a run id learns that the
+    analysis is not theirs, rather than being told it does not exist. This reveals only
+    that a run id is taken, never a single word of its content.
+    """
+
+    if run_id is None:
+        return 404, None, None
+    if db.get_pipeline_run(database_path, run_id) is None:
+        return 404, None, None
+    run = db.get_visible_pipeline_run(
+        database_path,
+        run_id,
+        user_id=user_id,
+        guest_token=guest_token,
+    )
+    if run is None:
+        return 403, None, None
+    if not run["video_id"]:
+        return 404, run, None
+    cleaned = db.get_cleaned_transcript(database_path, run["video_id"])
+    if cleaned is None or not (cleaned["text"] or "").strip():
+        return 404, run, None
+    return 200, run, cleaned
+
+
+def render_transcript_page(
+    database_path: Path | str,
+    *,
+    run,
+    transcript,
+    context: WebContext | None = None,
+) -> str:
+    """Read the cleaned transcript in the app, from the database rather than a path."""
+
+    if run is None or transcript is None:
+        body = """
+<main>
+  <div class="card">
+    <div class="card-head"><h2>Transcript</h2></div>
+    <div class="card-body">
+      <div class="notice">No transcript is available for this analysis.</div>
+    </div>
+  </div>
+</main>
+"""
+        return _page_shell(
+            "ClaimLens Transcript",
+            body,
+            context=context,
+            csrf_token=context.csrf_token if context else "",
+            active="process",
+            nav=context is not None,
+        )
+    video = db.get_video(database_path, run["video_id"])
+    title = (video["title"] if video is not None else None) or run["video_id"]
+    body = f"""
+<main>
+  <div class="card report">
+    <div class="card-head">
+      <div><h2>Cleaned transcript</h2>
+        <span class="sub">{html.escape(title)}</span></div>
+      <a class="btn btn-ghost btn-sm"
+        href="/transcript/download?run_id={run["id"]}">Download text</a>
+    </div>
+    <div class="card-body">
+      <p class="mono">Analysis #{run["id"]} · language {
+        html.escape(str(run["report_language"] or "default"))
+    }</p>
+      <pre class="transcript">{html.escape(transcript["text"])}</pre>
+    </div>
+  </div>
+</main>
+"""
+    return _page_shell(
+        "ClaimLens Transcript",
+        body,
+        context=context,
+        csrf_token=context.csrf_token if context else "",
+        active="process",
+        nav=context is not None,
+    )
+
+
+def _transcript_document(text: str) -> str:
+    """One trailing newline, so the download opens cleanly in any text editor."""
+
+    return text if text.endswith("\n") else f"{text}\n"
+
+
+def _transcript_filename(run) -> str:
+    video_id = re.sub(r"[^A-Za-z0-9_-]", "", str(run["video_id"] or "transcript"))
+    return f"claimlens-transcript-{video_id or 'run'}-{run['id']}.txt"
+
+
+def render_standalone_brief(markdown: str, *, title: str) -> str:
+    """Export one brief as a self-contained HTML file.
+
+    Everything it needs travels with it: no stylesheet request, no app chrome, and print
+    rules so the same file reads on screen and on paper.
+    """
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(title)}</title>
+  <style>{STYLES}{STANDALONE_BRIEF_STYLES}</style>
+</head>
+<body>
+<main>
+  <div class="card report">
+    <div class="card-body"><article class="brief">{render_brief_html(markdown)}</article></div>
+  </div>
+</main>
+</body>
+</html>
+"""
 
 
 def _brief_path_for_run(

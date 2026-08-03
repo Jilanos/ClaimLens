@@ -74,10 +74,26 @@ Add to `Caddyfile`:
 {$CLAIMLENS_DOMAIN} {
 	encode zstd gzip
 	import security_headers
+	# ClaimLens serves its tracking client from /static, so it needs no script-src
+	# exception: the shared strict policy applies unchanged.
+	import default_csp
+
 	reverse_proxy claimlens:8765 {
+		# ClaimLens trusts X-Real-IP only from this peer, and keys guest limits on it.
 		header_up X-Real-IP {remote_host}
 	}
 }
+```
+
+`default_csp` sets `script-src 'self'` with no `'unsafe-inline'`. ClaimLens pages carry no inline
+script and no inline event handler, so nothing on the site depends on an exception. Inline `<style>`
+is still used and is covered by `style-src 'self' 'unsafe-inline'` in that shared policy.
+
+After a deploy, confirm the public headers:
+
+```bash
+curl -sSI https://<claimlens-domain>/ | grep -i content-security-policy
+curl -sSI https://<claimlens-domain>/static/live-status.js | grep -i content-type
 ```
 
 Add the volume:

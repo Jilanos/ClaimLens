@@ -1,0 +1,327 @@
+{
+  "budgets": {
+    "max_docs": 48,
+    "max_docs_per_ref": 8
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable item_088_simplifier_le_bandeau_et_le_lancement_d_analyse item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens --mode full --profile deep --handoff",
+  "companion_docs": [],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, finaliser l'espace d'analyse claimlens et ses livrables lisibles, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles",
+        "use when": "You need to implement or review the scaffolded workflow for Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+          "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+          "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ]
+      },
+      "path": "logics/request/req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles.md",
+      "ref": "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: Une analyse active actualise les cinq \u00e9tapes, les erreurs et le brief sans rechargement manuel sous la CSP de production stricte.",
+          "- AC2: L'ic\u00f4ne ClaimLens du bandeau sup\u00e9rieur est 80 % plus grande sans casser l'alignement ou la navigation mobile.",
+          "- AC3: Le transcript nettoy\u00e9 expose un lien autoris\u00e9 de lecture ou t\u00e9l\u00e9chargement, sans afficher ni tenter d'ouvrir le chemin local du serveur.",
+          "- AC4: Une analyse termin\u00e9e peut \u00eatre masqu\u00e9e depuis l'espace de travail, reste disponible dans Recent analyses et peut \u00eatre rouverte avec son r\u00e9sultat.",
+          "- AC5: Un brief termin\u00e9 est lisible dans le navigateur et t\u00e9l\u00e9chargeable en HTML autonome, sans n\u00e9cessiter d'\u00e9diteur Markdown.",
+          "- AC6: Le formulaire de cr\u00e9ation ne contient plus Report language et les analyses nouvelles utilisent la langue de rapport configur\u00e9e par d\u00e9faut."
+        ],
+        "Needs": [
+          "- Rendre l'\u00e9tat de l'analyse lisible sans recharger manuellement la page.",
+          "- Agrandir de 80 % l'ic\u00f4ne de marque dans le bandeau sup\u00e9rieur.",
+          "- Remplacer l'affichage d'un chemin interne de transcript par un acc\u00e8s s\u00fbr et utilisable au transcript nettoy\u00e9.",
+          "- Permettre de fermer l'espace d'analyse et le r\u00e9sultat termin\u00e9, puis de le rouvrir depuis l'historique.",
+          "- Fournir un brief lisible directement dans un navigateur et exportable dans un format non-Markdown.",
+          "- Supprimer le choix de langue du rapport de l'interface et du flux de cr\u00e9ation."
+        ]
+      },
+      "status": "Draft",
+      "title": "Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rendre le suivi d'analyse compatible csp et observable, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rendre le suivi d'analyse compatible CSP et observable",
+        "use when": "Implementing the scaffolded slice for Rendre le suivi d'analyse compatible CSP et observable."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable.md",
+      "ref": "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: Le navigateur ex\u00e9cute le client de suivi avec la CSP script-src 'self' et rafra\u00eechit chaque changement de step.",
+          "- AC2: Apr\u00e8s des erreurs r\u00e9p\u00e9t\u00e9es de polling, l'interface annonce que les mises \u00e0 jour sont indisponibles puis se r\u00e9tablit automatiquement.",
+          "- AC3: Une transition entre deux jobs ne d\u00e9grade pas le rythme actif \u00e0 15 secondes."
+        ],
+        "Problem": [
+          "- Le polling est inject\u00e9 dans un script inline que la CSP de production bloque.",
+          "- Un \u00e9chec de polling est silencieux et une courte transition entre jobs peut provoquer un backoff inutile."
+        ]
+      },
+      "status": "Ready",
+      "title": "Rendre le suivi d'analyse compatible CSP et observable"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, simplifier le bandeau et le lancement d'analyse, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Simplifier le bandeau et le lancement d'analyse",
+        "use when": "Implementing the scaffolded slice for Simplifier le bandeau et le lancement d'analyse."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_088_simplifier_le_bandeau_et_le_lancement_d_analyse.md",
+      "ref": "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: L'ic\u00f4ne du bandeau est 1,8 fois sa taille actuelle et la barre reste utilisable \u00e0 largeur mobile.",
+          "- AC2: Aucun champ Report language n'est rendu ou accept\u00e9 depuis le formulaire de cr\u00e9ation.",
+          "- AC3: Une nouvelle analyse emploie la valeur de configuration par d\u00e9faut de report_language."
+        ],
+        "Problem": [
+          "- La marque est trop discr\u00e8te et le champ Report language ajoute un choix non n\u00e9cessaire."
+        ]
+      },
+      "status": "Ready",
+      "title": "Simplifier le bandeau et le lancement d'analyse"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, fournir les transcripts et briefs comme livrables lisibles, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Fournir les transcripts et briefs comme livrables lisibles",
+        "use when": "Implementing the scaffolded slice for Fournir les transcripts et briefs comme livrables lisibles."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles.md",
+      "ref": "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: La sortie transcript pr\u00e9sente un lien Read transcript et/ou Download transcript autoris\u00e9 pour le run concern\u00e9.",
+          "- AC2: Le brief est consultable dans l'app et Download HTML produit un document autonome lisible dans un navigateur.",
+          "- AC3: Aucun chemin absolu /data n'est pr\u00e9sent\u00e9 comme action utilisateur."
+        ],
+        "Problem": [
+          "- Les chemins /data sont inutilisables dans le navigateur et le t\u00e9l\u00e9chargement .md impose un lecteur technique."
+        ]
+      },
+      "status": "Ready",
+      "title": "Fournir les transcripts et briefs comme livrables lisibles"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, masquer et r\u00e9ouvrir les analyses termin\u00e9es, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Masquer et r\u00e9ouvrir les analyses termin\u00e9es",
+        "use when": "Implementing the scaffolded slice for Masquer et r\u00e9ouvrir les analyses termin\u00e9es."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es.md",
+      "ref": "item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: Close analysis masque l'espace actif et le r\u00e9sultat seulement lorsque toute la cha\u00eene est terminale.",
+          "- AC2: Recent analyses permet de rouvrir un run ferm\u00e9 et d'afficher son brief complet.",
+          "- AC3: Fermer une analyse ne supprime aucune donn\u00e9e et ne masque pas les analyses encore en cours."
+        ],
+        "Problem": [
+          "- Un r\u00e9sultat termin\u00e9 conserve l'espace Active analysis et Result ouvert, encombrant le flux de travail suivant."
+        ]
+      },
+      "status": "Ready",
+      "title": "Masquer et r\u00e9ouvrir les analyses termin\u00e9es"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrer la finalisation de l'espace d'analyse ClaimLens",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+          "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+          "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md",
+      "ref": "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- (no validation recorded yet)"
+        ]
+      },
+      "status": "Ready",
+      "title": "Orchestrer la finalisation de l'espace d'analyse ClaimLens"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+          "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+          "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles"
+        ],
+        "req": [
+          "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles"
+        ],
+        "task": [
+          "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_020_espace_d_analyse_termin\u00e9_r\u00e9ouvrable_et_lisible.md",
+      "ref": "prod_020_espace_d_analyse_termin\u00e9_r\u00e9ouvrable_et_lisible",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Espace d'analyse termin\u00e9, r\u00e9ouvrable et lisible"
+    }
+  ],
+  "estimates": {
+    "char_count": 10290,
+    "companion_doc_count": 0,
+    "doc_count": 7
+  },
+  "generated_at": "2026-08-03T08:55:47Z",
+  "handoff": {
+    "companion_doc_count": 0,
+    "enabled": true,
+    "source_refs": [
+      "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles",
+      "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+      "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+      "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles",
+      "item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es",
+      "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "full",
+  "profile": "deep",
+  "ref": "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles,item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable,item_088_simplifier_le_bandeau_et_le_lancement_d_analyse,item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles,item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es,task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens",
+  "refs": [
+    "req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles",
+    "item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable",
+    "item_088_simplifier_le_bandeau_et_le_lancement_d_analyse",
+    "item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles",
+    "item_090_masquer_et_r\u00e9ouvrir_les_analyses_termin\u00e9es",
+    "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md",
+      "ref": "task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens"
+    }
+  ]
+}

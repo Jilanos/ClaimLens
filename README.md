@@ -188,11 +188,40 @@ enable_semantic_scholar = true
 enable_web_search = false
 ```
 
+`report_language` is a deployment setting: every new analysis uses it, and the launcher does not ask
+for a language.
+
 The Process page polls a run-scoped JSON endpoint every two seconds while a job is active and backs
 off to fifteen seconds when idle, so a run that becomes active again — from the chain, a retry, or
-another tab — is picked up without a reload. Polling pauses on a hidden tab and resumes when the tab
-becomes visible. It displays semantic status and messages rather than a numeric percentage, because
-external provider calls do not expose reliable intermediate progress.
+another tab — is picked up without a reload. It also stays on the fast rhythm for as long as the
+state keeps changing, so a chain that is briefly between two jobs is not mistaken for an idle run.
+Polling pauses on a hidden tab and resumes when the tab becomes visible. After repeated failed polls
+the page says that live updates are unavailable, and takes the notice back down on the first success.
+It displays semantic status and messages rather than a numeric percentage, because external provider
+calls do not expose reliable intermediate progress.
+
+The tracking client is served from `/static/live-status.js` and configured through data attributes,
+so the deployment keeps `script-src 'self'` with no inline-script exception. No page uses an inline
+script or an inline event handler, and `tests/test_workspace_deliverables.py` sweeps every page to
+keep it that way.
+
+Deliverables are reached through the app, never through a server path:
+
+| Route | Purpose |
+| --- | --- |
+| `/transcript?run_id=N` | Read the cleaned transcript of one authorized run |
+| `/transcript/download?run_id=N` | The same transcript as a plain-text file |
+| `/brief?run_id=N` | Read the brief in the app |
+| `/brief/download?run_id=N&format=html` | A self-contained HTML brief that also prints cleanly |
+| `/brief/download?run_id=N` | The stored Markdown artifact, unchanged |
+
+A run that belongs to another account or guest answers 403; a run or artifact that does not exist
+answers 404.
+
+A finished analysis can be closed from the workspace once its whole chain is terminal. Closing is a
+visibility change only: nothing is deleted, the run stays in Recent analyses, and reopening it brings
+the result and the brief back to the workspace. A run that is still working — including one paused
+for a key — cannot be closed.
 
 The in-process queue is bounded by `CLAIMLENS_MAX_QUEUED_JOBS` (16 by default). A worker owns a run
 for the whole chain, so `CLAIMLENS_JOB_WORKERS` (4 by default, capped at 16) is the number of
@@ -320,7 +349,7 @@ Deployment notes:
 
 ## SQLite Schema
 
-Schema version 6 creates and migrates the local tables for pipeline state, analysis, verification,
+Schema version 8 creates and migrates the local tables for pipeline state, analysis, verification,
 brief artifacts, async jobs, web users, sessions, encrypted API keys, and Supadata key pools:
 
 - `channels`
@@ -342,6 +371,9 @@ brief artifacts, async jobs, web users, sessions, encrypted API keys, and Supada
 - `sessions`
 - `user_api_keys`
 - `supadata_api_keys`
+
+Version 8 adds `pipeline_runs.closed_at`, which records that an owner closed a finished analysis. It
+is additive and nullable, so an existing database keeps every run visible until someone closes one.
 
 Before introducing the next schema version, any additive or destructive production schema change
 must include a tested migration path against an older schema/database fixture.

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from claimlens import __version__, db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript, parse_analysis_json
 from claimlens.api_keys import save_supadata_api_key
+from claimlens.assets import LIVE_STATUS_JS
 from claimlens.auth import hash_password
 from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.config import SourceConfig, load_config
@@ -12,6 +13,7 @@ from claimlens.web import (
     FAVICON_DATA_URI,
     FAVICON_SVG,
     HISTORY_VISIBLE_ROWS,
+    LIVE_STATUS_ASSET,
     LOGO_MARK,
     MARK_BODY,
     WebContext,
@@ -114,15 +116,16 @@ def test_launcher_hides_opt_in_when_verification_is_disabled(tmp_path):
     assert 'name="verify_sources"' not in rendered
 
 
-def test_live_script_is_present_even_without_an_active_job(tmp_path):
+def test_live_client_is_mounted_even_without_an_active_job(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
     db.set_step_status(database, run_id=run_id, step="captions", status="succeeded")
 
     rendered = render_process_page(database, run_id=run_id, csrf_token="csrf")
 
-    assert "/api/run-status?run_id=" in rendered
-    assert "visibilitychange" in rendered
+    assert f'data-endpoint="/api/run-status?run_id={run_id}"' in rendered
+    assert f'<script src="{LIVE_STATUS_ASSET}' in rendered
+    assert "visibilitychange" in LIVE_STATUS_JS
 
 
 def test_live_payload_covers_every_dynamic_region(tmp_path):

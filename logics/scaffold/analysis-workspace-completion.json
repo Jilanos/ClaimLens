@@ -1,0 +1,152 @@
+{
+  "title": "Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles",
+  "references": [
+    "src/claimlens/web.py",
+    "tests/test_analysis_briefs_web.py",
+    "docs/deployment-paulmondou-infra.md",
+    "/home/paul/dev/paulmondou-infra/Caddyfile"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "analysis-workspace",
+    "needs": [
+      "Rendre l'état de l'analyse lisible sans recharger manuellement la page.",
+      "Agrandir de 80 % l'icône de marque dans le bandeau supérieur.",
+      "Remplacer l'affichage d'un chemin interne de transcript par un accès sûr et utilisable au transcript nettoyé.",
+      "Permettre de fermer l'espace d'analyse et le résultat terminé, puis de le rouvrir depuis l'historique.",
+      "Fournir un brief lisible directement dans un navigateur et exportable dans un format non-Markdown.",
+      "Supprimer le choix de langue du rapport de l'interface et du flux de création."
+    ],
+    "context": [
+      "La page Process utilise actuellement un script de polling inline, bloqué par la CSP de production script-src 'self'.",
+      "Le navigateur ne peut pas ouvrir de manière sûre le dossier /data/outputs/transcripts du serveur ; l'accès doit être un endpoint authentifié de lecture ou de téléchargement.",
+      "Les cinq étapes sont captions, clean_transcript, analysis, brief et source_verification.",
+      "Les runs sont déjà conservés dans SQLite et la page History les rend accessibles."
+    ],
+    "acceptance_criteria": [
+      "AC1: Une analyse active actualise les cinq étapes, les erreurs et le brief sans rechargement manuel sous la CSP de production stricte.",
+      "AC2: L'icône ClaimLens du bandeau supérieur est 80 % plus grande sans casser l'alignement ou la navigation mobile.",
+      "AC3: Le transcript nettoyé expose un lien autorisé de lecture ou téléchargement, sans afficher ni tenter d'ouvrir le chemin local du serveur.",
+      "AC4: Une analyse terminée peut être masquée depuis l'espace de travail, reste disponible dans Recent analyses et peut être rouverte avec son résultat.",
+      "AC5: Un brief terminé est lisible dans le navigateur et téléchargeable en HTML autonome, sans nécessiter d'éditeur Markdown.",
+      "AC6: Le formulaire de création ne contient plus Report language et les analyses nouvelles utilisent la langue de rapport configurée par défaut.",
+      "AC7: Des tests navigateur ou d'intégration vérifient le rafraîchissement réel sous CSP, les contrôles de visibilité, les autorisations d'accès aux fichiers et les nouveaux exports."
+    ]
+  },
+  "product": {
+    "title": "Espace d'analyse terminé, réouvrable et lisible",
+    "overview": "Un espace ClaimLens fiable où l'avancement est vivant, les résultats terminés ne monopolisent pas l'écran et les livrables sont consultables sans outil technique.",
+    "goals": [
+      "Conserver une CSP stricte tout en assurant la mise à jour en direct.",
+      "Réduire l'encombrement de l'écran une fois une analyse terminée sans perdre l'accès à ses preuves.",
+      "Remplacer les chemins techniques et le Markdown comme seules sorties par des interactions sûres et lisibles.",
+      "Simplifier le lancement de l'analyse autour des choix réellement nécessaires."
+    ],
+    "non_goals": [
+      "Ne pas ouvrir le gestionnaire de fichiers ou un dossier du serveur depuis le navigateur.",
+      "Ne pas ajouter de traduction ou de choix de langue utilisateur à la place du champ supprimé.",
+      "Ne pas remplacer SQLite ou le moteur de traitement asynchrone dans cette livraison."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Rendre le suivi d'analyse compatible CSP et observable",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "live-progress",
+      "request_acs": ["AC1", "AC7"],
+      "problem": [
+        "Le polling est injecté dans un script inline que la CSP de production bloque.",
+        "Un échec de polling est silencieux et une courte transition entre jobs peut provoquer un backoff inutile."
+      ],
+      "scope_in": [
+        "Extraire le client de polling dans un asset servi en same-origin.",
+        "Passer la configuration de run par attributs data sûrs.",
+        "Préserver CSP script-src 'self' sans unsafe-inline.",
+        "Afficher un état de connexion et calculer l'activité à partir du run et des jobs.",
+        "Ajouter une vérification navigateur ou HTTP+JS sous CSP."
+      ],
+      "scope_out": ["Passage à WebSocket ou SSE."],
+      "acceptance_criteria": [
+        "AC1: Le navigateur exécute le client de suivi avec la CSP script-src 'self' et rafraîchit chaque changement de step.",
+        "AC2: Après des erreurs répétées de polling, l'interface annonce que les mises à jour sont indisponibles puis se rétablit automatiquement.",
+        "AC3: Une transition entre deux jobs ne dégrade pas le rythme actif à 15 secondes."
+      ]
+    },
+    {
+      "title": "Simplifier le bandeau et le lancement d'analyse",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "interface",
+      "request_acs": ["AC2", "AC6"],
+      "problem": ["La marque est trop discrète et le champ Report language ajoute un choix non nécessaire."],
+      "scope_in": [
+        "Augmenter de 80 % les dimensions de l'icône de la navigation principale et ajuster le layout responsive.",
+        "Retirer Report language de l'UI, de son POST et des textes associés.",
+        "Documenter et tester l'emploi de la langue configurée par défaut."
+      ],
+      "scope_out": ["Modifier la configuration globale de langue ou les langues déjà stockées des analyses passées."],
+      "acceptance_criteria": [
+        "AC1: L'icône du bandeau est 1,8 fois sa taille actuelle et la barre reste utilisable à largeur mobile.",
+        "AC2: Aucun champ Report language n'est rendu ou accepté depuis le formulaire de création.",
+        "AC3: Une nouvelle analyse emploie la valeur de configuration par défaut de report_language."
+      ]
+    },
+    {
+      "title": "Fournir les transcripts et briefs comme livrables lisibles",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "deliverables",
+      "request_acs": ["AC3", "AC5", "AC7"],
+      "problem": ["Les chemins /data sont inutilisables dans le navigateur et le téléchargement .md impose un lecteur technique."],
+      "scope_in": [
+        "Créer des routes autorisées par run pour consulter et télécharger le transcript nettoyé.",
+        "Rendre ou exporter un brief HTML autonome avec styles de lecture et impression.",
+        "Remplacer les liens de sortie techniques par des libellés orientés lecteur.",
+        "Tester les permissions utilisateur et invité ainsi que les réponses 404/403."
+      ],
+      "scope_out": ["Donner au navigateur un accès à des répertoires ou chemins de fichiers serveur."],
+      "acceptance_criteria": [
+        "AC1: La sortie transcript présente un lien Read transcript et/ou Download transcript autorisé pour le run concerné.",
+        "AC2: Le brief est consultable dans l'app et Download HTML produit un document autonome lisible dans un navigateur.",
+        "AC3: Aucun chemin absolu /data n'est présenté comme action utilisateur."
+      ]
+    },
+    {
+      "title": "Masquer et réouvrir les analyses terminées",
+      "priority": "Medium",
+      "complexity": "Medium",
+      "theme": "workspace-lifecycle",
+      "request_acs": ["AC4", "AC7"],
+      "problem": ["Un résultat terminé conserve l'espace Active analysis et Result ouvert, encombrant le flux de travail suivant."],
+      "scope_in": [
+        "Ajouter une action explicite Close analysis pour les runs terminés.",
+        "Conserver les données, le brief et la traçabilité du run dans l'historique.",
+        "Permettre de rouvrir un run terminé dans l'espace de travail depuis Recent analyses.",
+        "Définir la persistance de la préférence de masquage par utilisateur ou invité."
+      ],
+      "scope_out": ["Supprimer une analyse, son transcript ou son brief."],
+      "acceptance_criteria": [
+        "AC1: Close analysis masque l'espace actif et le résultat seulement lorsque toute la chaîne est terminale.",
+        "AC2: Recent analyses permet de rouvrir un run fermé et d'afficher son brief complet.",
+        "AC3: Fermer une analyse ne supprime aucune donnée et ne masque pas les analyses encore en cours."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrer la finalisation de l'espace d'analyse ClaimLens",
+    "plan": [
+      "Cartographier les routes, sorties et états de run existants, puis décider le contrat de masquage persistant.",
+      "Extraire et tester le client de suivi compatible CSP avant de modifier les interactions de l'espace de travail.",
+      "Livrer les simplifications visuelles et le retrait du champ de langue.",
+      "Ajouter les lecteurs et exports autorisés de transcript et brief HTML.",
+      "Ajouter le cycle close/reopen, les tests d'autorisations et le test navigateur de la chaîne complète.",
+      "Déployer la configuration Caddy cohérente, vérifier les en-têtes publics et consigner les preuves de validation."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/analysis-workspace-completion.json",
+    "mode": "full",
+    "profile": "deep"
+  }
+}

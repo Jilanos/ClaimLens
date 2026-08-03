@@ -8,7 +8,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Protocol
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     guest_token TEXT,
     verify_sources INTEGER NOT NULL DEFAULT 0,
+    -- Set when the owner closed the finished analysis. Visibility only: no row is removed,
+    -- so the run, its transcript, and its brief stay readable from the history.
+    closed_at TEXT,
     details TEXT
 );
 
@@ -295,7 +298,7 @@ CREATE INDEX IF NOT EXISTS idx_supadata_api_keys_user_priority
 ON supadata_api_keys(user_id, enabled, priority, id);
 
 INSERT INTO schema_metadata (key, value)
-VALUES ('schema_version', '7')
+VALUES ('schema_version', '8')
 ON CONFLICT(key) DO UPDATE SET
     value = excluded.value,
     updated_at = CURRENT_TIMESTAMP;
@@ -363,6 +366,7 @@ def _migrate_schema(connection: sqlite3.Connection) -> None:
         "verify_sources",
         "INTEGER NOT NULL DEFAULT 0",
     )
+    _add_column_if_missing(connection, "pipeline_runs", "closed_at", "TEXT")
     _add_column_if_missing(connection, "transcripts", "submitted_by_user_id", "INTEGER")
     _add_column_if_missing(connection, "transcripts", "submitted_by_guest_token", "TEXT")
     connection.execute(
@@ -790,6 +794,30 @@ def get_visible_pipeline_run(
     if user_id is None and guest_token and run["guest_token"] == guest_token:
         return run
     return None
+
+
+def close_pipeline_run(database_path: Path | str, run_id: int) -> None:
+    """Hide a finished run from the workspace. Nothing is deleted; only visibility moves."""
+
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                """
+                UPDATE pipeline_runs
+                SET closed_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND closed_at IS NULL
+                """,
+                (run_id,),
+            )
+
+
+def reopen_pipeline_run(database_path: Path | str, run_id: int) -> None:
+    with closing(connect(database_path)) as connection:
+        with connection:
+            connection.execute(
+                "UPDATE pipeline_runs SET closed_at = NULL WHERE id = ?",
+                (run_id,),
+            )
 
 
 def get_video(database_path: Path | str, video_id: str) -> sqlite3.Row | None:

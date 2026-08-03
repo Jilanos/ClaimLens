@@ -30,6 +30,7 @@
 | [prod_017_hardening_de_production_claimlens_suivi](product/prod_017_hardening_de_production_claimlens_suivi.md) | Hardening de production ClaimLens - suivi | Settled |  |  | product/prod_017_hardening_de_production_claimlens_suivi.md |
 | [prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture](product/prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture.md) | Espace d'analyse et brief scientifique orientés lecture | Settled |  |  | product/prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture.md |
 | [prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue](product/prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue.md) | Marque ClaimLens et recherche scientifique independante de la langue | Settled |  |  | product/prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue.md |
+| [prod_020_espace_d_analyse_termine_reouvrable_et_lisible](product/prod_020_espace_d_analyse_termine_reouvrable_et_lisible.md) | Espace d'analyse terminé, réouvrable et lisible | Settled |  |  | product/prod_020_espace_d_analyse_termine_reouvrable_et_lisible.md |
 
 ## Roadmaps
 
@@ -55,6 +56,7 @@ _None_
 | [req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens](request/req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens.md) | Finaliser le hardening web et operationnel de ClaimLens | Done |  |  | request/req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens.md |
 | [req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production](request/req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production.md) | Rendre l'analyse ClaimLens lisible, scientifique et fiable en production | Done |  |  | request/req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production.md |
 | [req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue](request/req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue.md) | Donner a ClaimLens sa marque propre et une recherche scientifique independante de la langue | Done |  |  | request/req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue.md |
+| [req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles](request/req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles.md) | Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles | Done |  |  | request/req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles.md |
 
 ## Backlog
 
@@ -146,6 +148,10 @@ _None_
 | [item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider](backlog/item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider.md) | Respecter les cooldowns Semantic Scholar avant de signaler une erreur provider | Done |  | 100% | backlog/item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider.md |
 | [item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet](backlog/item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet.md) | Adopter la marque ClaimLens dans l'en-tete et dans l'onglet | Done |  | 100% | backlog/item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet.md |
 | [item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim](backlog/item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim.md) | Interroger la litterature en anglais quelle que soit la langue du claim | Done |  | 100% | backlog/item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim.md |
+| [item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable](backlog/item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable.md) | Rendre le suivi d'analyse compatible CSP et observable | Done |  | 100% | backlog/item_087_rendre_le_suivi_d_analyse_compatible_csp_et_observable.md |
+| [item_088_simplifier_le_bandeau_et_le_lancement_d_analyse](backlog/item_088_simplifier_le_bandeau_et_le_lancement_d_analyse.md) | Simplifier le bandeau et le lancement d'analyse | Done |  | 100% | backlog/item_088_simplifier_le_bandeau_et_le_lancement_d_analyse.md |
+| [item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles](backlog/item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles.md) | Fournir les transcripts et briefs comme livrables lisibles | Done |  | 100% | backlog/item_089_fournir_les_transcripts_et_briefs_comme_livrables_lisibles.md |
+| [item_090_masquer_et_reouvrir_les_analyses_terminees](backlog/item_090_masquer_et_reouvrir_les_analyses_terminees.md) | Masquer et réouvrir les analyses terminées | Done |  | 100% | backlog/item_090_masquer_et_reouvrir_les_analyses_terminees.md |
 
 ## Tasks
 
@@ -170,3 +176,4 @@ _None_
 | [task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens](tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md) | Orchestrer le suivi de hardening web et operationnel ClaimLens | Done | codex | 100% | tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md |
 | [task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens](tasks/task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens.md) | Orchestrer la lisibilité et la fiabilité du brief ClaimLens | Done |  | 100% | tasks/task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens.md |
 | [task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue](tasks/task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue.md) | Livrer la marque ClaimLens et la recherche scientifique multilingue | Done |  | 100% | tasks/task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue.md |
+| [task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens](tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md) | Orchestrer la finalisation de l'espace d'analyse ClaimLens | Done |  | 100% | tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md |

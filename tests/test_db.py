@@ -73,7 +73,7 @@ def test_init_db_is_idempotent(tmp_path):
             "SELECT value FROM schema_metadata WHERE key = 'schema_version'"
         ).fetchone()[0]
 
-    assert schema_version == "7"
+    assert schema_version == "8"
 
 
 def test_supadata_api_key_pool_tracks_quota_state(tmp_path):
