@@ -852,7 +852,23 @@ def test_the_archive_page_lists_analyses_and_keeps_the_status_filter(tmp_path):
     assert 'href="/?run_id=' in rendered
 
 
-def test_the_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path):
+def test_the_active_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
+    db.set_step_status(database, run_id=run_id, step="captions", status="running")
+    db.create_job(database, run_id=run_id, action="captions")
+
+    rendered = render_process_page(database, run_id=run_id, csrf_token="csrf")
+
+    assert 'class="workspace-main"' in rendered
+    assert 'class="workspace-brief"' in rendered
+    # One column below the breakpoint, two above it, and never a horizontal scroll.
+    assert ".workspace { display:grid; grid-template-columns:minmax(0,1fr);" in rendered
+    assert "@media (min-width:1080px) {" in rendered
+    assert ".workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }" in rendered
+
+
+def test_the_completed_workspace_gives_the_brief_the_full_width(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
     run_id = completed_run(tmp_path, database)
 
@@ -864,12 +880,15 @@ def test_the_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path):
         briefs_path=tmp_path / "briefs",
     )
 
-    assert 'class="workspace-main"' in rendered
-    assert 'class="workspace-brief"' in rendered
-    # One column below the breakpoint, two above it, and never a horizontal scroll.
-    assert ".workspace { display:grid; grid-template-columns:minmax(0,1fr);" in rendered
-    assert "@media (min-width:1080px) {" in rendered
-    assert ".workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }" in rendered
+    # No permanent second column competes with the brief once the run is complete.
+    assert 'class="workspace-main"' not in rendered
+    assert 'class="workspace-brief" id="pipeline-brief">' in rendered
+    assert ".workspace.complete { grid-template-columns:minmax(0,1fr); }" in rendered
+    # The completed identity, status, and Results summary are recoverable, not gone.
+    assert '<div class="card recall">' in rendered
+    assert "<summary" in rendered
+    assert "<h2>Analysis complete</h2>" in rendered
+    assert '<h2>Results</h2>' in rendered
 
 
 def test_the_brief_is_rendered_as_html_and_never_as_raw_markdown(tmp_path):

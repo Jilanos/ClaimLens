@@ -300,6 +300,9 @@ ul.out li:last-child { border-bottom:0; }
 .workspace.complete .card-head { padding:12px 16px; }
 .workspace.complete .card-body { padding:12px 16px; }
 .workspace-complete-note { margin:0; color:var(--muted); font-size:13px; }
+.recall summary { cursor:pointer; list-style:none; }
+.recall summary::-webkit-details-marker { display:none; }
+.recall-hint { font-size:12px; font-weight:600; color:var(--accent-2); white-space:nowrap; }
 .version { font-size:11px; font-weight:700; letter-spacing:.02em; color:var(--accent-2);
   background:var(--accent-wash); border-radius:999px; padding:2px 8px; margin-left:2px; }
 .brief { max-width:70ch; }
@@ -359,6 +362,7 @@ ul.out li:last-child { border-bottom:0; }
   border-bottom:1px solid var(--line-2); }
 .history-row:last-child { border-bottom:0; }
 .history-row a { font-weight:600; text-decoration:none; }
+.history-title { display:block; color:var(--ink-2); font-size:13.5px; margin-top:3px; }
 .history-row small { display:block; color:var(--muted); margin-top:3px; }
 .history-filter { max-width:170px; min-height:34px; padding:6px 9px; font-size:13px; }
 .history-row[aria-current] { background:var(--accent-wash); border-radius:var(--radius-sm);
@@ -389,6 +393,7 @@ ul.out li:last-child { border-bottom:0; }
    so no layout ever needs horizontal scrolling. */
 @media (min-width:1080px) {
   .workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }
+  .workspace.complete { grid-template-columns:minmax(0,1fr); }
   .report { margin:0; }
 }
 @media (max-width:720px) {
@@ -1453,7 +1458,7 @@ def _create_card(
 """
     return f"""
   <div class="card">
-    <div class="card-head"><h2>New analysis</h2>
+    <div class="card-head"><h2>New analysis</h2></div>
     <div class="card-body">{form}</div>
   </div>
 """
@@ -1516,28 +1521,33 @@ def _active_workspace(
         user_id=user_id,
         guest_token=guest_token,
     )
-    # Once the brief exists, the work is complete: retain the run identity and its
-    # results, but remove the long operational timeline from the reading view.
+    # Once the brief exists, the work is complete: let it own the full reading width,
+    # and fold the run identity and results behind an accessible recall control instead
+    # of a permanent second column.
     if brief_html:
+        outputs_html = _outputs(
+            database_path, selected_run["video_id"], run_id=selected_run["id"]
+        )
         return f"""
   <section class="workspace complete" aria-label="Completed analysis workspace">
-    <div class="workspace-main">
-      <div class="card">
-        <div class="card-head">
-          <div>
+    <div class="workspace-brief" id="pipeline-brief">
+      <div class="card recall">
+        <details>
+          <summary class="card-head recall-summary">
             <div class="workspace-title"><h2>Analysis complete</h2>
               <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+            <span class="recall-hint">Run details</span>
+          </summary>
+          <div class="card-body">
             <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}</p>
+            <p class="workspace-complete-note">The results below reflect this completed
+              run.</p>
+            <div id="pipeline-outputs">{outputs_html}</div>
           </div>
-        </div>
-        <div class="card-body"><p class="workspace-complete-note">The brief and available
-          evidence are ready to review.</p></div>
+        </details>
       </div>
-      <div id="pipeline-outputs">{
-        _outputs(database_path, selected_run["video_id"], run_id=selected_run["id"])
-    }</div>
+      {brief_html}
     </div>
-    <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
   </section>
 """
     return f"""
@@ -1747,7 +1757,8 @@ def _history_card(
         return (
             f'<div class="history-row"{current}><div><a href="/?run_id={row["id"]}">'
             f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
-            f"<small>{title} · Analysis #{row['id']} · "
+            f'<span class="history-title">{title}</span>'
+            f"<small>Analysis #{row['id']} · "
             f"{html.escape(row['started_at'] or '')}</small></div>"
             f'<div class="history-actions">{actions}</div></div>'
         )

@@ -1,0 +1,145 @@
+{
+  "title": "Prioritise the completed analysis brief and standardise ClaimLens delivery releases",
+  "references": [
+    "src/claimlens/web.py",
+    "tests/test_workspace_deliverables.py",
+    "src/claimlens/__init__.py",
+    "pyproject.toml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/release.yml",
+    "logics/instructions.md"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Analysis workspace and release discipline",
+    "needs": [
+      "When a brief exists, make it the full-width, primary reading surface of the Analyses page.",
+      "Keep the completed-analysis identity, status, result summary, transcript, brief links, and source-verification outcome available but collapsed behind a persistent, accessible recall control placed beside the completed workspace.",
+      "Keep the complete and warning terminal states truthful and distinguishable after they are collapsed.",
+      "Make the new-analysis launcher use one stable, full-width layout whether the user lands on Analyses directly, arrives from another tab, or starts another analysis after a completed run.",
+      "Give each Recent analyses row a clearly visible video-title line in addition to the video identifier and metadata.",
+      "Ship the implementation using the repository release sequence: implementation commit, SemVer preparation, version commit, push, successful CI on that exact commit, then annotated version tag and release verification."
+    ],
+    "context": [
+      "The current completed workspace still allocates a left column to Analysis complete and Results, which prevents the embedded brief from owning the page.",
+      "The existing completed view removed execution diagnostics entirely; the replacement must preserve read-only access rather than discard them.",
+      "The non-collapsed launcher nests card-body inside card-head, producing the observed split layout; the collapsed launcher is the visual reference.",
+      "Recent-analysis queries already join videos.title as video_title, so the history defect is presentation and regression coverage, not a schema change.",
+      "Release-by-tag validates that the tagged commit is an ancestor of main, and the tag must therefore be created only after CI has passed for the pushed version-preparation commit."
+    ],
+    "acceptance_criteria": [
+      "AC1 — For a run with a saved brief, the brief occupies the full content width of the Analyses workspace on desktop; the previous two-column completed layout is absent.",
+      "AC2 — A visible, keyboard-operable recall control adjacent to the completed workspace exposes Analysis complete, the terminal status, Results, deliverable links, and source-verification outcome without changing or rerunning the analysis.",
+      "AC3 — The recall control and its expanded content correctly represent both Complete and Complete with limits states, including accessible labels and sensible responsive behaviour.",
+      "AC4 — The new-analysis form has the same full-width, aligned structure in the empty landing state and the Start another analysis state; no card-head/card-body nesting causes a split layout.",
+      "AC5 — Each Recent analyses row shows the video identifier and its video title as independently visible text, with a graceful fallback only when title metadata is unavailable.",
+      "AC6 — Focused rendering tests cover completed, warning, empty, and start-another states, and the complete test suite, Ruff, Logics lint, audit, and workflow validation pass.",
+      "AC7 — The delivery ends with an implementation commit, a SemVer version-preparation commit, a push, a successful CI run for that exact commit, then an annotated vX.Y.Z tag and confirmation of the tag-triggered release workflow."
+    ]
+  },
+  "product": {
+    "title": "Brief-first analysis workspace and repeatable release delivery",
+    "overview": "Let a finished scientific brief own the analysis page while retaining all completed-run details on demand, repair the consistent launcher and history scanability, and make the release handoff repeatable.",
+    "goals": [
+      "Turn the completed analysis screen into a reading-first experience.",
+      "Preserve transparent access to completed results and terminal states.",
+      "Eliminate the inconsistent new-analysis layout.",
+      "Make history useful at a glance through a visible title.",
+      "Make every functional delivery follow an auditable release sequence."
+    ],
+    "non_goals": [
+      "Change the transcript, claim-extraction, or evidence-verification pipeline.",
+      "Delete completed analyses or hide their data permanently.",
+      "Introduce a new database migration when the existing video title data is available.",
+      "Tag or release an unvalidated commit."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Make the completed brief full-page and recall completed analysis details",
+      "priority": "High — the main analysis reading experience is currently constrained by secondary panels.",
+      "complexity": "Medium",
+      "theme": "Completed analysis workspace",
+      "request_acs": ["AC1", "AC2", "AC3"],
+      "problem": [
+        "A finished brief is rendered beside a permanent Analysis complete and Results column, while operational details were removed rather than being available on demand."
+      ],
+      "scope_in": [
+        "Full-width embedded brief layout after a saved brief exists.",
+        "Accessible disclosure/recall control beside the completed workspace.",
+        "Completed and completed-with-warnings status, Results summary, deliverable links, and evidence outcome inside the recalled panel.",
+        "Responsive and regression tests."
+      ],
+      "scope_out": [
+        "Pipeline changes, result recomputation, or destructive run-state changes."
+      ],
+      "acceptance_criteria": [
+        "The saved brief is the sole primary column at desktop widths.",
+        "Completed information is hidden by default but is fully recoverable by keyboard and pointer.",
+        "Terminal statuses remain accurate and distinguish warnings from complete success."
+      ]
+    },
+    {
+      "title": "Unify the new-analysis launcher and expose video titles in history",
+      "priority": "High — starting a run and locating a past one are primary navigation actions.",
+      "complexity": "Low",
+      "theme": "Analysis navigation",
+      "request_acs": ["AC4", "AC5"],
+      "problem": [
+        "The direct landing launcher has malformed card structure and the video title in history is visually easy to miss."
+      ],
+      "scope_in": [
+        "Correct card markup and reuse the full-width launcher form layout in both entry states.",
+        "History typography/layout that clearly separates video ID, title, analysis number, timestamp, and status.",
+        "Fallback rendering tests for absent title metadata."
+      ],
+      "scope_out": [
+        "Changing history retention, ownership, filtering semantics, or video metadata persistence."
+      ],
+      "acceptance_criteria": [
+        "Both new-analysis entry states have matching form geometry and no isolated heading column.",
+        "The title is independently readable in every history row when present."
+      ]
+    },
+    {
+      "title": "Validate and release the brief-first analysis workspace",
+      "priority": "High — release integrity is required before users receive the interface change.",
+      "complexity": "Medium",
+      "theme": "Quality and release",
+      "request_acs": ["AC6", "AC7"],
+      "problem": [
+        "The implementation needs an explicit quality gate and repeatable commit-to-tag handoff."
+      ],
+      "scope_in": [
+        "Targeted rendering tests, full test suite, Ruff, Logics lint/audit/validation.",
+        "Implementation commit, SemVer version preparation, version commit, push, CI observation, annotated tag, and tag-release verification.",
+        "Repository instructions that make this the default completion reflex for future functional changes."
+      ],
+      "scope_out": [
+        "Bypassing failed CI, force-pushing, or tagging a commit that has not passed CI."
+      ],
+      "acceptance_criteria": [
+        "All required local and Logics validation gates pass before the version commit is pushed.",
+        "The pushed version commit is the exact commit whose successful CI is observed before tagging.",
+        "The annotated tag matches the prepared SemVer version and its release workflow is checked after push."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Deliver the brief-first analysis workspace and validated release",
+    "plan": [
+      "Inspect the completed workspace renderer, CSS breakpoints, launcher markup, history renderer, and existing rendering tests.",
+      "Implement the full-width brief and the adjacent accessible recall control, preserving truthful terminal state and results content.",
+      "Repair the direct new-analysis card structure and align history title presentation.",
+      "Add focused tests, run the full quality and Logics gates, and record their evidence.",
+      "Create the implementation commit.",
+      "Prepare the appropriate next SemVer version across all canonical version surfaces and create the version-preparation commit.",
+      "Push the version-preparation commit, wait for CI success on its exact SHA, then create and push an annotated vX.Y.Z tag and verify the tag-triggered release workflow."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/brief-first-analysis-workspace-and-release.json",
+    "mode": "diff-first",
+    "profile": "normal"
+  }
+}

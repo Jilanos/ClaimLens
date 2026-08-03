@@ -1,0 +1,361 @@
+{
+  "budgets": {
+    "max_docs": 20,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [
+    "logics/backlog/item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details.md",
+    "logics/backlog/item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history.md",
+    "logics/backlog/item_095_validate_and_release_the_brief_first_analysis_workspace.md",
+    "logics/product/prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery.md",
+    "logics/request/req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases.md",
+    "logics/scaffold/analysis-brief-full-page-and-release-discipline.json",
+    "logics/tasks/task_022_deliver_the_brief_first_analysis_workspace_and_validated_release.md"
+  ],
+  "command": "logics-manager sync context-pack req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history item_095_validate_and_release_the_brief_first_analysis_workspace task_022_deliver_the_brief_first_analysis_workspace_and_validated_release --mode diff-first --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+          "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+          "item_095_validate_and_release_the_brief_first_analysis_workspace"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/product/prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery.md",
+      "ref": "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery",
+      "sections": {
+        "Goals": [
+          "- Turn the completed analysis screen into a reading-first experience.",
+          "- Preserve transparent access to completed results and terminal states.",
+          "- Eliminate the inconsistent new-analysis layout.",
+          "- Make history useful at a glance through a visible title.",
+          "- Make every functional delivery follow an auditable release sequence."
+        ],
+        "Key product decisions": [
+          "- Use structured input as the source of truth for generated docs.",
+          "- Keep generated write paths local and repo-bounded."
+        ],
+        "Overview": [
+          "Let a finished scientific brief own the analysis page while retaining all completed-run details on demand, repair the consistent launcher and history scanability, and make the release handoff repeatable."
+        ],
+        "References": [
+          "- Product back-reference: `req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases`",
+          "- Task back-reference: `task_022_deliver_the_brief_first_analysis_workspace_and_validated_release`"
+        ]
+      },
+      "status": "Proposed",
+      "title": "Brief-first analysis workspace and repeatable release delivery"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, prioritise the completed analysis brief and standardise claimlens delivery releases, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Prioritise the completed analysis brief and standardise ClaimLens delivery releases",
+        "use when": "You need to implement or review the scaffolded workflow for Prioritise the completed analysis brief and standardise ClaimLens delivery releases."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+          "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+          "item_095_validate_and_release_the_brief_first_analysis_workspace"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ]
+      },
+      "path": "logics/request/req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases.md",
+      "ref": "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1 \u2014 For a run with a saved brief, the brief occupies the full content width of the Analyses workspace on desktop; the previous two-column completed layout is absent.",
+          "- AC2 \u2014 A visible, keyboard-operable recall control adjacent to the completed workspace exposes Analysis complete, the terminal status, Results, deliverable links, and source-verification outcome without changing or rerunning the analysis.",
+          "- AC3 \u2014 The recall control and its expanded content correctly represent both Complete and Complete with limits states, including accessible labels and sensible responsive behaviour.",
+          "- AC4 \u2014 The new-analysis form has the same full-width, aligned structure in the empty landing state and the Start another analysis state; no card-head/card-body nesting causes a split layout.",
+          "- AC5 \u2014 Each Recent analyses row shows the video identifier and its video title as independently visible text, with a graceful fallback only when title metadata is unavailable.",
+          "- AC6 \u2014 Focused rendering tests cover completed, warning, empty, and start-another states, and the complete test suite, Ruff, Logics lint, audit, and workflow validation pass."
+        ],
+        "Needs": [
+          "- When a brief exists, make it the full-width, primary reading surface of the Analyses page.",
+          "- Keep the completed-analysis identity, status, result summary, transcript, brief links, and source-verification outcome available but collapsed behind a persistent, accessible recall control placed beside the completed workspace.",
+          "- Keep the complete and warning terminal states truthful and distinguishable after they are collapsed.",
+          "- Make the new-analysis launcher use one stable, full-width layout whether the user lands on Analyses directly, arrives from another tab, or starts another analysis after a completed run.",
+          "- Give each Recent analyses row a clearly visible video-title line in addition to the video identifier and metadata.",
+          "- Ship the implementation using the repository release sequence: implementation commit, SemVer preparation, version commit, push, successful CI on that exact commit, then annotated version tag and release verification."
+        ]
+      },
+      "status": "Draft",
+      "title": "Prioritise the completed analysis brief and standardise ClaimLens delivery releases"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make the completed brief full-page and recall completed analysis details, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make the completed brief full-page and recall completed analysis details",
+        "use when": "Implementing the scaffolded slice for Make the completed brief full-page and recall completed analysis details."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/backlog/item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details.md",
+      "ref": "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- The saved brief is the sole primary column at desktop widths.",
+          "- Completed information is hidden by default but is fully recoverable by keyboard and pointer.",
+          "- Terminal statuses remain accurate and distinguish warnings from complete success."
+        ],
+        "Problem": [
+          "- A finished brief is rendered beside a permanent Analysis complete and Results column, while operational details were removed rather than being available on demand."
+        ]
+      },
+      "status": "Ready",
+      "title": "Make the completed brief full-page and recall completed analysis details"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, unify the new-analysis launcher and expose video titles in history, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Unify the new-analysis launcher and expose video titles in history",
+        "use when": "Implementing the scaffolded slice for Unify the new-analysis launcher and expose video titles in history."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/backlog/item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history.md",
+      "ref": "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- Both new-analysis entry states have matching form geometry and no isolated heading column.",
+          "- The title is independently readable in every history row when present."
+        ],
+        "Problem": [
+          "- The direct landing launcher has malformed card structure and the video title in history is visually easy to miss."
+        ]
+      },
+      "status": "Ready",
+      "title": "Unify the new-analysis launcher and expose video titles in history"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, validate and release the brief-first analysis workspace, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Validate and release the brief-first analysis workspace",
+        "use when": "Implementing the scaffolded slice for Validate and release the brief-first analysis workspace."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_095_validate_and_release_the_brief_first_analysis_workspace"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/backlog/item_095_validate_and_release_the_brief_first_analysis_workspace.md",
+      "ref": "item_095_validate_and_release_the_brief_first_analysis_workspace",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- All required local and Logics validation gates pass before the version commit is pushed.",
+          "- The pushed version commit is the exact commit whose successful CI is observed before tagging.",
+          "- The annotated tag matches the prepared SemVer version and its release workflow is checked after push."
+        ],
+        "Problem": [
+          "- The implementation needs an explicit quality gate and repeatable commit-to-tag handoff."
+        ]
+      },
+      "status": "Ready",
+      "title": "Validate and release the brief-first analysis workspace"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Deliver the brief-first analysis workspace and validated release",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+          "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+          "item_095_validate_and_release_the_brief_first_analysis_workspace"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/tasks/task_022_deliver_the_brief_first_analysis_workspace_and_validated_release.md",
+      "ref": "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- (no validation recorded yet)"
+        ]
+      },
+      "status": "Ready",
+      "title": "Deliver the brief-first analysis workspace and validated release"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+          "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+          "item_095_validate_and_release_the_brief_first_analysis_workspace"
+        ],
+        "prod": [
+          "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery"
+        ],
+        "req": [
+          "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases"
+        ],
+        "task": [
+          "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+        ]
+      },
+      "path": "logics/product/prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery.md",
+      "ref": "prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Brief-first analysis workspace and repeatable release delivery"
+    }
+  ],
+  "estimates": {
+    "char_count": 12128,
+    "companion_doc_count": 1,
+    "doc_count": 6
+  },
+  "generated_at": "2026-08-03T12:45:26Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases",
+      "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+      "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+      "item_095_validate_and_release_the_brief_first_analysis_workspace",
+      "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "diff-first",
+  "profile": "normal",
+  "ref": "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases,item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details,item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history,item_095_validate_and_release_the_brief_first_analysis_workspace,task_022_deliver_the_brief_first_analysis_workspace_and_validated_release",
+  "refs": [
+    "req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases",
+    "item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details",
+    "item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history",
+    "item_095_validate_and_release_the_brief_first_analysis_workspace",
+    "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "Missing logics/release/contract.json."
+    ],
+    "configured": false,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "Run logics-manager release discover --write, then review and promote logics/release/contract.draft.json to logics/release/contract.json.",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "not_configured",
+    "target_version": null
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_022_deliver_the_brief_first_analysis_workspace_and_validated_release.md",
+      "ref": "task_022_deliver_the_brief_first_analysis_workspace_and_validated_release"
+    }
+  ]
+}

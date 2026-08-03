@@ -1,0 +1,145 @@
+{
+  "schema_version": "1.0",
+  "project": {
+    "id": "claimlens",
+    "display_name": "ClaimLens",
+    "release_profile": "github-tag-deployment"
+  },
+  "version_sources": [
+    {
+      "path": "pyproject.toml",
+      "format": "toml",
+      "selector": "project.version",
+      "required": true
+    }
+  ],
+  "changelog": {
+    "required": false,
+    "version_heading_required": false,
+    "paths": []
+  },
+  "operator_intents": [
+    {
+      "utterance": "deliver a functional change",
+      "boundary": "Validate, create an implementation commit, prepare SemVer metadata, create a version-preparation commit, and push. Wait for CI on that exact commit before tagging.",
+      "publication_action": false
+    },
+    {
+      "utterance": "tag the validated release",
+      "boundary": "Create and push an annotated vX.Y.Z tag only after the required CI run is successful; then verify the tag-triggered release workflow.",
+      "publication_action": true
+    }
+  ],
+  "state_machine": [
+    "planning",
+    "local_validation",
+    "implementation_committed",
+    "version_prepared",
+    "version_committed",
+    "pushed",
+    "ci_verification",
+    "tagged",
+    "github_release",
+    "ready",
+    "blocked"
+  ],
+  "gates": [
+    {
+      "id": "version_metadata",
+      "state": "version_prepared",
+      "required": true,
+      "evidence_kinds": ["file"]
+    },
+    {
+      "id": "local_validation",
+      "state": "local_validation",
+      "required": true,
+      "evidence_kinds": ["command"]
+    },
+    {
+      "id": "git_push",
+      "state": "pushed",
+      "required": true,
+      "evidence_kinds": ["git"]
+    },
+    {
+      "id": "ci",
+      "state": "ci_verification",
+      "required": true,
+      "evidence_kinds": ["ci"]
+    },
+    {
+      "id": "release_tag",
+      "state": "tagged",
+      "required": true,
+      "evidence_kinds": ["git"]
+    },
+    {
+      "id": "github_release",
+      "state": "github_release",
+      "required": true,
+      "evidence_kinds": ["github_release"]
+    }
+  ],
+  "evidence": {
+    "store": {
+      "path": "logics/release/evidence.jsonl",
+      "format": "jsonl",
+      "required": true
+    },
+    "freshness": {
+      "match_target_version": true,
+      "match_commit_for_source_gates": true,
+      "match_tag_for_publication_gates": true
+    },
+    "required_fields": ["kind", "status", "observed_at", "target_version", "commit", "summary"]
+  },
+  "validation_commands": [
+    {
+      "id": "ruff",
+      "command": [".venv/bin/ruff", "check", "."],
+      "required": true,
+      "evidence_kind": "command"
+    },
+    {
+      "id": "pytest",
+      "command": [".venv/bin/pytest"],
+      "required": true,
+      "evidence_kind": "command"
+    },
+    {
+      "id": "logics_lint",
+      "command": ["logics-manager", "lint", "--require-status"],
+      "required": true,
+      "evidence_kind": "command"
+    },
+    {
+      "id": "logics_audit",
+      "command": ["logics-manager", "audit", "--legacy-cutoff-version", "1.1.0", "--group-by-doc"],
+      "required": true,
+      "evidence_kind": "command"
+    }
+  ],
+  "git": {
+    "release_branch_policy": "main_only",
+    "allowed_branches": ["main"],
+    "tag_policy": {
+      "required": true,
+      "pattern": "v{version}"
+    },
+    "require_clean_worktree": true,
+    "require_pushed_commit": true
+  },
+  "github_release": {
+    "required": true,
+    "mode": "tag_workflow",
+    "draft_allowed": false,
+    "asset_paths": []
+  },
+  "assistant_readiness": {
+    "must_inspect_status_before_claiming_ready": true,
+    "readiness_source": "project_owned_evidence",
+    "publication_requires_explicit_operator_approval": true
+  },
+  "external_publication": []
+}

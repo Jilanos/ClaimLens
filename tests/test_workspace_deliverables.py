@@ -315,7 +315,76 @@ def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):
     rendered = render_history_page(database, guest_token="guest")
 
     assert f'href="/?run_id={run_id}"' in rendered
-    assert f"{VIDEO_ID}</a><small>{VIDEO_ID} · Analysis #{run_id}" in rendered
+    assert (
+        f'{VIDEO_ID}</a><span class="history-title">{VIDEO_ID}</span>'
+        f"<small>Analysis #{run_id}" in rendered
+    )
+
+
+def test_recent_analyses_falls_back_to_the_identifier_without_title_metadata(tmp_path):
+    from claimlens.pipeline import MANUAL_CHANNEL_ID
+    from claimlens.youtube import YouTubeVideo
+
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, VIDEO_URL, guest_token="guest")
+    db.upsert_video(
+        database,
+        channel_id=MANUAL_CHANNEL_ID,
+        video=YouTubeVideo(id=VIDEO_ID, title="", url=VIDEO_URL),
+    )
+
+    rendered = render_history_page(database, guest_token="guest")
+
+    assert f'href="/?run_id={run_id}"' in rendered
+    # No real title is on record: the title line gracefully falls back to the identifier.
+    assert f'<span class="history-title">{VIDEO_ID}</span>' in rendered
+
+
+def test_recent_analyses_shows_a_distinct_title_independently_of_the_identifier(tmp_path):
+    from claimlens.pipeline import MANUAL_CHANNEL_ID
+    from claimlens.youtube import YouTubeVideo
+
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, VIDEO_URL, guest_token="guest")
+    db.upsert_video(
+        database,
+        channel_id=MANUAL_CHANNEL_ID,
+        video=YouTubeVideo(id=VIDEO_ID, title="A real video title", url=VIDEO_URL),
+    )
+
+    rendered = render_history_page(database, guest_token="guest")
+
+    assert f'href="/?run_id={run_id}"' in rendered
+    assert '<span class="history-title">A real video title</span>' in rendered
+
+
+def test_the_empty_landing_launcher_has_no_isolated_heading_column(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    rendered = render_process_page(database, csrf_token="csrf")
+
+    # The heading closes its own card-head before the form's card-body opens, so the
+    # two are stacked (not flex siblings sharing one unclosed .card-head).
+    assert '<div class="card-head"><h2>New analysis</h2></div>' in rendered
+    assert rendered.count('<div class="card-head"><h2>New analysis</h2>\n    <div') == 0
+
+
+def test_start_another_analysis_reuses_the_same_full_width_form(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(database, VIDEO_URL, guest_token="guest")
+    for step in ("captions", "clean_transcript", "analysis", "brief"):
+        db.set_step_status(database, run_id=run_id, step=step, status="succeeded")
+    db.set_run_status(database, run_id=run_id, status="succeeded", current_step="brief")
+
+    rendered = render_process_page(
+        database, run_id=run_id, guest_token="guest", csrf_token="csrf"
+    )
+
+    assert "Start another analysis" in rendered
+    assert '<div class="card-head"><h2>New analysis</h2></div>' not in rendered
+    # Both entry states share the exact same form markup.
+    assert 'placeholder="https://www.youtube.com/watch?v=..."' in rendered
 
 
 def test_the_launcher_no_longer_asks_for_a_report_language(tmp_path):
