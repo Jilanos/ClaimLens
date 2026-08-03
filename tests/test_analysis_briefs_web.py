@@ -9,13 +9,18 @@ from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.config import SourceConfig, load_config
 from claimlens.pipeline import create_run, next_eligible_step
 from claimlens.web import (
+    FAVICON_DATA_URI,
+    FAVICON_SVG,
     HISTORY_VISIBLE_ROWS,
+    LOGO_MARK,
+    MARK_BODY,
     WebContext,
     _run_job,
     reconcile_run_state,
     render_brief_html,
     render_brief_page,
     render_history_page,
+    render_login_page,
     render_options_page,
     render_process_page,
     run_status_payload,
@@ -987,3 +992,45 @@ def test_the_top_bar_stays_usable_on_a_phone_and_by_keyboard(tmp_path):
     # The bar wraps instead of pushing the page sideways.
     assert "nav.app { flex-wrap:wrap; height:auto; gap:8px; padding:10px 14px; }" in rendered
     assert ".navlinks { order:3; width:100%; }" in rendered
+
+
+def test_every_page_carries_the_inline_tab_icon(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+    context = WebContext(
+        user_id=None,
+        email=None,
+        csrf_token="csrf",
+        guest_token="guest",
+        session_token=None,
+    )
+
+    for rendered in (
+        render_process_page(database, csrf_token="csrf"),
+        render_history_page(database, csrf_token="csrf"),
+        render_login_page(context=context),
+    ):
+        assert '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,' in rendered
+        assert FAVICON_DATA_URI in rendered
+
+    # Inlined, so the tab icon costs no request and cannot 404 behind a proxy.
+    assert "%23" in FAVICON_DATA_URI  # the gradient colours survive URL encoding
+    assert '"' not in FAVICON_DATA_URI
+
+
+def test_the_mark_is_the_lens_play_and_review_check(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+    db.init_db(database)
+
+    rendered = render_process_page(database, csrf_token="csrf")
+
+    # Lens, handle, check and the play triangle, drawn once in the header.
+    assert '<circle cx="9.8" cy="9.8" r="8.2"/>' in rendered
+    assert 'd="m11 13.6 1.6 1.6 2.8-3.4"' in rendered
+    assert 'd="M7 6.2 12 9.1 7 12Z"' in rendered
+    # The header mark inherits the tile colour; only the play triangle is fixed red.
+    assert 'stroke="currentColor"' in LOGO_MARK
+    assert LOGO_MARK.count("#e5231b") == 2
+    # The tab icon and the header show the same drawing.
+    assert MARK_BODY in LOGO_MARK
+    assert MARK_BODY in FAVICON_SVG

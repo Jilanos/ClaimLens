@@ -18,6 +18,8 @@ from urllib.request import Request, urlopen
 from claimlens import db
 from claimlens.evidence import (
     ClaimSynthesizer,
+    ClaimTranslationError,
+    ClaimTranslator,
     EvidenceGrader,
     EvidenceGradingError,
     EvidenceSynthesisError,
@@ -73,6 +75,13 @@ class SourceQuery:
     video_id: str
     max_results: int
     timeout_seconds: int
+    #: The claim in English. Providers index English, so this is what they are asked,
+    #: while `claim` stays the wording the reader saw in the video.
+    search_text: str = ""
+
+    @property
+    def search_claim(self) -> str:
+        return self.search_text or self.claim
 
 
 @dataclass(frozen=True)
@@ -159,7 +168,7 @@ class PubMedAdapter:
         self.api_key = api_key
 
     def search(self, query: SourceQuery) -> list[SourceCandidate]:
-        term = build_claim_query(query.claim)
+        term = build_claim_query(query.search_claim)
         search_params = {
             "db": "pubmed",
             "term": term,
@@ -219,7 +228,7 @@ class SemanticScholarAdapter:
 
     def search(self, query: SourceQuery) -> list[SourceCandidate]:
         params = {
-            "query": build_claim_query(query.claim),
+            "query": build_claim_query(query.search_claim),
             "limit": str(query.max_results),
             "fields": (
                 "title,url,abstract,venue,year,externalIds,authors,"
@@ -380,6 +389,7 @@ def verify_sources(
     timeout_seconds: int = 20,
     grader: EvidenceGrader | None = None,
     synthesizer: ClaimSynthesizer | None = None,
+    translator: ClaimTranslator | None = None,
 ) -> int:
     analysis = db.latest_analysis(database_path, video_id)
     if analysis is None:
@@ -397,13 +407,16 @@ def verify_sources(
     )
     adapter_results: list[dict] = []
     try:
+        search_texts = _english_search_texts(translator, claims, adapter_results)
         for claim in claims:
+            search_text = search_texts[claim["id"]]
             query = SourceQuery(
                 claim_id=claim["id"],
                 claim=claim["claim"],
                 video_id=video_id,
                 max_results=max_results,
                 timeout_seconds=timeout_seconds,
+                search_text=search_text,
             )
             search_result = _search_all(adapters, query)
             adapter_results.extend(
@@ -413,8 +426,10 @@ def verify_sources(
             grading_errors: list[str] = []
             if grader is not None and candidates:
                 try:
+                    # Judge in the language the abstracts are written in; the grader
+                    # writes its rationale in the report language on its own.
                     candidates = grade_candidates(
-                        claim=claim["claim"],
+                        claim=search_text,
                         candidates=candidates,
                         grader=grader,
                     )
@@ -478,6 +493,7 @@ def verify_sources(
                 synthesis=_synthesize_claim(
                     synthesizer,
                     claim=claim,
+                    claim_text=search_text,
                     verdict=assessment.verdict,
                     candidates=candidates,
                     adapter_results=adapter_results,
@@ -525,10 +541,48 @@ def verify_sources(
     return verification_run_id
 
 
+def _english_search_texts(
+    translator: ClaimTranslator | None,
+    claims,
+    adapter_results: list[dict],
+) -> dict[int, str]:
+    """Map each claim id to the wording the providers will actually be asked.
+
+    PubMed and Semantic Scholar index English, so a claim stated in another language
+    finds nothing and reads as "the science is silent" when nothing was ever asked.
+    """
+
+    originals = [str(claim["claim"]) for claim in claims]
+    english = originals
+    if translator is not None and originals:
+        try:
+            english = translator.translate(claims=originals)
+        except ClaimTranslationError as exc:
+            LOGGER.warning("Claim translation failed; searching the claims as written: %s", exc)
+            adapter_results.append(
+                {
+                    "adapter": "claim_translation",
+                    "status": "unavailable",
+                    "candidate_count": 0,
+                    "message": str(exc),
+                }
+            )
+            english = originals
+    # A short list must never shift claims onto the wrong search text.
+    if len(english) != len(originals):
+        LOGGER.warning("Claim translation returned %d of %d claims", len(english), len(originals))
+        english = list(english) + originals[len(english) :]
+    return {
+        claim["id"]: (text.strip() or originals[index])
+        for index, (claim, text) in enumerate(zip(claims, english, strict=False))
+    }
+
+
 def _synthesize_claim(
     synthesizer: ClaimSynthesizer | None,
     *,
     claim,
+    claim_text: str,
     verdict: str,
     candidates: list[SourceCandidate],
     adapter_results: list[dict],
@@ -543,7 +597,7 @@ def _synthesize_claim(
         return None
     try:
         return synthesizer.synthesize(
-            claim=claim["claim"],
+            claim=claim_text,
             verdict=verdict,
             sources=[
                 SynthesisSource(
@@ -595,7 +649,7 @@ def _search_all(adapters: list[SourceAdapter], query: SourceQuery) -> AdapterSea
     limits: list[str] = []
     outcomes: list[dict] = []
     for adapter in adapters:
-        query_text = build_claim_query(query.claim)
+        query_text = build_claim_query(query.search_claim)
         report = RetryReport()
         unwaited = _await_cooldown(adapter.name, report)
         if unwaited > 0:

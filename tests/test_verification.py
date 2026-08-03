@@ -8,12 +8,16 @@ from claimlens import db
 from claimlens.analysis import TranscriptAnalysis, analyze_cleaned_transcript
 from claimlens.briefs import generate_verified_brief
 from claimlens.evidence import (
+    ClaimTranslationError,
     EvidenceGrade,
     EvidenceGradingError,
     EvidenceSynthesisError,
     SynthesisSource,
     build_synthesis_prompt,
+    build_translation_prompt,
+    language_instruction,
     parse_synthesis_json,
+    parse_translation_json,
 )
 from claimlens.pipeline import create_run
 from claimlens.verification import (
@@ -1082,3 +1086,210 @@ def test_claim_signals_render_as_labelled_pills_without_emoji(tmp_path):
     assert '<li class="signal verdict warn">Verdict: mixed' in rendered
     # Meaning never rides on a pictogram.
     assert all(ord(char) < 128 or char in "·—’" for char in rendered)
+
+
+class StubTranslator:
+    """Stands in for the LLM: French in, English out, and it records what it saw."""
+
+    model = "stub-translator"
+
+    def __init__(self, mapping=None, error=None, short=False):
+        self.mapping = mapping or {}
+        self.error = error
+        self.short = short
+        self.calls = []
+
+    def translate(self, *, claims):
+        if self.error:
+            raise self.error
+        self.calls.append(list(claims))
+        english = [self.mapping.get(claim, claim) for claim in claims]
+        return english[:-1] if self.short and len(english) > 1 else english
+
+
+class RecordingAdapter:
+    """Captures the exact text each provider was asked about."""
+
+    name = "pubmed"
+
+    def __init__(self):
+        self.searched: list[str] = []
+
+    def search(self, query):
+        self.searched.append(query.search_claim)
+        return [
+            SourceCandidate(
+                title="Vitamin D and bone density",
+                url="https://example.test/vitd",
+                publisher="Journal",
+                published_at="2024",
+                abstract_or_snippet="Supplementation improved bone mineral density.",
+                adapter=self.name,
+                external_id="vitd",
+                metadata={"assessment_polarity": "supports"},
+            )
+        ]
+
+
+def french_claim_database(tmp_path):
+    """A run whose transcript, and therefore whose claims, are in French."""
+
+    @dataclass(frozen=True)
+    class FrenchAnalysisClient:
+        model: str = "test-model"
+
+        def analyze(self, transcript_text: str) -> TranscriptAnalysis:
+            return TranscriptAnalysis(
+                summary="Resume.",
+                key_points=["Point"],
+                notable_claims=["La vitamine D ameliore la densite osseuse"],
+                caveats=["Prudence"],
+                editorial_notes=["Note"],
+            )
+
+    database = tmp_path / "claimlens.sqlite3"
+    run_id = create_run(
+        database,
+        "https://www.youtube.com/watch?v=abc123XYZ_",
+        report_language="fr",
+    )
+    transcript_id = db.upsert_transcript(
+        database,
+        Transcript(
+            video_id="abc123XYZ_",
+            source="youtube",
+            language="fr",
+            text="texte propre",
+            segments=[Segment(start_seconds=0.0, end_seconds=1.0, text="texte propre")],
+        ),
+    )
+    db.upsert_cleaned_transcript(
+        database,
+        video_id="abc123XYZ_",
+        transcript_id=transcript_id,
+        text="texte propre",
+    )
+    analyze_cleaned_transcript(database, video_id="abc123XYZ_", client=FrenchAnalysisClient())
+    db.set_step_status(database, run_id=run_id, step="analysis", status="succeeded")
+    return database, run_id
+
+
+FRENCH_TO_ENGLISH = {
+    "La vitamine D ameliore la densite osseuse": "Vitamin D improves bone mineral density",
+}
+
+
+def test_a_french_claim_is_searched_in_english(tmp_path):
+    """The reported bug: French claims found nothing because the indexes speak English."""
+
+    database, _run_id = french_claim_database(tmp_path)
+    adapter = RecordingAdapter()
+    translator = StubTranslator(FRENCH_TO_ENGLISH)
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[adapter],
+        max_results=2,
+        timeout_seconds=1,
+        translator=translator,
+    )
+
+    assert adapter.searched == ["Vitamin D improves bone mineral density"]
+    assert translator.calls == [["La vitamine D ameliore la densite osseuse"]]
+
+
+def test_the_reader_still_sees_the_claim_as_it_was_said(tmp_path):
+    database, _run_id = french_claim_database(tmp_path)
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[RecordingAdapter()],
+        max_results=2,
+        timeout_seconds=1,
+        translator=StubTranslator(FRENCH_TO_ENGLISH),
+    )
+
+    markdown = generate_verified_brief(
+        database,
+        video_id="abc123XYZ_",
+        briefs_path=tmp_path / "briefs",
+    ).read_text(encoding="utf-8")
+    # Translation serves the search, never the brief.
+    assert "### La vitamine D ameliore la densite osseuse" in markdown
+    assert "Vitamin D improves bone mineral density" not in markdown
+
+
+def test_the_grader_and_the_synthesizer_judge_the_english_claim(tmp_path):
+    database, _run_id = french_claim_database(tmp_path)
+    grader = StubGrader(grades=[EvidenceGrade("supports", "Reports improved density.", 0.9)])
+    synthesizer = StubSynthesizer()
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[RecordingAdapter()],
+        max_results=2,
+        timeout_seconds=1,
+        grader=grader,
+        synthesizer=synthesizer,
+        translator=StubTranslator(FRENCH_TO_ENGLISH),
+    )
+
+    # Both boundaries read English abstracts, so both get the English claim.
+    assert grader.calls[0][0] == "Vitamin D improves bone mineral density"
+    assert synthesizer.calls[0][0] == "Vitamin D improves bone mineral density"
+
+
+def test_a_failed_translation_searches_the_claim_as_written(tmp_path):
+    database, _run_id = french_claim_database(tmp_path)
+    adapter = RecordingAdapter()
+
+    verify_sources(
+        database,
+        video_id="abc123XYZ_",
+        adapters=[adapter],
+        max_results=2,
+        timeout_seconds=1,
+        translator=StubTranslator(error=ClaimTranslationError("boom")),
+    )
+
+    assert adapter.searched == ["La vitamine D ameliore la densite osseuse"]
+    verification = db.latest_verification_run(database, "abc123XYZ_")
+    # Degraded search, not a failed run: the claim is still checked, just worse.
+    assert verification["status"] == "succeeded"
+    outcomes = json.loads(verification["source_adapters_json"])
+    assert any(item["adapter"] == "claim_translation" for item in outcomes)
+
+
+def test_a_short_translation_never_shifts_claims_onto_the_wrong_text():
+    translated = parse_translation_json(
+        '{"claims": [{"index": 2, "english": "Second claim"}]}',
+        originals=["Premiere affirmation", "Deuxieme affirmation"],
+    )
+
+    assert translated == ["Premiere affirmation", "Second claim"]
+
+
+def test_translation_parsing_rejects_a_response_without_claims():
+    with pytest.raises(ClaimTranslationError):
+        parse_translation_json('{"other": []}', originals=["A claim"])
+    with pytest.raises(ClaimTranslationError):
+        parse_translation_json("not json", originals=["A claim"])
+
+
+def test_the_translation_prompt_asks_for_every_claim():
+    prompt = build_translation_prompt(["Premiere affirmation", "Deuxieme affirmation"])
+
+    assert "[1] Premiere affirmation" in prompt
+    assert "[2] Deuxieme affirmation" in prompt
+    assert "Return all 2 claims in English." in prompt
+
+
+def test_prose_follows_the_report_language_while_judgement_stays_english():
+    assert "French" in language_instruction("fr")
+    assert "English" in language_instruction("en")
+    assert "English" in language_instruction(None)
+    # An unknown code still produces a usable instruction rather than silence.
+    assert "sv" in language_instruction("sv")

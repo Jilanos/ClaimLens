@@ -1,0 +1,116 @@
+{
+  "title": "Donner a ClaimLens sa marque propre et une recherche scientifique independante de la langue",
+  "references": [
+    "Feedback utilisateur du 2026-08-03 sur le run g9YIYX22XBk",
+    "Grille de 16 propositions d'icônes, concept retenu: loupe, triangle play et coche de revue"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Brand identity and multilingual evidence retrieval",
+    "needs": [
+      "Reconnaître ClaimLens dans un onglet et dans l'en-tête grâce à une marque qui dit vidéo, examen et revue des sources.",
+      "Obtenir des résultats scientifiques même lorsque la vidéo et le rapport sont dans une autre langue que l'anglais."
+    ],
+    "context": [
+      "Le run g9YIYX22XBk portait sur une vidéo française: le récapitulatif en français convient à l'utilisateur, mais aucune source n'a été trouvée.",
+      "PubMed et Semantic Scholar indexent en anglais; un claim interrogé tel quel dans une autre langue ne renvoie rien.",
+      "L'icône retenue vient de la grille de propositions et remplace la loupe générique existante.",
+      "L'application est déployée sous paulmondou.fr, où l'icône d'onglet est la première marque visible."
+    ],
+    "acceptance_criteria": [
+      "AC1: L'en-tête de l'application affiche la marque retenue, combinant loupe, triangle de lecture et coche de revue, à la place de l'ancienne loupe.",
+      "AC2: Chaque page sert une icône d'onglet inline reprenant exactement la même marque sur la tuile de marque, sans requête supplémentaire.",
+      "AC3: Les claims sont systématiquement traduits en anglais avant toute interrogation de PubMed et Semantic Scholar, quelle que soit la langue de la vidéo.",
+      "AC4: Le brief continue d'afficher le claim dans la langue d'origine; la traduction ne sert que la recherche et le jugement des sources.",
+      "AC5: La prose destinée au lecteur, rationales de sources et synthèse par claim, suit la langue du rapport et non celle des articles.",
+      "AC6: Une traduction indisponible dégrade la recherche sans faire échouer la vérification, et l'incident est tracé dans les résultats d'adaptateur.",
+      "AC7: Les tests couvrent la marque, l'icône d'onglet, la recherche en anglais depuis un claim français, le repli sans traducteur et l'alignement de langue."
+    ]
+  },
+  "product": {
+    "title": "Marque ClaimLens et recherche scientifique independante de la langue",
+    "overview": "Rendre ClaimLens identifiable d'un coup d'œil et faire en sorte qu'une vidéo non anglophone obtienne les mêmes preuves scientifiques qu'une vidéo anglophone.",
+    "goals": [
+      "Donner à l'application une marque cohérente entre l'onglet, l'en-tête et le site hôte.",
+      "Poser la traduction des claims comme une étape normale de la recherche, invisible pour le lecteur.",
+      "Garder la langue du lecteur pour tout ce qu'il lit, et l'anglais pour tout ce qui interroge la littérature."
+    ],
+    "non_goals": [
+      "Traduire l'interface ou introduire un système d'internationalisation complet.",
+      "Traduire le brief, les sources ou les titres d'articles récupérés.",
+      "Refondre l'identité visuelle au-delà de la marque et de l'icône d'onglet."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Adopter la marque ClaimLens dans l'en-tete et dans l'onglet",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Brand identity",
+      "request_acs": ["AC1", "AC2"],
+      "problem": [
+        "La loupe générique actuelle ne dit ni la vidéo ni la revue des sources, et aucune icône d'onglet n'identifie l'application."
+      ],
+      "scope_in": [
+        "Marque unique sur grille 24, réutilisée par l'en-tête et par l'icône d'onglet.",
+        "Icône d'onglet inline en data URI, sur la tuile en dégradé de marque.",
+        "Lisibilité vérifiée à seize et trente-deux pixels, en thème clair et sombre."
+      ],
+      "scope_out": [
+        "Charte graphique complète, déclinaisons sociales, et fichiers statiques servis séparément."
+      ],
+      "acceptance_criteria": [
+        "AC1: L'en-tête et la page de connexion rendent la marque retenue et plus l'ancienne loupe.",
+        "AC2: Chaque page sert la même marque comme icône d'onglet, inline et sans requête supplémentaire.",
+        "AC3: La marque hérite de la couleur du contexte, seul le triangle de lecture reste rouge.",
+        "AC4: La marque reste lisible aux tailles d'usage réelles sans détail interne perdu."
+      ]
+    },
+    {
+      "title": "Interroger la litterature en anglais quelle que soit la langue du claim",
+      "priority": "High",
+      "complexity": "Medium",
+      "theme": "Multilingual evidence retrieval",
+      "request_acs": ["AC3", "AC4", "AC5", "AC6"],
+      "problem": [
+        "Un claim énoncé en français est envoyé tel quel à PubMed et Semantic Scholar, qui indexent en anglais, et ne renvoie rien.",
+        "L'absence de résultat se lit comme un silence de la science alors que la question n'a jamais été posée dans la bonne langue."
+      ],
+      "scope_in": [
+        "Frontière LLM de traduction des claims vers l'anglais, par lot et bornée.",
+        "Texte de recherche anglais porté par la requête provider, distinct du claim affiché.",
+        "Jugement des sources sur le claim anglais, prose destinée au lecteur dans la langue du rapport.",
+        "Repli explicite et tracé lorsque la traduction est indisponible."
+      ],
+      "scope_out": [
+        "Traduction du brief, des titres d'articles ou de l'interface.",
+        "Détection de langue côté transcription et changement du modèle d'analyse."
+      ],
+      "acceptance_criteria": [
+        "AC1: Un claim français atteint les adaptateurs sous sa forme anglaise.",
+        "AC2: Le brief affiche le claim tel qu'il a été énoncé, sans fuite de la traduction.",
+        "AC3: Le grader et la synthèse reçoivent le claim anglais, puisqu'ils lisent des résumés anglais.",
+        "AC4: La prose rendue au lecteur suit la langue du rapport.",
+        "AC5: Une traduction en échec laisse la vérification aboutir et apparaît dans les résultats d'adaptateur.",
+        "AC6: Une traduction incomplète ne décale jamais un claim sur le texte de recherche d'un autre."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Livrer la marque ClaimLens et la recherche scientifique multilingue",
+    "plan": [
+      "Dériver la marque retenue de la grille de propositions et la valider par rendu aux tailles d'usage.",
+      "Partager un seul corps de marque entre l'en-tête et l'icône d'onglet inline.",
+      "Ajouter la frontière de traduction des claims et la porter jusqu'aux adaptateurs.",
+      "Séparer la langue du jugement de la langue de la prose destinée au lecteur.",
+      "Couvrir par des tests la marque, l'icône d'onglet, la recherche en anglais et le repli sans traducteur.",
+      "Exécuter les validations Logics et préparer la version avant déploiement.",
+      "ADR 009 checkpoint: mettre à jour les docs Logics touchés et laisser le dépôt prêt à être commit."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/brand-mark-and-english-claim-search.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

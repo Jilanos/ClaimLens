@@ -15,13 +15,18 @@ from claimlens.config import load_config
 from claimlens.db import (
     get_pipeline_run,
     init_db,
+    latest_pipeline_run_for_video,
     set_run_status,
     set_step_status,
     upsert_channel,
     upsert_transcript,
     upsert_video,
 )
-from claimlens.evidence import OpenAIClaimSynthesizer, OpenAIEvidenceGrader
+from claimlens.evidence import (
+    OpenAIClaimSynthesizer,
+    OpenAIClaimTranslator,
+    OpenAIEvidenceGrader,
+)
 from claimlens.pipeline import (
     PipelineError,
     clean_run_transcript,
@@ -363,6 +368,16 @@ def _brief(args: argparse.Namespace) -> int:
     return 0
 
 
+def _report_language_for(database_path, video_id: str, config) -> str:
+    run = latest_pipeline_run_for_video(database_path, video_id)
+    if run is None:
+        return config.pipeline.report_language
+    try:
+        return str(run["report_language"] or config.pipeline.report_language)
+    except (IndexError, KeyError):
+        return config.pipeline.report_language
+
+
 def _verify_sources(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     if not config.sources.advanced_source_verification:
@@ -381,11 +396,16 @@ def _verify_sources(args: argparse.Namespace) -> int:
         return 1
     grader = None
     synthesizer = None
+    translator = None
     if not args.no_grading:
         grading_key = args.openai_api_key or config.api_keys.openai
         if grading_key:
-            grader = OpenAIEvidenceGrader(api_key=grading_key)
-            synthesizer = OpenAIClaimSynthesizer(api_key=grading_key)
+            language = _report_language_for(database_path, args.video_id, config)
+            grader = OpenAIEvidenceGrader(api_key=grading_key, language=language)
+            synthesizer = OpenAIClaimSynthesizer(api_key=grading_key, language=language)
+            # Providers index English, so the claims are searched in English whatever
+            # language the video and the report are in.
+            translator = OpenAIClaimTranslator(api_key=grading_key)
         else:
             print(
                 "No OpenAI key available: sources will be retrieved but not graded as "
@@ -400,6 +420,7 @@ def _verify_sources(args: argparse.Namespace) -> int:
             timeout_seconds=config.pipeline.source_verification_timeout_seconds,
             grader=grader,
             synthesizer=synthesizer,
+            translator=translator,
         )
         briefs_dir = args.briefs_dir or config.paths.briefs
         path = generate_verified_brief(

@@ -90,12 +90,52 @@ SYNTHESIS_SYSTEM_PROMPT = (
 )
 
 
+TRANSLATION_SYSTEM_PROMPT = (
+    "You translate short factual claims into English so they can be searched "
+    "against scientific literature indexes.\n"
+    "Rules:\n"
+    "- Return the claim in English. If it is already English, return it "
+    "unchanged.\n"
+    "- Preserve the meaning exactly: keep every quantity, unit, comparison, "
+    "population and hedge. Never strengthen or soften the claim.\n"
+    "- Prefer the term a researcher would use in a paper title or abstract, "
+    "so the wording matches indexed literature.\n"
+    "- Keep proper nouns, molecule names, and acronyms as they are.\n"
+    "- Do not explain, comment, or add anything the claim does not state.\n"
+    'Return JSON only: {"claims": [{"index": <int>, "english": "<claim>"}]}. '
+    "Translate every claim exactly once."
+)
+
+#: Language names for the codes the report language field realistically carries.
+LANGUAGE_NAMES = {
+    "en": "English",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "nl": "Dutch",
+}
+
+
+def language_instruction(language: str | None) -> str:
+    """Name the prose language, so a French report never gets English commentary."""
+
+    code = (language or "en").strip().lower()
+    name = LANGUAGE_NAMES.get(code.split("-")[0], f"the language with IETF tag '{code}'")
+    return f"Write every piece of prose you return in {name}."
+
+
 class EvidenceGradingError(RuntimeError):
     """Raised when the grading boundary cannot return usable grades."""
 
 
 class EvidenceSynthesisError(RuntimeError):
     """Raised when the synthesis boundary cannot return usable prose."""
+
+
+class ClaimTranslationError(RuntimeError):
+    """Raised when the translation boundary cannot return usable claims."""
 
 
 @dataclass(frozen=True)
@@ -135,6 +175,7 @@ class OpenAIEvidenceGrader:
         model: str = DEFAULT_MODEL,
         batch_size: int = DEFAULT_BATCH_SIZE,
         timeout_seconds: int = 60,
+        language: str = "en",
     ) -> None:
         if not api_key:
             raise EvidenceGradingError("An OpenAI API key is required for evidence grading.")
@@ -142,6 +183,9 @@ class OpenAIEvidenceGrader:
         self.model = model
         self.batch_size = max(1, batch_size)
         self.timeout_seconds = timeout_seconds
+        # The judgement is made against English abstracts; only the rationale the
+        # reader sees follows the report language.
+        self.language = language
 
     def grade(self, *, claim: str, candidates: list[GradableCandidate]) -> list[EvidenceGrade]:
         grades: list[EvidenceGrade] = []
@@ -159,7 +203,7 @@ class OpenAIEvidenceGrader:
         content = _chat_json(
             api_key=self.api_key,
             model=self.model,
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=f"{SYSTEM_PROMPT}\n{language_instruction(self.language)}",
             user_prompt=build_grading_prompt(claim, candidates),
             timeout_seconds=self.timeout_seconds,
             error=EvidenceGradingError,
@@ -198,12 +242,15 @@ class OpenAIClaimSynthesizer:
         api_key: str,
         model: str = DEFAULT_MODEL,
         timeout_seconds: int = 60,
+        language: str = "en",
     ) -> None:
         if not api_key:
             raise EvidenceSynthesisError("An OpenAI API key is required for claim synthesis.")
         self.api_key = api_key
         self.model = model
         self.timeout_seconds = timeout_seconds
+        # The records are English; the paragraph belongs to the reader's brief.
+        self.language = language
 
     def synthesize(self, *, claim: str, verdict: str, sources: list[SynthesisSource]) -> str:
         if not sources:
@@ -211,7 +258,7 @@ class OpenAIClaimSynthesizer:
         content = _chat_json(
             api_key=self.api_key,
             model=self.model,
-            system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+            system_prompt=f"{SYNTHESIS_SYSTEM_PROMPT}\n{language_instruction(self.language)}",
             user_prompt=build_synthesis_prompt(claim, verdict, sources),
             timeout_seconds=self.timeout_seconds,
             error=EvidenceSynthesisError,
@@ -260,6 +307,99 @@ def parse_synthesis_json(content: str) -> str:
     if not text:
         raise EvidenceSynthesisError("Claim synthesis response carried no paragraph.")
     return text
+
+
+class ClaimTranslator(Protocol):
+    model: str
+
+    def translate(self, *, claims: list[str]) -> list[str]:
+        """Return each claim rendered in English, in the order it was given."""
+
+
+class OpenAIClaimTranslator:
+    """Puts claims into the language the literature is indexed in.
+
+    PubMed and Semantic Scholar index English. A French claim searched verbatim
+    returns nothing, which reads to the user as "science has no answer" when the real
+    cause is that the question was never asked in a language the index understands.
+    """
+
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        model: str = DEFAULT_MODEL,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        timeout_seconds: int = 60,
+    ) -> None:
+        if not api_key:
+            raise ClaimTranslationError("An OpenAI API key is required to translate claims.")
+        self.api_key = api_key
+        self.model = model
+        self.batch_size = max(1, batch_size)
+        self.timeout_seconds = timeout_seconds
+
+    def translate(self, *, claims: list[str]) -> list[str]:
+        english: list[str] = []
+        for start in range(0, len(claims), self.batch_size):
+            batch = claims[start : start + self.batch_size]
+            content = _chat_json(
+                api_key=self.api_key,
+                model=self.model,
+                system_prompt=TRANSLATION_SYSTEM_PROMPT,
+                user_prompt=build_translation_prompt(batch),
+                timeout_seconds=self.timeout_seconds,
+                error=ClaimTranslationError,
+                label="Claim translation",
+            )
+            english.extend(parse_translation_json(content, originals=batch))
+        return english
+
+
+def build_translation_prompt(claims: list[str]) -> str:
+    lines = ["Claims:"]
+    for index, claim in enumerate(claims, start=1):
+        lines.append(f"[{index}] {_trim(claim, limit=600)}")
+    lines.append("")
+    lines.append(f"Return all {len(claims)} claims in English.")
+    return "\n".join(lines)
+
+
+def parse_translation_json(content: str, *, originals: list[str]) -> list[str]:
+    """Return one English claim per original, falling back to the original text.
+
+    A claim we could not translate is still searchable, just badly; dropping it would
+    silently remove it from the verification instead.
+    """
+
+    try:
+        raw = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ClaimTranslationError("Claim translation response was not valid JSON.") from exc
+
+    entries = raw.get("claims") if isinstance(raw, dict) else None
+    if not isinstance(entries, list):
+        raise ClaimTranslationError("Claim translation response had no claims array.")
+
+    by_index: dict[int, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            index = int(entry.get("index"))
+        except (TypeError, ValueError):
+            continue
+        english = " ".join(str(entry.get("english", "")).split())
+        if 1 <= index <= len(originals) and english and index not in by_index:
+            by_index[index] = english
+
+    missing = [index for index in range(1, len(originals) + 1) if index not in by_index]
+    if missing:
+        LOGGER.info(
+            "Claim translation omitted %d claim(s); searching them as written",
+            len(missing),
+        )
+    return [by_index.get(index, originals[index - 1]) for index in range(1, len(originals) + 1)]
 
 
 def _chat_json(

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from claimlens import __version__, db
 from claimlens.analysis import OpenAIAnalysisClient, analyze_cleaned_transcript
@@ -36,7 +36,11 @@ from claimlens.auth import (
 )
 from claimlens.briefs import SIGNALS_PREFIX, generate_brief, generate_verified_brief
 from claimlens.config import AppConfig, SourceConfig
-from claimlens.evidence import OpenAIClaimSynthesizer, OpenAIEvidenceGrader
+from claimlens.evidence import (
+    OpenAIClaimSynthesizer,
+    OpenAIClaimTranslator,
+    OpenAIEvidenceGrader,
+)
 from claimlens.kapsule_auth import authenticate as authenticate_kapsule_account
 from claimlens.pipeline import (
     add_manual_transcript,
@@ -92,11 +96,31 @@ STATUS_LABELS = {
     "pending": "Waiting",
 }
 
-LOGO_MARK = (
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '
-    'stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/>'
-    '<path d="m21 21-5.2-5.2"/><path d="M8 10.5h5M10.5 8v5" stroke-width="1.8"/></svg>'
+#: The ClaimLens mark: a lens over a play triangle, with the check that stands for the
+#: source review. Drawn on a 24 grid with `currentColor`, so the same body serves the
+#: gradient tile in the header and the favicon.
+MARK_ATTRS = (
+    'fill="none" stroke="currentColor" stroke-width="1.8" '
+    'stroke-linecap="round" stroke-linejoin="round"'
 )
+MARK_BODY = (
+    '<circle cx="9.8" cy="9.8" r="8.2"/>'
+    '<path d="m16 15.8 6.2 5.5"/>'
+    '<path d="m11 13.6 1.6 1.6 2.8-3.4"/>'
+    '<path d="M7 6.2 12 9.1 7 12Z" fill="#e5231b" stroke="#e5231b" stroke-width="1.5"/>'
+)
+LOGO_MARK = f'<svg viewBox="0 0 24 24" {MARK_ATTRS} aria-hidden="true">{MARK_BODY}</svg>'
+#: The same mark on its brand tile, inlined so the tab icon costs no extra request.
+FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+    '<defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1">'
+    '<stop offset="0" stop-color="#0b7d8c"/><stop offset="1" stop-color="#0a6270"/>'
+    "</linearGradient></defs>"
+    '<rect width="32" height="32" rx="7" fill="url(#m)"/>'
+    f'<g color="#ffffff" {MARK_ATTRS} transform="translate(3.2 3.2) scale(1.067)">'
+    f"{MARK_BODY}</g></svg>"
+)
+FAVICON_DATA_URI = "data:image/svg+xml," + quote(FAVICON_SVG, safe="")
 
 STYLES = """
 :root {
@@ -409,6 +433,8 @@ def _page_shell(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)}</title>
+  <link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}">
+  <meta name="theme-color" content="#0b7d8c">
   <style>{STYLES}</style>
 </head>
 <body>
@@ -1640,6 +1666,7 @@ def _evidence_grader(
     form: dict[str, list[str]],
     *,
     user_id: int | None,
+    language: str = "en",
 ) -> OpenAIEvidenceGrader | None:
     """Build the grader when a key is reachable, else verify sources without grading."""
 
@@ -1647,7 +1674,7 @@ def _evidence_grader(
     if not api_key:
         LOGGER.info("No OpenAI key available; source verification will not grade evidence")
         return None
-    return OpenAIEvidenceGrader(api_key=api_key)
+    return OpenAIEvidenceGrader(api_key=api_key, language=language)
 
 
 def _claim_synthesizer(
@@ -1656,6 +1683,7 @@ def _claim_synthesizer(
     form: dict[str, list[str]],
     *,
     user_id: int | None,
+    language: str = "en",
 ) -> OpenAIClaimSynthesizer | None:
     """Build the synthesizer when a key is reachable; the brief degrades without it."""
 
@@ -1663,7 +1691,32 @@ def _claim_synthesizer(
     if not api_key:
         LOGGER.info("No OpenAI key available; claims will carry no evidence synthesis")
         return None
-    return OpenAIClaimSynthesizer(api_key=api_key)
+    return OpenAIClaimSynthesizer(api_key=api_key, language=language)
+
+
+def _claim_translator(
+    config: AppConfig,
+    database_path: Path | str,
+    form: dict[str, list[str]],
+    *,
+    user_id: int | None,
+) -> OpenAIClaimTranslator | None:
+    """Build the translator that puts claims into the language the indexes speak."""
+
+    api_key = _openai_key(config, database_path, form, user_id=user_id)
+    if not api_key:
+        LOGGER.info("No OpenAI key available; claims will be searched as written")
+        return None
+    return OpenAIClaimTranslator(api_key=api_key)
+
+
+def _run_language(run) -> str:
+    """The language the reader asked the report in, defaulting to English."""
+
+    try:
+        return str(run["report_language"] or "en")
+    except (IndexError, KeyError):
+        return "en"
 
 
 def _openai_key(
@@ -1902,8 +1955,21 @@ def _run_action(
             adapters=adapters,
             max_results=config.pipeline.source_verification_max_results,
             timeout_seconds=config.pipeline.source_verification_timeout_seconds,
-            grader=_evidence_grader(config, database_path, form, user_id=user_id),
-            synthesizer=_claim_synthesizer(config, database_path, form, user_id=user_id),
+            grader=_evidence_grader(
+                config,
+                database_path,
+                form,
+                user_id=user_id,
+                language=_run_language(run),
+            ),
+            synthesizer=_claim_synthesizer(
+                config,
+                database_path,
+                form,
+                user_id=user_id,
+                language=_run_language(run),
+            ),
+            translator=_claim_translator(config, database_path, form, user_id=user_id),
         )
         path = generate_verified_brief(
             database_path,

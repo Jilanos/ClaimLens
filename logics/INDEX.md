@@ -29,6 +29,7 @@
 | [prod_016_securisation_et_fiabilisation_de_claimlens](product/prod_016_securisation_et_fiabilisation_de_claimlens.md) | Securisation et fiabilisation de ClaimLens | Proposed |  |  | product/prod_016_securisation_et_fiabilisation_de_claimlens.md |
 | [prod_017_hardening_de_production_claimlens_suivi](product/prod_017_hardening_de_production_claimlens_suivi.md) | Hardening de production ClaimLens - suivi | Settled |  |  | product/prod_017_hardening_de_production_claimlens_suivi.md |
 | [prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture](product/prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture.md) | Espace d'analyse et brief scientifique orientés lecture | Settled |  |  | product/prod_018_espace_d_analyse_et_brief_scientifique_orientes_lecture.md |
+| [prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue](product/prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue.md) | Marque ClaimLens et recherche scientifique independante de la langue | Settled |  |  | product/prod_019_marque_claimlens_et_recherche_scientifique_independante_de_la_langue.md |
 
 ## Roadmaps
 
@@ -53,6 +54,7 @@ _None_
 | [req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25](request/req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25.md) | Remedier aux constats de l'audit technique 2026-07-25 | Done |  |  | request/req_012_remedier_aux_constats_de_l_audit_technique_2026_07_25.md |
 | [req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens](request/req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens.md) | Finaliser le hardening web et operationnel de ClaimLens | Done |  |  | request/req_013_finaliser_le_hardening_web_et_operationnel_de_claimlens.md |
 | [req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production](request/req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production.md) | Rendre l'analyse ClaimLens lisible, scientifique et fiable en production | Done |  |  | request/req_014_rendre_l_analyse_claimlens_lisible_scientifique_et_fiable_en_production.md |
+| [req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue](request/req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue.md) | Donner a ClaimLens sa marque propre et une recherche scientifique independante de la langue | Done |  |  | request/req_015_donner_a_claimlens_sa_marque_propre_et_une_recherche_scientifique_independante_de_la_langue.md |
 
 ## Backlog
 
@@ -142,6 +144,8 @@ _None_
 | [item_082_recomposer_la_navigation_et_le_brief_html_en_espace_desktop_a_deux_colonnes](backlog/item_082_recomposer_la_navigation_et_le_brief_html_en_espace_desktop_a_deux_colonnes.md) | Recomposer la navigation et le brief HTML en espace desktop à deux colonnes | Done |  | 100% | backlog/item_082_recomposer_la_navigation_et_le_brief_html_en_espace_desktop_a_deux_colonnes.md |
 | [item_083_expliquer_les_claims_par_une_synthese_scientifique_sourcee](backlog/item_083_expliquer_les_claims_par_une_synthese_scientifique_sourcee.md) | Expliquer les claims par une synthèse scientifique sourcée | Done |  | 100% | backlog/item_083_expliquer_les_claims_par_une_synthese_scientifique_sourcee.md |
 | [item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider](backlog/item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider.md) | Respecter les cooldowns Semantic Scholar avant de signaler une erreur provider | Done |  | 100% | backlog/item_084_respecter_les_cooldowns_semantic_scholar_avant_de_signaler_une_erreur_provider.md |
+| [item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet](backlog/item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet.md) | Adopter la marque ClaimLens dans l'en-tete et dans l'onglet | Done |  | 100% | backlog/item_085_adopter_la_marque_claimlens_dans_l_en_tete_et_dans_l_onglet.md |
+| [item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim](backlog/item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim.md) | Interroger la litterature en anglais quelle que soit la langue du claim | Done |  | 100% | backlog/item_086_interroger_la_litterature_en_anglais_quelle_que_soit_la_langue_du_claim.md |
 
 ## Tasks
 
@@ -165,3 +169,4 @@ _None_
 | [task_016_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production](tasks/task_016_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production.md) | Standardiser le stockage des cles et la fiabilite web de production | Done | codex | 100% | tasks/task_016_standardiser_le_stockage_des_cles_et_la_fiabilite_web_de_production.md |
 | [task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens](tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md) | Orchestrer le suivi de hardening web et operationnel ClaimLens | Done | codex | 100% | tasks/task_017_orchestrer_le_suivi_de_hardening_web_et_operationnel_claimlens.md |
 | [task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens](tasks/task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens.md) | Orchestrer la lisibilité et la fiabilité du brief ClaimLens | Done |  | 100% | tasks/task_018_orchestrer_la_lisibilite_et_la_fiabilite_du_brief_claimlens.md |
+| [task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue](tasks/task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue.md) | Livrer la marque ClaimLens et la recherche scientifique multilingue | Done |  | 100% | tasks/task_019_livrer_la_marque_claimlens_et_la_recherche_scientifique_multilingue.md |
