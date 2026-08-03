@@ -619,7 +619,8 @@ def test_a_finished_analysis_is_compact_and_has_no_close_control(tmp_path):
     assert 'value="close_analysis"' not in rendered
     assert "Close analysis" not in rendered
     assert '<section class="workspace complete"' in rendered
-    assert "Execution details" not in rendered
+    assert '<details class="workspace-details">' in rendered
+    assert "Execution details" in rendered
 
 
 def test_an_unfinished_analysis_cannot_be_closed(tmp_path):

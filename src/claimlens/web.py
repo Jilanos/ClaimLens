@@ -293,9 +293,10 @@ ul.out li:last-child { border-bottom:0; }
 .report li { margin:5px 0; }
 .mono { font-family:var(--mono); font-size:12.5px; color:var(--muted); }
 .workspace { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; align-items:start; }
-.workspace-main { min-width:0; }
+.workspace-main { min-width:0; display:grid; gap:16px; }
 .workspace-brief { min-width:0; }
 .workspace-brief:empty { display:none; }
+.workspace-progress .card-body { padding:0; }
 .workspace.complete { gap:16px; }
 .workspace.complete .card-head { padding:12px 16px; }
 .workspace.complete .card-body { padding:12px 16px; }
@@ -303,6 +304,14 @@ ul.out li:last-child { border-bottom:0; }
 .workspace.complete .report-complete .card-body { padding:34px 40px; }
 .workspace.complete .report-complete .brief { max-width:92ch; }
 .workspace-complete-note { margin:0; color:var(--muted); font-size:13px; }
+.workspace-details { background:var(--surface); border:1px solid var(--line);
+  border-radius:var(--radius); box-shadow:var(--shadow); }
+.workspace-details summary { cursor:pointer; list-style:none; }
+.workspace-details summary::-webkit-details-marker { display:none; }
+.workspace-details-summary::after { content:"v"; margin-left:auto; color:var(--muted);
+  font-size:16px; transition:transform .12s; }
+.workspace-details[open] .workspace-details-summary::after { transform:rotate(180deg); }
+.workspace-details-stack { display:grid; gap:16px; }
 .recall summary { cursor:pointer; list-style:none; }
 .recall summary::-webkit-details-marker { display:none; }
 .recall-hint { font-size:12px; font-weight:600; color:var(--accent-2); white-space:nowrap; }
@@ -395,10 +404,10 @@ ul.out li:last-child { border-bottom:0; }
   border-top:1px solid color-mix(in srgb,var(--warn) 26%,transparent); }
 .recovery-panel h4 { margin:0 0 4px; font-size:14px; }
 .recovery-panel p { margin:0; color:var(--ink-2); font-size:13px; }
-/* Desktop reads the run and the brief side by side; anything narrower stacks them,
-   so no layout ever needs horizontal scrolling. */
+/* The progress tracker, details panel, results and brief stay stacked. A completed brief
+   should own the reading surface instead of competing with a permanent side column. */
 @media (min-width:1080px) {
-  .workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }
+  .workspace { grid-template-columns:minmax(0,1fr); }
   .workspace.complete { grid-template-columns:minmax(0,1fr); }
   .report { margin:0; }
 }
@@ -428,7 +437,7 @@ ul.out li:last-child { border-bottom:0; }
 STANDALONE_BRIEF_STYLES = """
 body { background:var(--surface); }
 main { padding:32px 20px 56px; }
-.report { box-shadow:none; border:0; }
+.report { width:100%; max-width:none; box-shadow:none; border:0; }
 .report .card-body { padding:0; }
 .brief { max-width:none; }
 @media print {
@@ -1503,12 +1512,16 @@ def _active_workspace(
     )
     video_title = html.escape(video_title_value)
     step_rows_html = "\n".join(_step_row(row) for row in step_rows)
-    # The business timeline is never behind a disclosure: it is the answer to "where is
-    # my analysis". Only the row-level diagnostics fold away.
-    diagnostics = f"""
-    <div id="pipeline-stepper" class="stepper" aria-label="Analysis steps">{
+    progress = f"""
+    <div class="card workspace-progress">
+      <div class="card-body">
+        <div id="pipeline-stepper" class="stepper" aria-label="Analysis steps">{
         _stepper(step_rows)
     }</div>
+      </div>
+    </div>
+"""
+    execution_details = f"""
     <details class="diagnostic">
       <summary>Execution details</summary>
       <div class="diagnostic-body">
@@ -1538,54 +1551,80 @@ def _active_workspace(
         )
         return f"""
   <section class="workspace complete" aria-label="Completed analysis workspace">
-    <div class="workspace-brief" id="pipeline-brief">
-      <div class="card recall">
-        <details>
-          <summary class="card-head recall-summary">
-            <div class="workspace-title"><h2>Analysis complete</h2>
-              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
-            <span class="recall-hint">Run details</span>
-          </summary>
-          <div class="card-body">
-            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}</p>
-            <p class="workspace-complete-note">The results below reflect this completed
-              run.</p>
-            <div id="pipeline-outputs">{outputs_html}</div>
+    {progress}
+    <details class="workspace-details">
+      <summary class="card-head workspace-details-summary">
+        <div class="workspace-title"><h2>Analysis details</h2>
+          <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+        <span class="recall-hint">Expand</span>
+      </summary>
+      <div class="card-body workspace-details-stack">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <div class="workspace-title"><h2>Active analysis</h2>
+                <span>{_status_badge(selected_run["status"])}</span>
+                <p id="{LIVE_CONNECTION_REGION}" class="connection" role="status"
+                  aria-live="polite" hidden></p></div>
+              <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}
+                · {video_url}</p>
+            </div>
           </div>
-        </details>
+          <div class="card-body">
+            <div class="workspace-action">
+              <div id="pipeline-action">{
+            _action_html(selected_run, next_step, failed_captions)
+        }</div>
+              <div id="pipeline-controls">{controls}</div>
+              <div id="pipeline-recovery">{recovery}</div>
+            </div>
+          </div>
+        </div>
+        <div id="pipeline-outputs">{outputs_html}</div>
+        {execution_details}
       </div>
-      {brief_html}
-    </div>
+    </details>
+    <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
   </section>
 """
     return f"""
   <section class="workspace" aria-label="Active analysis workspace">
+    {progress}
     <div class="workspace-main">
-      <div class="card">
-        <div class="card-head">
-          <div>
-            <div class="workspace-title"><h2>Active analysis</h2>
-              <span id="pipeline-status">{_status_badge(selected_run["status"])}</span>
-              <p id="{LIVE_CONNECTION_REGION}" class="connection" role="status"
-                aria-live="polite" hidden></p></div>
-            <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}
-              · {video_url}</p>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="workspace-action">
-            <div id="pipeline-action">{
+      <details class="workspace-details">
+        <summary class="card-head workspace-details-summary">
+          <div class="workspace-title"><h2>Analysis details</h2>
+            <span id="pipeline-status">{_status_badge(selected_run["status"])}</span></div>
+          <span class="recall-hint">Expand</span>
+        </summary>
+        <div class="card-body workspace-details-stack">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="workspace-title"><h2>Active analysis</h2>
+                  <span>{_status_badge(selected_run["status"])}</span>
+                  <p id="{LIVE_CONNECTION_REGION}" class="connection" role="status"
+                    aria-live="polite" hidden></p></div>
+                <p class="workspace-url">Video <span class="mono">{video_id}</span> · {video_title}
+                  · {video_url}</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="workspace-action">
+                <div id="pipeline-action">{
         _action_html(selected_run, next_step, failed_captions)
     }</div>
-            <div id="pipeline-controls">{controls}</div>
-            <div id="pipeline-recovery">{recovery}</div>
+                <div id="pipeline-controls">{controls}</div>
+                <div id="pipeline-recovery">{recovery}</div>
+              </div>
+            </div>
           </div>
-          {diagnostics}
-        </div>
-      </div>
-      <div id="pipeline-outputs">{
+          <div id="pipeline-outputs">{
         _outputs(database_path, selected_run["video_id"], run_id=selected_run["id"])
     }</div>
+          {execution_details}
+        </div>
+      </details>
     </div>
     <div class="workspace-brief" id="pipeline-brief">{brief_html}</div>
   </section>
@@ -2465,6 +2504,7 @@ def run_status_payload(
             run_id=run_id,
             user_id=user_id,
             guest_token=guest_token,
+            full_page=True,
         )
         or None,
     }

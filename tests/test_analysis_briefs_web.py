@@ -27,6 +27,7 @@ from claimlens.web import (
     render_login_page,
     render_options_page,
     render_process_page,
+    render_standalone_brief,
     run_status_payload,
 )
 
@@ -852,7 +853,7 @@ def test_the_archive_page_lists_analyses_and_keeps_the_status_filter(tmp_path):
     assert 'href="/?run_id=' in rendered
 
 
-def test_the_active_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path):
+def test_the_active_workspace_stacks_progress_details_results_and_brief(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
     run_id = create_run(database, "https://www.youtube.com/watch?v=abc123XYZ_")
     db.set_step_status(database, run_id=run_id, step="captions", status="running")
@@ -862,10 +863,14 @@ def test_the_active_workspace_puts_the_brief_in_a_second_desktop_column(tmp_path
 
     assert 'class="workspace-main"' in rendered
     assert 'class="workspace-brief"' in rendered
-    # One column below the breakpoint, two above it, and never a horizontal scroll.
+    # The progress tracker stays visible, while the work details expand vertically.
+    assert rendered.index('id="pipeline-stepper"') < rendered.index("Analysis details")
+    assert '<details class="workspace-details">' in rendered
+    assert 'id="pipeline-outputs"' in rendered
+    assert 'id="pipeline-brief"' in rendered
     assert ".workspace { display:grid; grid-template-columns:minmax(0,1fr);" in rendered
     assert "@media (min-width:1080px) {" in rendered
-    assert ".workspace { grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); }" in rendered
+    assert ".workspace { grid-template-columns:minmax(0,1fr); }" in rendered
 
 
 def test_the_completed_workspace_gives_the_brief_the_full_width(tmp_path):
@@ -891,10 +896,26 @@ def test_the_completed_workspace_gives_the_brief_the_full_width(tmp_path):
     )
     assert ".workspace.complete .report-complete .brief { max-width:92ch; }" in rendered
     # The completed identity, status, and Results summary are recoverable, not gone.
-    assert '<div class="card recall">' in rendered
+    assert '<details class="workspace-details">' in rendered
     assert "<summary" in rendered
-    assert "<h2>Analysis complete</h2>" in rendered
+    assert "<h2>Analysis details</h2>" in rendered
+    assert "<h2>Active analysis</h2>" in rendered
     assert '<h2>Results</h2>' in rendered
+    assert rendered.index('id="pipeline-stepper"') < rendered.index("Analysis details")
+    assert rendered.index("Analysis details") < rendered.index('id="pipeline-brief"')
+
+
+def test_standalone_brief_export_uses_the_available_page_width():
+    rendered = render_standalone_brief(
+        "# ClaimLens Brief\n\n## A video title\n\n## Summary\n\nReadable paragraph.",
+        title="ClaimLens brief",
+    )
+
+    standalone_styles = rendered[rendered.index("body { background:var(--surface); }") :]
+
+    assert ".report { width:100%; max-width:none; box-shadow:none; border:0; }" in rendered
+    assert ".brief { max-width:none; }" in rendered
+    assert ".report { max-width:760px; margin:0 auto; }" not in standalone_styles
 
 
 def test_the_brief_is_rendered_as_html_and_never_as_raw_markdown(tmp_path):
