@@ -11,6 +11,7 @@ from threading import Thread
 from urllib.request import urlopen
 
 import pytest
+from support import Client, source_config, store_cleaned_fixture
 
 from claimlens import __version__, db
 from claimlens.assets import LIVE_STATUS_JS
@@ -30,7 +31,6 @@ from claimlens.web import (
     resolve_transcript,
     run_status_payload,
 )
-from tests.test_analysis_briefs_web import Client, source_config, store_cleaned_fixture
 
 VIDEO_ID = "abc123XYZ_"
 VIDEO_URL = f"https://www.youtube.com/watch?v={VIDEO_ID}"
