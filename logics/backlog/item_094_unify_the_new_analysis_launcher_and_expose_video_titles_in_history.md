@@ -1,10 +1,10 @@
 ## item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history - Unify the new-analysis launcher and expose video titles in history
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Low
 > Theme: Analysis navigation
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -47,3 +47,9 @@
 # Priority
 - Priority: High — starting a run and locating a past one are primary navigation actions.
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_022_deliver_the_brief_first_analysis_workspace_and_validated_release`
+
+# Notes
+- Task `task_022_deliver_the_brief_first_analysis_workspace_and_validated_release` was finished via `logics-manager flow finish task` on 2026-08-03.

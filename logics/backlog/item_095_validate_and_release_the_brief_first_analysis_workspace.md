@@ -1,10 +1,10 @@
 ## item_095_validate_and_release_the_brief_first_analysis_workspace - Validate and release the brief-first analysis workspace
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 100%
 > Complexity: Medium
 > Theme: Quality and release
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -48,3 +48,9 @@
 # Priority
 - Priority: High — release integrity is required before users receive the interface change.
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_022_deliver_the_brief_first_analysis_workspace_and_validated_release`
+
+# Notes
+- Task `task_022_deliver_the_brief_first_analysis_workspace_and_validated_release` was finished via `logics-manager flow finish task` on 2026-08-03.

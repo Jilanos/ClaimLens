@@ -1,7 +1,7 @@
 ## req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases - Prioritise the completed analysis brief and standardise ClaimLens delivery releases
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Draft
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
 > Complexity: Medium
