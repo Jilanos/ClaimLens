@@ -299,6 +299,9 @@ ul.out li:last-child { border-bottom:0; }
 .workspace.complete { gap:16px; }
 .workspace.complete .card-head { padding:12px 16px; }
 .workspace.complete .card-body { padding:12px 16px; }
+.workspace.complete .report-complete { width:100%; max-width:none; margin:0; }
+.workspace.complete .report-complete .card-body { padding:34px 40px; }
+.workspace.complete .report-complete .brief { max-width:92ch; }
 .workspace-complete-note { margin:0; color:var(--muted); font-size:13px; }
 .recall summary { cursor:pointer; list-style:none; }
 .recall summary::-webkit-details-marker { display:none; }
@@ -361,8 +364,11 @@ ul.out li:last-child { border-bottom:0; }
   padding:12px 4px;
   border-bottom:1px solid var(--line-2); }
 .history-row:last-child { border-bottom:0; }
-.history-row a { font-weight:600; text-decoration:none; }
-.history-title { display:block; color:var(--ink-2); font-size:13.5px; margin-top:3px; }
+.history-primary { display:flex; align-items:baseline; gap:7px; flex-wrap:wrap;
+  font-weight:600; text-decoration:none; }
+.history-code { color:var(--muted); font-family:var(--mono); font-size:12.5px; }
+.history-separator { color:var(--muted); }
+.history-title { color:var(--ink); font-size:15.5px; font-weight:700; }
 .history-row small { display:block; color:var(--muted); margin-top:3px; }
 .history-filter { max-width:170px; min-height:34px; padding:6px 9px; font-size:13px; }
 .history-row[aria-current] { background:var(--accent-wash); border-radius:var(--radius-sm);
@@ -412,6 +418,7 @@ ul.out li:last-child { border-bottom:0; }
   .summary-item { padding:9px; }
   .summary-item strong { font-size:16px; }
   .report .card-body { padding:24px; }
+  .workspace.complete .report-complete .card-body { padding:24px; }
   .navuser .who { display:none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
@@ -1520,6 +1527,7 @@ def _active_workspace(
         run_id=selected_run["id"],
         user_id=user_id,
         guest_token=guest_token,
+        full_page=True,
     )
     # Once the brief exists, the work is complete: let it own the full reading width,
     # and fold the run identity and results behind an accessible recall control instead
@@ -1656,6 +1664,7 @@ def _brief_panel(
     run_id: int,
     user_id: int | None,
     guest_token: str | None,
+    full_page: bool = False,
 ) -> str:
     """Show the finished brief beside the run, as soon as there is one to read."""
 
@@ -1672,8 +1681,9 @@ def _brief_panel(
         return ""
     # Offset by one: the page owns the h1, and the brief's own title labels this panel.
     content = render_brief_html(path.read_text(encoding="utf-8"), heading_offset=1)
+    report_class = "card report report-complete" if full_page else "card report"
     return f"""
-      <div class="card report">
+      <div class="{report_class}">
         <div class="card-head"><span class="sub">Result</span>
           <div class="card-actions">
             <a href="/brief/download?run_id={run_id}&amp;format=html"
@@ -1753,11 +1763,20 @@ def _history_card(
                 label="Reopen",
                 css="btn btn-ghost btn-sm",
             )
-        title = html.escape(row["video_title"] or row["video_id"] or "Untitled video")
+        video_id = html.escape(row["video_id"] or "Untitled analysis")
+        title_value = row["video_title"] or row["video_id"] or "Untitled video"
+        title = html.escape(title_value)
+        if title_value and title_value != row["video_id"]:
+            primary = (
+                f'<span class="history-code">{video_id}</span>'
+                '<span class="history-separator">:</span>'
+                f'<span class="history-title">{title}</span>'
+            )
+        else:
+            primary = f'<span class="history-title">{video_id}</span>'
         return (
-            f'<div class="history-row"{current}><div><a href="/?run_id={row["id"]}">'
-            f"{html.escape(row['video_id'] or 'Untitled analysis')}</a>"
-            f'<span class="history-title">{title}</span>'
+            f'<div class="history-row"{current}><div><a class="history-primary" '
+            f'href="/?run_id={row["id"]}">{primary}</a>'
             f"<small>Analysis #{row['id']} · "
             f"{html.escape(row['started_at'] or '')}</small></div>"
             f'<div class="history-actions">{actions}</div></div>'

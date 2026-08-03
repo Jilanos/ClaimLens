@@ -316,7 +316,8 @@ def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):
 
     assert f'href="/?run_id={run_id}"' in rendered
     assert (
-        f'{VIDEO_ID}</a><span class="history-title">{VIDEO_ID}</span>'
+        f'<a class="history-primary" href="/?run_id={run_id}">'
+        f'<span class="history-title">{VIDEO_ID}</span></a>'
         f"<small>Analysis #{run_id}" in rendered
     )
 
@@ -337,7 +338,11 @@ def test_recent_analyses_falls_back_to_the_identifier_without_title_metadata(tmp
 
     assert f'href="/?run_id={run_id}"' in rendered
     # No real title is on record: the title line gracefully falls back to the identifier.
-    assert f'<span class="history-title">{VIDEO_ID}</span>' in rendered
+    assert (
+        f'<a class="history-primary" href="/?run_id={run_id}">'
+        f'<span class="history-title">{VIDEO_ID}</span></a>' in rendered
+    )
+    assert '<span class="history-separator">:</span>' not in rendered
 
 
 def test_recent_analyses_shows_a_distinct_title_independently_of_the_identifier(tmp_path):
@@ -355,7 +360,12 @@ def test_recent_analyses_shows_a_distinct_title_independently_of_the_identifier(
     rendered = render_history_page(database, guest_token="guest")
 
     assert f'href="/?run_id={run_id}"' in rendered
-    assert '<span class="history-title">A real video title</span>' in rendered
+    assert (
+        f'<span class="history-code">{VIDEO_ID}</span>'
+        '<span class="history-separator">:</span>'
+        '<span class="history-title">A real video title</span>' in rendered
+    )
+    assert ".history-title { color:var(--ink); font-size:15.5px; font-weight:700; }" in rendered
 
 
 def test_the_empty_landing_launcher_has_no_isolated_heading_column(tmp_path):

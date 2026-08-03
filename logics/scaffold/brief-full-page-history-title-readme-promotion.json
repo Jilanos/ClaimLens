@@ -1,0 +1,144 @@
+{
+  "title": "Correct the completed brief reading surface and promote ClaimLens documentation",
+  "references": [
+    "User screenshot: /home/paul/dev/WORK/perso/not full page.png",
+    "src/claimlens/web.py",
+    "tests/test_analysis_briefs_web.py",
+    "tests/test_workspace_deliverables.py",
+    "README.md"
+  ],
+  "request": {
+    "theme": "Completed analysis reading experience",
+    "complexity": "Medium",
+    "context": [
+      "The previous brief-first delivery was marked complete, but the supplied screenshot shows the completed brief still constrained to a narrow left-aligned report card instead of using the page width.",
+      "Recent analyses already carries video title metadata, but the title is currently rendered on a secondary line and does not attract attention before the video identifier.",
+      "The README currently documents the tool accurately but does not sell the workflow with screenshots, reader-focused benefits, or a usage narrative."
+    ],
+    "needs": [
+      "Make completed briefs full-page by default in the Analyses workspace when a saved brief exists.",
+      "Render the video title on the same visible line as the video code in old/recent analyses, after a separator, and make the title visually dominant.",
+      "Document ClaimLens extensively in the README with screenshots and explanations that show why the tool is useful and make readers want to use it."
+    ],
+    "acceptance_criteria": [
+      "AC1: A completed run with a saved brief renders the brief as the dominant full-width reading surface by default, without a narrow report max-width or a competing permanent side column.",
+      "AC2: Completed run details, status, deliverable links, transcript access, and source-verification outcome remain recoverable through an accessible disclosure and are not removed.",
+      "AC3: Each Recent analyses row displays video_id and video_title on the same primary line using a clear separator, with the video title emphasized more strongly than the identifier and with a graceful fallback when no title exists.",
+      "AC4: The README contains an extensive, screenshot-backed product narrative that explains the value of ClaimLens, the end-to-end workflow, outputs, source verification, privacy/key handling, and local/deployed usage.",
+      "AC5: Focused rendering tests prove the full-page brief layout and title presentation, and the normal quality gates pass or any remaining limitation is explicitly recorded."
+    ]
+  },
+  "product": {
+    "title": "Brief-first ClaimLens reading and adoption documentation",
+    "overview": "Turn the completed analysis page into a real reading surface, make history scan by human titles first, and make the README function as a convincing product guide.",
+    "goals": [
+      "Completed briefs should feel like the main artifact, not a preview embedded in leftover workflow chrome.",
+      "History should let a returning user recognize analyses by video title before reading technical identifiers.",
+      "The README should help a new user understand the problem ClaimLens solves, trust its workflow, and start using it."
+    ],
+    "non_goals": [
+      "Changing the analysis pipeline, evidence grading semantics, or database schema.",
+      "Changing history retention, ownership, authentication, or authorization behavior.",
+      "Adding new external services or changing deployment topology."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Make completed briefs genuinely full page by default",
+      "theme": "Completed brief layout",
+      "complexity": "Medium",
+      "priority": "High",
+      "problem": [
+        "The completed workspace uses a single-column grid, but the embedded report card still has a narrow max-width and desktop margin rules that keep it from occupying the available reading surface."
+      ],
+      "scope_in": [
+        "Remove or override narrow completed-brief constraints so the completed brief card spans the workspace width.",
+        "Keep the brief text readable with a controlled measure inside the full-width card.",
+        "Preserve the accessible recall disclosure for completed run details and results."
+      ],
+      "scope_out": [
+        "Pipeline, artifact generation, and authorization changes.",
+        "Standalone downloadable brief print layout changes unless directly necessary."
+      ],
+      "acceptance_criteria": [
+        "AC1: Completed workspace HTML/CSS contains a completed-brief class or equivalent rule proving the report card itself is full width.",
+        "AC2: The completed page has no permanent workspace-main column when a saved brief exists.",
+        "AC3: Completed details and Results remain present inside a disclosure."
+      ],
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC5"
+      ]
+    },
+    {
+      "title": "Make recent analysis rows title-first and same-line",
+      "theme": "History scanability",
+      "complexity": "Low",
+      "priority": "High",
+      "problem": [
+        "The video title is available but displayed as secondary text below the identifier, so old analyses are still scanned by code rather than by meaningful title."
+      ],
+      "scope_in": [
+        "Render video_id and video_title on the same primary line with a clear separator.",
+        "Emphasize the title as the dominant text while keeping the video_id available.",
+        "Keep status badges, close/reopen actions, timestamps, and filtering unchanged."
+      ],
+      "scope_out": [
+        "Metadata ingestion or schema changes.",
+        "History filtering and retention changes."
+      ],
+      "acceptance_criteria": [
+        "AC1: Rows with a title render a same-line video code plus separator plus emphasized title.",
+        "AC2: Rows without a distinct title render a sensible fallback without duplicated noisy text.",
+        "AC3: Regression tests cover both title and fallback rendering."
+      ],
+      "request_acs": [
+        "AC3",
+        "AC5"
+      ]
+    },
+    {
+      "title": "Rewrite README as a screenshot-backed product guide",
+      "theme": "Adoption documentation",
+      "complexity": "Medium",
+      "priority": "Medium",
+      "problem": [
+        "The README is technically useful but reads like an implementation inventory, not like a guide that demonstrates why ClaimLens is worth using."
+      ],
+      "scope_in": [
+        "Add a reader-oriented overview, workflow narrative, screenshots, output examples, trust model, setup, and smoke-test guidance.",
+        "Use checked-in screenshots or clearly documented screenshot placeholders/paths that can be regenerated.",
+        "Keep operational configuration, deployment, schema, and command details accurate."
+      ],
+      "scope_out": [
+        "Changing product behavior solely for documentation.",
+        "Inventing unsupported features or claims."
+      ],
+      "acceptance_criteria": [
+        "AC1: README opens with a strong value proposition and use-case narrative.",
+        "AC2: README includes screenshot references for the main analysis workflow, completed brief, history, and options/key management surfaces.",
+        "AC3: Existing operational instructions remain present and accurate."
+      ],
+      "request_acs": [
+        "AC4",
+        "AC5"
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrate completed brief full-page correction, history title emphasis, and README promotion",
+    "plan": [
+      "Inspect the completed workspace renderer, CSS report constraints, history renderer, existing tests, README structure, and supplied screenshot.",
+      "Implement the full-width completed brief layout while preserving the recall disclosure and standalone brief readability.",
+      "Update Recent analyses row markup/CSS so the video title appears on the same primary line as the video code and carries visual emphasis.",
+      "Expand README into a screenshot-backed product guide using existing app behavior and checked-in screenshot assets or documented capture locations.",
+      "Add focused regression tests and run targeted tests, broader tests as appropriate, Ruff, and Logics validation."
+    ]
+  },
+  "context_pack": {
+    "mode": "summary-only",
+    "profile": "normal",
+    "out": "logics/context-packs/brief-full-page-history-title-readme-promotion.json"
+  }
+}

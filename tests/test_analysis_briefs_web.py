@@ -883,7 +883,13 @@ def test_the_completed_workspace_gives_the_brief_the_full_width(tmp_path):
     # No permanent second column competes with the brief once the run is complete.
     assert 'class="workspace-main"' not in rendered
     assert 'class="workspace-brief" id="pipeline-brief">' in rendered
+    assert 'class="card report report-complete"' in rendered
     assert ".workspace.complete { grid-template-columns:minmax(0,1fr); }" in rendered
+    assert (
+        ".workspace.complete .report-complete { width:100%; max-width:none; margin:0; }"
+        in rendered
+    )
+    assert ".workspace.complete .report-complete .brief { max-width:92ch; }" in rendered
     # The completed identity, status, and Results summary are recoverable, not gone.
     assert '<div class="card recall">' in rendered
     assert "<summary" in rendered

@@ -1,0 +1,325 @@
+{
+  "budgets": {
+    "max_docs": 20,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation item_096_make_completed_briefs_genuinely_full_page_by_default item_097_make_recent_analysis_rows_title_first_and_same_line item_098_rewrite_readme_as_a_screenshot_backed_product_guide task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_096_make_completed_briefs_genuinely_full_page_by_default",
+          "item_097_make_recent_analysis_rows_title_first_and_same_line",
+          "item_098_rewrite_readme_as_a_screenshot_backed_product_guide"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md",
+      "ref": "prod_023_brief_first_claimlens_reading_and_adoption_documentation",
+      "status": "Proposed",
+      "title": "Brief-first ClaimLens reading and adoption documentation"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, correct the completed brief reading surface and promote claimlens documentation, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Correct the completed brief reading surface and promote ClaimLens documentation",
+        "use when": "You need to implement or review the scaffolded workflow for Correct the completed brief reading surface and promote ClaimLens documentation."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_096_make_completed_briefs_genuinely_full_page_by_default",
+          "item_097_make_recent_analysis_rows_title_first_and_same_line",
+          "item_098_rewrite_readme_as_a_screenshot_backed_product_guide"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ]
+      },
+      "path": "logics/request/req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation.md",
+      "ref": "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Correct the completed brief reading surface and promote ClaimLens documentation"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make completed briefs genuinely full page by default, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make completed briefs genuinely full page by default",
+        "use when": "Implementing the scaffolded slice for Make completed briefs genuinely full page by default."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_096_make_completed_briefs_genuinely_full_page_by_default"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/backlog/item_096_make_completed_briefs_genuinely_full_page_by_default.md",
+      "ref": "item_096_make_completed_briefs_genuinely_full_page_by_default",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Make completed briefs genuinely full page by default"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, make recent analysis rows title-first and same-line, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Make recent analysis rows title-first and same-line",
+        "use when": "Implementing the scaffolded slice for Make recent analysis rows title-first and same-line."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_097_make_recent_analysis_rows_title_first_and_same_line"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/backlog/item_097_make_recent_analysis_rows_title_first_and_same_line.md",
+      "ref": "item_097_make_recent_analysis_rows_title_first_and_same_line",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Make recent analysis rows title-first and same-line"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, rewrite readme as a screenshot-backed product guide, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Rewrite README as a screenshot-backed product guide",
+        "use when": "Implementing the scaffolded slice for Rewrite README as a screenshot-backed product guide."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_098_rewrite_readme_as_a_screenshot_backed_product_guide"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/backlog/item_098_rewrite_readme_as_a_screenshot_backed_product_guide.md",
+      "ref": "item_098_rewrite_readme_as_a_screenshot_backed_product_guide",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Rewrite README as a screenshot-backed product guide"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrate completed brief full-page correction, history title emphasis, and README promotion",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_096_make_completed_briefs_genuinely_full_page_by_default",
+          "item_097_make_recent_analysis_rows_title_first_and_same_line",
+          "item_098_rewrite_readme_as_a_screenshot_backed_product_guide"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md",
+      "ref": "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrate completed brief full-page correction, history title emphasis, and README promotion"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_096_make_completed_briefs_genuinely_full_page_by_default",
+          "item_097_make_recent_analysis_rows_title_first_and_same_line",
+          "item_098_rewrite_readme_as_a_screenshot_backed_product_guide"
+        ],
+        "prod": [
+          "prod_023_brief_first_claimlens_reading_and_adoption_documentation"
+        ],
+        "req": [
+          "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation"
+        ],
+        "task": [
+          "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+        ]
+      },
+      "path": "logics/product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md",
+      "ref": "prod_023_brief_first_claimlens_reading_and_adoption_documentation",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "Brief-first ClaimLens reading and adoption documentation"
+    }
+  ],
+  "estimates": {
+    "char_count": 7226,
+    "companion_doc_count": 1,
+    "doc_count": 6
+  },
+  "generated_at": "2026-08-03T13:38:05Z",
+  "handoff": {
+    "companion_doc_count": 1,
+    "enabled": true,
+    "source_refs": [
+      "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation",
+      "item_096_make_completed_briefs_genuinely_full_page_by_default",
+      "item_097_make_recent_analysis_rows_title_first_and_same_line",
+      "item_098_rewrite_readme_as_a_screenshot_backed_product_guide",
+      "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation,item_096_make_completed_briefs_genuinely_full_page_by_default,item_097_make_recent_analysis_rows_title_first_and_same_line,item_098_rewrite_readme_as_a_screenshot_backed_product_guide,task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion",
+  "refs": [
+    "req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation",
+    "item_096_make_completed_briefs_genuinely_full_page_by_default",
+    "item_097_make_recent_analysis_rows_title_first_and_same_line",
+    "item_098_rewrite_readme_as_a_screenshot_backed_product_guide",
+    "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "version_metadata: missing required evidence",
+      "local_validation: missing required evidence",
+      "git_push: missing required evidence",
+      "ci: missing required evidence",
+      "release_tag: missing required evidence",
+      "github_release: missing required evidence"
+    ],
+    "configured": true,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "version_metadata: missing required evidence",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "version_metadata",
+        "required": true,
+        "state": "version_prepared",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "local_validation",
+        "required": true,
+        "state": "local_validation",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "git_push",
+        "required": true,
+        "state": "pushed",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "ci",
+        "required": true,
+        "state": "ci_verification",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "release_tag",
+        "required": true,
+        "state": "tagged",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "github_release",
+        "required": true,
+        "state": "github_release",
+        "status": "pending"
+      }
+    ],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "version_prepared",
+    "target_version": "1.7.0"
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md",
+      "ref": "task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion"
+    }
+  ]
+}

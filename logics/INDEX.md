@@ -33,6 +33,7 @@
 | [prod_020_espace_d_analyse_termine_reouvrable_et_lisible](product/prod_020_espace_d_analyse_termine_reouvrable_et_lisible.md) | Espace d'analyse terminé, réouvrable et lisible | Settled |  |  | product/prod_020_espace_d_analyse_termine_reouvrable_et_lisible.md |
 | [prod_021_claimlens_analysis_interface_polish](product/prod_021_claimlens_analysis_interface_polish.md) | ClaimLens analysis interface polish | Settled |  |  | product/prod_021_claimlens_analysis_interface_polish.md |
 | [prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery](product/prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery.md) | Brief-first analysis workspace and repeatable release delivery | Settled |  |  | product/prod_022_brief_first_analysis_workspace_and_repeatable_release_delivery.md |
+| [prod_023_brief_first_claimlens_reading_and_adoption_documentation](product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md) | Brief-first ClaimLens reading and adoption documentation | Settled |  |  | product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md |
 
 ## Roadmaps
 
@@ -61,6 +62,7 @@ _None_
 | [req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles](request/req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles.md) | Finaliser l'espace d'analyse ClaimLens et ses livrables lisibles | Done |  |  | request/req_016_finaliser_l_espace_d_analyse_claimlens_et_ses_livrables_lisibles.md |
 | [req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view](request/req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view.md) | Polish the ClaimLens analysis interface and completed-run reading view | Done |  |  | request/req_017_polish_the_claimlens_analysis_interface_and_completed_run_reading_view.md |
 | [req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases](request/req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases.md) | Prioritise the completed analysis brief and standardise ClaimLens delivery releases | Done |  |  | request/req_018_prioritise_the_completed_analysis_brief_and_standardise_claimlens_delivery_releases.md |
+| [req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation](request/req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation.md) | Correct the completed brief reading surface and promote ClaimLens documentation | Done |  |  | request/req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation.md |
 
 ## Backlog
 
@@ -161,6 +163,9 @@ _None_
 | [item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details](backlog/item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details.md) | Make the completed brief full-page and recall completed analysis details | Done |  | 100% | backlog/item_093_make_the_completed_brief_full_page_and_recall_completed_analysis_details.md |
 | [item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history](backlog/item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history.md) | Unify the new-analysis launcher and expose video titles in history | Done |  | 100% | backlog/item_094_unify_the_new_analysis_launcher_and_expose_video_titles_in_history.md |
 | [item_095_validate_and_release_the_brief_first_analysis_workspace](backlog/item_095_validate_and_release_the_brief_first_analysis_workspace.md) | Validate and release the brief-first analysis workspace | Done |  | 100% | backlog/item_095_validate_and_release_the_brief_first_analysis_workspace.md |
+| [item_096_make_completed_briefs_genuinely_full_page_by_default](backlog/item_096_make_completed_briefs_genuinely_full_page_by_default.md) | Make completed briefs genuinely full page by default | Done |  | 100% | backlog/item_096_make_completed_briefs_genuinely_full_page_by_default.md |
+| [item_097_make_recent_analysis_rows_title_first_and_same_line](backlog/item_097_make_recent_analysis_rows_title_first_and_same_line.md) | Make recent analysis rows title-first and same-line | Done |  | 100% | backlog/item_097_make_recent_analysis_rows_title_first_and_same_line.md |
+| [item_098_rewrite_readme_as_a_screenshot_backed_product_guide](backlog/item_098_rewrite_readme_as_a_screenshot_backed_product_guide.md) | Rewrite README as a screenshot-backed product guide | Done |  | 100% | backlog/item_098_rewrite_readme_as_a_screenshot_backed_product_guide.md |
 
 ## Tasks
 
@@ -188,3 +193,4 @@ _None_
 | [task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens](tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md) | Orchestrer la finalisation de l'espace d'analyse ClaimLens | Done |  | 100% | tasks/task_020_orchestrer_la_finalisation_de_l_espace_d_analyse_claimlens.md |
 | [task_021_deliver_the_claimlens_analysis_interface_polish](tasks/task_021_deliver_the_claimlens_analysis_interface_polish.md) | Deliver the ClaimLens analysis interface polish | Done | codex | 100% | tasks/task_021_deliver_the_claimlens_analysis_interface_polish.md |
 | [task_022_deliver_the_brief_first_analysis_workspace_and_validated_release](tasks/task_022_deliver_the_brief_first_analysis_workspace_and_validated_release.md) | Deliver the brief-first analysis workspace and validated release | Done |  | 100% | tasks/task_022_deliver_the_brief_first_analysis_workspace_and_validated_release.md |
+| [task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion](tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md) | Orchestrate completed brief full-page correction, history title emphasis, and README promotion | Done | codex | 100% | tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md |
