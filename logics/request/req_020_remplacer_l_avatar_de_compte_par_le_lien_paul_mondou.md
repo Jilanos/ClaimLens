@@ -7,6 +7,7 @@
 > Complexity: Low
 > Theme: Navigation et identité parent
 > Reminder: Update status/understanding/confidence and linked backlog/task references when you edit this doc.
+> Indicators reviewed: 2026-08-04
 
 # Needs
 - Retirer de l'extrémité droite de la barre supérieure la pastille qui affiche l'initiale de l'adresse e-mail.
@@ -20,7 +21,7 @@
 # Acceptance criteria
 - AC1: Une session authentifiée ne rend plus la pastille circulaire ni aucune initiale issue de l'adresse e-mail dans la barre supérieure.
 - AC2: La partie droite de la barre supérieure affiche un emblème Paul Mondou cliquable qui cible exactement https://paulmondou.fr.
-- AC3: Le lien parent est accessible au clavier, possède un nom accessible explicite, ouvre dans un nouvel onglet avec rel="noopener noreferrer", et n'altère ni Logout ni les liens existants.
+- AC3: Le lien parent est accessible au clavier, possède un nom accessible explicite, navigue dans l'onglet courant vers le site parent (révision opérateur du 2026-08-04, v1.8.1: le nouvel onglet initialement demandé est abandonné, donc rel="noopener noreferrer" devient sans objet), et n'altère ni Logout ni les liens existants.
 - AC4: L'emblème est copié dans un asset versionné du projet, conserve sa transparence, est net et proportionné dans l'en-tête desktop et mobile, sans provoquer de débordement ou de saut de mise en page.
 - AC5: Des tests de rendu couvrent les états connecté et invité, l'absence de l'avatar et les attributs exacts du lien parent.
 

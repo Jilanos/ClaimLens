@@ -8,6 +8,7 @@
 > Complexity: Low
 > Theme: Navigation et identité parent
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
+> Indicators reviewed: 2026-08-04
 
 # Problem
 - L'initiale de l'e-mail n'offre aucune action de compte et encombre l'extrémité de la navigation.
@@ -26,14 +27,14 @@
 # Acceptance criteria
 - AC1: _nav ne construit plus le span .avatar, ni l'initiale calculée à partir de context.email.
 - AC2: Un unique lien d'emblème présent dans la zone .navuser, en session comme en invité, utilise href="https://paulmondou.fr" et l'asset versionné dérivé de paulmondou-emblem-dark-transparent.png.
-- AC3: Le lien porte aria-label="Visit paulmondou.fr", target="_blank" et rel="noopener noreferrer"; son focus visible respecte le style de navigation.
+- AC3: Le lien porte aria-label="Visit paulmondou.fr" et navigue dans l'onglet courant, sans target ni rel (décision opérateur du 2026-08-04, v1.8.1: quitter la page plutôt qu'ouvrir un onglet, ce qui rend noopener sans objet); son focus visible respecte le style de navigation.
 - AC4: Le style réserve une boîte carrée stable d'environ 30 px, conserve l'aspect ratio de l'emblème et reste utilisable sous le breakpoint mobile existant.
 - AC5: La suite de tests vérifie le HTML connecté et invité, les attributs de sécurité/accessibilité du lien et l'absence de avatar/initiale.
 
 # AC Traceability
 - request-AC1 -> This backlog slice. Proof: AC1: _nav ne construit plus le span .avatar, ni l'initiale calculée à partir de context.email.
-- request-AC2 -> This backlog slice. Proof: AC2: Un unique lien d'emblème présent dans la zone .navuser utilise href="https://paulmondou.fr" et l'asset versionné dérivé de paulmondou-emblem-dark-transparent.png.
-- request-AC3 -> This backlog slice. Proof: AC3: Le lien porte aria-label="Visit paulmondou.fr", target="_blank" et rel="noopener noreferrer"; son focus visible respecte le style de navigation.
+- request-AC2 -> This backlog slice. Proof: AC2: Un unique lien d'emblème présent dans la zone .navuser, en session comme en invité, utilise href="https://paulmondou.fr" et l'asset versionné dérivé de paulmondou-emblem-dark-transparent.png.
+- request-AC3 -> This backlog slice. Proof: AC3: Le lien porte aria-label="Visit paulmondou.fr" et navigue dans l'onglet courant, sans target ni rel (décision opérateur du 2026-08-04, v1.8.1: quitter la page plutôt qu'ouvrir un onglet, ce qui rend noopener sans objet); son focus visible respecte le style de navigation.
 - request-AC4 -> This backlog slice. Proof: AC4: Le style réserve une boîte carrée stable d'environ 30 px, conserve l'aspect ratio de l'emblème et reste utilisable sous le breakpoint mobile existant.
 - request-AC5 -> This backlog slice. Proof: AC5: La suite de tests vérifie le HTML connecté et invité, les attributs de sécurité/accessibilité du lien et l'absence de avatar/initiale.
 

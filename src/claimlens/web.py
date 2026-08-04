@@ -2642,13 +2642,15 @@ def _parent_link() -> str:
     """The way out to the site ClaimLens is served behind, shown to guests and users alike.
 
     It stands where the account avatar used to: that corner carried no action, and the
-    emblem gives it one. `noopener noreferrer` keeps the new tab from reaching back into
-    this one, and the label says the destination rather than describing the picture.
+    emblem gives it one. It navigates in place rather than opening a tab, so leaving for
+    the parent site is a departure the reader can undo with Back; `noopener` would add
+    nothing here, since no second window is created. The label says the destination
+    rather than describing the picture.
     """
 
     return (
-        f'<a class="parent-link" href="{PARENT_SITE_URL}" target="_blank"'
-        f' rel="noopener noreferrer" aria-label="{PARENT_SITE_LABEL}">'
+        f'<a class="parent-link" href="{PARENT_SITE_URL}"'
+        f' aria-label="{PARENT_SITE_LABEL}">'
         f'<img src="{PARENT_EMBLEM_ASSET}?v={quote(__version__)}" alt="" width="30"'
         ' height="30" decoding="async"></a>'
     )

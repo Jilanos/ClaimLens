@@ -344,14 +344,16 @@ def test_signed_in_bar_swaps_the_account_avatar_for_the_parent_link(tmp_path):
     assert 'name="action" value="logout"' in rendered
 
 
-def test_the_parent_link_opens_safely_and_announces_its_destination(tmp_path):
+def test_the_parent_link_navigates_in_place_and_announces_its_destination(tmp_path):
     database = tmp_path / "claimlens.sqlite3"
 
     rendered = render_process_page(database, csrf_token="csrf", context=signed_in())
     link = re.search(r"<a class=\"parent-link\"[^>]*>", rendered).group(0)
 
-    assert 'target="_blank"' in link
-    assert 'rel="noopener noreferrer"' in link
+    # Leaving for the parent site replaces this page instead of spawning a tab, so Back
+    # brings the reader home. With no second window, `noopener` has nothing to protect.
+    assert "target=" not in link
+    assert "rel=" not in link
     # The name says the destination; the image is decorative beside it.
     assert f'aria-label="{PARENT_SITE_LABEL}"' in link
     assert 'alt=""' in rendered[rendered.index(link) :]

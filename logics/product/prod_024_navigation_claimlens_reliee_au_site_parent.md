@@ -6,6 +6,7 @@
 > Related task: `task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens`
 > Related architecture: (none yet)
 > Reminder: Update status, linked refs, scope, decisions, success signals, and open questions when you edit this doc.
+> Indicators reviewed: 2026-08-04
 
 # Overview
 La navigation conserve les contrôles de session utiles et remplace l'avatar décoratif par un lien de marque clair vers paulmondou.fr.
@@ -34,7 +35,7 @@ flowchart LR
 
 # Key product decisions
 - Utiliser `paulmondou-emblem-dark-transparent.png` comme source de l'asset versionné; ne jamais référencer le chemin WSL/Windows au runtime.
-- Placer le lien à l'emplacement de l'avatar supprimé, avec `target="_blank"`, `rel="noopener noreferrer"` et le nom accessible `Visit paulmondou.fr`.
+- Placer le lien à l'emplacement de l'avatar supprimé, avec le nom accessible `Visit paulmondou.fr`. Depuis la v1.8.1 il navigue dans l'onglet courant: aller sur le site parent est un départ assumé, réversible par le bouton Retour, et sans second onglet `noopener` n'a rien à protéger.
 - Préserver l'e-mail et `Logout`; seul le visuel d'initiale disparaît.
 
 # Success signals
