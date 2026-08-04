@@ -1,0 +1,252 @@
+{
+  "budgets": {
+    "max_docs": 12,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [
+    "\"logics/backlog/item_099_remplacer_l_avatar_de_navigation_par_l_embl\\303\\250me_paul_mondou.md\"",
+    "\"logics/product/prod_024_navigation_claimlens_reli\\303\\251e_au_site_parent.md\"",
+    "logics/request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md",
+    "logics/scaffold/parent-site-emblem-navigation.json",
+    "logics/tasks/task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens.md"
+  ],
+  "command": "logics-manager sync context-pack req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens --mode diff-first --profile normal --handoff",
+  "companion_docs": [],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, remplacer l'avatar de compte par le lien paul mondou, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Remplacer l'avatar de compte par le lien Paul Mondou",
+        "use when": "You need to implement or review the scaffolded workflow for Remplacer l'avatar de compte par le lien Paul Mondou."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ]
+      },
+      "path": "logics/request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md",
+      "ref": "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: Une session authentifi\u00e9e ne rend plus la pastille circulaire ni aucune initiale issue de l'adresse e-mail dans la barre sup\u00e9rieure.",
+          "- AC2: La partie droite de la barre sup\u00e9rieure affiche un embl\u00e8me Paul Mondou cliquable qui cible exactement https://paulmondou.fr.",
+          "- AC3: Le lien parent est accessible au clavier, poss\u00e8de un nom accessible explicite, ouvre dans un nouvel onglet avec rel=\"noopener noreferrer\", et n'alt\u00e8re ni Logout ni les liens existants.",
+          "- AC4: L'embl\u00e8me est copi\u00e9 dans un asset versionn\u00e9 du projet, conserve sa transparence, est net et proportionn\u00e9 dans l'en-t\u00eate desktop et mobile, sans provoquer de d\u00e9bordement ou de saut de mise en page.",
+          "- AC5: Des tests de rendu couvrent les \u00e9tats connect\u00e9 et invit\u00e9, l'absence de l'avatar et les attributs exacts du lien parent."
+        ],
+        "Needs": [
+          "- Retirer de l'extr\u00e9mit\u00e9 droite de la barre sup\u00e9rieure la pastille qui affiche l'initiale de l'adresse e-mail.",
+          "- Donner un acc\u00e8s explicite et discret au site parent paulmondou.fr au m\u00eame emplacement, par son embl\u00e8me."
+        ]
+      },
+      "status": "Draft",
+      "title": "Remplacer l'avatar de compte par le lien Paul Mondou"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, remplacer l'avatar de navigation par l'embl\u00e8me paul mondou, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Remplacer l'avatar de navigation par l'embl\u00e8me Paul Mondou",
+        "use when": "Implementing the scaffolded slice for Remplacer l'avatar de navigation par l'embl\u00e8me Paul Mondou."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ],
+        "task": [
+          "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou.md",
+      "ref": "item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou",
+      "schema_version": "1.0",
+      "sections": {
+        "Acceptance criteria": [
+          "- AC1: _nav ne construit plus le span .avatar, ni l'initiale calcul\u00e9e \u00e0 partir de context.email.",
+          "- AC2: Un unique lien d'embl\u00e8me pr\u00e9sent dans la zone .navuser utilise href=\"https://paulmondou.fr\" et l'asset versionn\u00e9 d\u00e9riv\u00e9 de paulmondou-emblem-dark-transparent.png.",
+          "- AC3: Le lien porte aria-label=\"Visit paulmondou.fr\", target=\"_blank\" et rel=\"noopener noreferrer\"; son focus visible respecte le style de navigation.",
+          "- AC4: Le style r\u00e9serve une bo\u00eete carr\u00e9e stable d'environ 30 px, conserve l'aspect ratio de l'embl\u00e8me et reste utilisable sous le breakpoint mobile existant.",
+          "- AC5: La suite de tests v\u00e9rifie le HTML connect\u00e9 et invit\u00e9, les attributs de s\u00e9curit\u00e9/accessibilit\u00e9 du lien et l'absence de avatar/initiale."
+        ],
+        "Problem": [
+          "- L'initiale de l'e-mail n'offre aucune action de compte et encombre l'extr\u00e9mit\u00e9 de la navigation.",
+          "- ClaimLens ne propose pas de chemin visuel vers son site parent."
+        ]
+      },
+      "status": "Ready",
+      "title": "Remplacer l'avatar de navigation par l'embl\u00e8me Paul Mondou"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Livrer le lien parent Paul Mondou dans la navigation ClaimLens",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ],
+        "task": [
+          "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+        ]
+      },
+      "path": "logics/tasks/task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens.md",
+      "ref": "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens",
+      "schema_version": "1.0",
+      "sections": {
+        "Context": [
+          "- Orchestrate the scaffolded request chain and keep sibling implementation slices linked."
+        ],
+        "Validation": [
+          "- (no validation recorded yet)"
+        ]
+      },
+      "status": "Ready",
+      "title": "Livrer le lien parent Paul Mondou dans la navigation ClaimLens"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ],
+        "task": [
+          "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_024_navigation_claimlens_reli\u00e9e_au_site_parent.md",
+      "ref": "prod_024_navigation_claimlens_reli\u00e9e_au_site_parent",
+      "schema_version": "1.0",
+      "sections": {},
+      "status": "Proposed",
+      "title": "Navigation ClaimLens reli\u00e9e au site parent"
+    }
+  ],
+  "estimates": {
+    "char_count": 5359,
+    "companion_doc_count": 0,
+    "doc_count": 4
+  },
+  "generated_at": "2026-08-04T13:26:53Z",
+  "handoff": {
+    "companion_doc_count": 0,
+    "enabled": true,
+    "source_refs": [
+      "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou",
+      "item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou",
+      "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "diff-first",
+  "profile": "normal",
+  "ref": "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou,item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou,task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens",
+  "refs": [
+    "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou",
+    "item_099_remplacer_l_avatar_de_navigation_par_l_embl\u00e8me_paul_mondou",
+    "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "version_metadata: missing required evidence",
+      "local_validation: missing required evidence",
+      "git_push: missing required evidence",
+      "ci: missing required evidence",
+      "release_tag: missing required evidence",
+      "github_release: missing required evidence"
+    ],
+    "configured": true,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "version_metadata: missing required evidence",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "version_metadata",
+        "required": true,
+        "state": "version_prepared",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "local_validation",
+        "required": true,
+        "state": "local_validation",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "git_push",
+        "required": true,
+        "state": "pushed",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "ci",
+        "required": true,
+        "state": "ci_verification",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "release_tag",
+        "required": true,
+        "state": "tagged",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "github_release",
+        "required": true,
+        "state": "github_release",
+        "status": "pending"
+      }
+    ],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "version_prepared",
+    "target_version": "1.7.3"
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens.md",
+      "ref": "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+    }
+  ]
+}

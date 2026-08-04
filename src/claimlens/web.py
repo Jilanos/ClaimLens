@@ -26,7 +26,7 @@ from claimlens.api_keys import (
     save_user_api_key,
     validate_provider_api_key,
 )
-from claimlens.assets import LIVE_STATUS_JS
+from claimlens.assets import LIVE_STATUS_JS, parent_emblem_png
 from claimlens.auth import (
     guest_csrf_token,
     hash_password,
@@ -107,6 +107,10 @@ LIVE_ERROR_DELAY_MS = 5000
 #: One failed poll is noise; a second in a row is worth telling the reader about.
 LIVE_ERRORS_BEFORE_NOTICE = 2
 LIVE_STATUS_ASSET = "/static/live-status.js"
+#: The parent site ClaimLens is served behind, reached from the top bar by its emblem.
+PARENT_SITE_URL = "https://paulmondou.fr"
+PARENT_SITE_LABEL = "Visit paulmondou.fr"
+PARENT_EMBLEM_ASSET = "/static/paulmondou-emblem.png"
 #: Job states that still have work in flight.
 LIVE_JOB_STATUSES = frozenset({"queued", "running"})
 STATUS_LABELS = {
@@ -193,8 +197,13 @@ nav.app { display:flex; align-items:center; justify-content:space-between; gap:1
   outline-offset:2px; border-radius:8px; }
 .navuser { display:flex; align-items:center; gap:12px; }
 .navuser .who { font-size:13px; color:var(--muted); }
-.avatar { width:30px; height:30px; border-radius:50%; background:var(--accent-wash);
-  color:var(--accent-2); display:grid; place-items:center; font-weight:700; font-size:13px; }
+/* The square is reserved before the PNG decodes, so the bar cannot jump on load, and it
+   holds at phone width where the e-mail is the element that gives way instead. */
+.navuser .parent-link { display:grid; place-items:center; width:30px; height:30px;
+  flex:none; border-radius:8px; }
+.navuser .parent-link img { width:100%; height:100%; object-fit:contain; display:block; }
+.navuser .parent-link:hover { background:var(--surface-2); }
+.navuser .parent-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 main { max-width:1320px; margin:0 auto; padding:34px 24px 80px; }
 .page-head { margin-bottom:24px; }
 .page-head h1 { font-size:26px; }
@@ -558,6 +567,10 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 # Same-origin asset: the production CSP keeps script-src 'self'.
                 self._send_asset(LIVE_STATUS_JS, content_type="text/javascript; charset=utf-8")
                 return
+            if parsed.path == PARENT_EMBLEM_ASSET:
+                # Same-origin too: the emblem must not depend on the parent site being up.
+                self._send_asset(parent_emblem_png(), content_type="image/png")
+                return
             if parsed.path == "/health/jobs":
                 self._send_json(db.job_metrics(database_path))
                 return
@@ -864,10 +877,10 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 return
             self._send_json(payload)
 
-        def _send_asset(self, body: str, *, content_type: str) -> None:
+        def _send_asset(self, body: str | bytes, *, content_type: str) -> None:
             """Serve a shipped asset. No cookie: an asset must not mint an identity."""
 
-            encoded = body.encode("utf-8")
+            encoded = body.encode("utf-8") if isinstance(body, str) else body
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(encoded)))
@@ -2625,6 +2638,22 @@ def _outputs(database_path: Path | str, video_id: str, *, run_id: int) -> str:
     )
 
 
+def _parent_link() -> str:
+    """The way out to the site ClaimLens is served behind, shown to guests and users alike.
+
+    It stands where the account avatar used to: that corner carried no action, and the
+    emblem gives it one. `noopener noreferrer` keeps the new tab from reaching back into
+    this one, and the label says the destination rather than describing the picture.
+    """
+
+    return (
+        f'<a class="parent-link" href="{PARENT_SITE_URL}" target="_blank"'
+        f' rel="noopener noreferrer" aria-label="{PARENT_SITE_LABEL}">'
+        f'<img src="{PARENT_EMBLEM_ASSET}?v={quote(__version__)}" alt="" width="30"'
+        ' height="30" decoding="async"></a>'
+    )
+
+
 def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = None) -> str:
     logged_in = context is not None and context.user_id is not None
     analyses_cls = ' class="active"' if active == "process" else ""
@@ -2635,17 +2664,18 @@ def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = No
     if logged_in:
         options_cls = ' class="active"' if active == "options" else ""
         links += f'<a href="/options"{options_cls}>API keys</a>'
-        initial = html.escape((context.email or "?")[:1].upper())
         user = (
             f'<span class="who">{html.escape(context.email or "")}</span>'
             '<form method="post" style="display:inline">'
             f'<input type="hidden" name="csrf_token" value="{html.escape(csrf_token)}">'
             '<input type="hidden" name="action" value="logout">'
             '<button type="submit" class="btn btn-ghost btn-sm">Logout</button></form>'
-            f'<span class="avatar">{initial}</span>'
         )
     else:
         user = '<a href="/login" class="btn btn-ghost btn-sm">Login</a>'
+    # The parent site is where a visitor arrives from, so the way back belongs in both
+    # states: a guest reading a brief has more reason to follow it than a signed-in user.
+    user += _parent_link()
     return (
         '<nav class="app">'
         f'<a class="brand" href="/"><span class="mark">{LOGO_MARK}</span> ClaimLens'

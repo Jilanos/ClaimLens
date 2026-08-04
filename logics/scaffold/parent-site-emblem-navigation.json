@@ -1,0 +1,85 @@
+{
+  "title": "Remplacer l'avatar de compte par le lien Paul Mondou",
+  "references": [
+    "src/claimlens/web.py (_nav et styles .navuser/.avatar)",
+    "/home/paul/dev/WORK/perso/Icones/paulmondou/paulmondou-emblem-dark-transparent.png"
+  ],
+  "request": {
+    "complexity": "Low",
+    "theme": "Navigation et identité parent",
+    "needs": [
+      "Retirer de l'extrémité droite de la barre supérieure la pastille qui affiche l'initiale de l'adresse e-mail.",
+      "Donner un accès explicite et discret au site parent paulmondou.fr au même emplacement, par son emblème."
+    ],
+    "context": [
+      "La pastille actuelle est le span .avatar construit par _nav pour une session authentifiée; l'e-mail, le bouton Logout et les liens d'application doivent rester disponibles.",
+      "La source approuvée de l'emblème est paulmondou-emblem-dark-transparent.png (PNG RGBA, 311 x 311) dans le répertoire personnel indiqué.",
+      "ClaimLens est servi derrière paulmondou.fr; l'asset doit donc être embarqué ou servi par ClaimLens sans dépendre d'un chemin WSL/Windows ni d'un proxy externe au runtime."
+    ],
+    "acceptance_criteria": [
+      "AC1: Une session authentifiée ne rend plus la pastille circulaire ni aucune initiale issue de l'adresse e-mail dans la barre supérieure.",
+      "AC2: La partie droite de la barre supérieure affiche un emblème Paul Mondou cliquable qui cible exactement https://paulmondou.fr.",
+      "AC3: Le lien parent est accessible au clavier, possède un nom accessible explicite, ouvre dans un nouvel onglet avec rel=\"noopener noreferrer\", et n'altère ni Logout ni les liens existants.",
+      "AC4: L'emblème est copié dans un asset versionné du projet, conserve sa transparence, est net et proportionné dans l'en-tête desktop et mobile, sans provoquer de débordement ou de saut de mise en page.",
+      "AC5: Des tests de rendu couvrent les états connecté et invité, l'absence de l'avatar et les attributs exacts du lien parent."
+    ]
+  },
+  "product": {
+    "title": "Navigation ClaimLens reliée au site parent",
+    "overview": "La navigation conserve les contrôles de session utiles et remplace l'avatar décoratif par un lien de marque clair vers paulmondou.fr.",
+    "goals": [
+      "Supprimer l'élément de compte redondant sans perdre l'information ou les actions de session.",
+      "Faire de l'emblème Paul Mondou une sortie identifiable, sûre et accessible vers le site parent.",
+      "Conserver la densité et le comportement responsive de la barre actuelle."
+    ],
+    "non_goals": [
+      "Revoir la charte complète de ClaimLens ou remplacer son logo principal.",
+      "Ajouter un menu de compte, modifier l'authentification ou changer les routes de session.",
+      "Mettre en place une dépendance runtime vers le partage de fichiers personnel."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Remplacer l'avatar de navigation par l'emblème Paul Mondou",
+      "priority": "Medium",
+      "complexity": "Low",
+      "theme": "Navigation et identité parent",
+      "request_acs": ["AC1", "AC2", "AC3", "AC4", "AC5"],
+      "problem": [
+        "L'initiale de l'e-mail n'offre aucune action de compte et encombre l'extrémité de la navigation.",
+        "ClaimLens ne propose pas de chemin visuel vers son site parent."
+      ],
+      "scope_in": [
+        "Ajouter l'emblème transparent fourni sous un chemin d'asset pérenne et adapté au packaging du projet.",
+        "Modifier _nav et les styles associés pour substituer le lien parent à .avatar sur les vues authentifiées.",
+        "Rendre le lien sûr, accessible et responsive; couvrir ce contrat par les tests web existants."
+      ],
+      "scope_out": [
+        "Modification de l'e-mail affiché, du bouton Logout, de Login, d'API keys ou de l'autorisation.",
+        "Changement du logo ClaimLens, favicon ou de la navigation centrale.",
+        "Chargement d'assets depuis le chemin source hors dépôt en production."
+      ],
+      "acceptance_criteria": [
+        "AC1: _nav ne construit plus le span .avatar, ni l'initiale calculée à partir de context.email.",
+        "AC2: Un unique lien d'emblème présent dans la zone .navuser utilise href=\"https://paulmondou.fr\" et l'asset versionné dérivé de paulmondou-emblem-dark-transparent.png.",
+        "AC3: Le lien porte aria-label=\"Visit paulmondou.fr\", target=\"_blank\" et rel=\"noopener noreferrer\"; son focus visible respecte le style de navigation.",
+        "AC4: Le style réserve une boîte carrée stable d'environ 30 px, conserve l'aspect ratio de l'emblème et reste utilisable sous le breakpoint mobile existant.",
+        "AC5: La suite de tests vérifie le HTML connecté et invité, les attributs de sécurité/accessibilité du lien et l'absence de avatar/initiale."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Livrer le lien parent Paul Mondou dans la navigation ClaimLens",
+    "plan": [
+      "Copier l'emblème transparent source dans l'emplacement d'assets retenu et vérifier son intégration au packaging/container.",
+      "Remplacer .avatar dans _nav par le lien externe accessible, puis ajuster les styles de l'en-tête aux deux tailles d'écran.",
+      "Ajouter ou adapter les tests de rendu de navigation pour les états connecté et invité.",
+      "Exécuter les tests ciblés puis la suite pertinente, et valider le corpus Logics avant handoff."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/parent-site-emblem-navigation.json",
+    "mode": "diff-first",
+    "profile": "normal"
+  }
+}

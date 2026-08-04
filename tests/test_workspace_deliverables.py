@@ -14,7 +14,7 @@ import pytest
 from support import Client, source_config, store_cleaned_fixture
 
 from claimlens import __version__, db
-from claimlens.assets import LIVE_STATUS_JS
+from claimlens.assets import LIVE_STATUS_JS, parent_emblem_png
 from claimlens.briefs import generate_brief
 from claimlens.config import load_config
 from claimlens.pipeline import create_run
@@ -22,7 +22,11 @@ from claimlens.web import (
     LIVE_CONNECTION_REGION,
     LIVE_REGIONS,
     LIVE_STATUS_ASSET,
+    PARENT_EMBLEM_ASSET,
+    PARENT_SITE_LABEL,
+    PARENT_SITE_URL,
     STYLES,
+    WebContext,
     build_web_server,
     render_history_page,
     render_process_page,
@@ -154,8 +158,10 @@ def test_no_page_needs_more_than_the_production_csp_allows(tmp_path):
             for handler in re.findall(r'\son[a-z]+="[^"]*"', body):
                 violations.append((path, f"inline handler {handler.strip()}"))
             for url in re.findall(r'(?:href|src)="((?:https?:)?//[^"]+)"', body):
-                # A link to the source video is a destination, not a resource to load.
-                if "youtube.com" not in url and "youtu.be" not in url:
+                # A link to the source video or to the parent site is a destination the
+                # reader chooses, not a resource the page loads.
+                destinations = ("youtube.com", "youtu.be", "paulmondou.fr")
+                if not any(host in url for host in destinations):
                     violations.append((path, f"off-origin resource {url}"))
     finally:
         server.shutdown()
@@ -306,6 +312,104 @@ def test_analysis_copy_and_navigation_use_the_requested_labels(tmp_path):
     assert "ClaimLens turns a video link" in rendered
     assert "Track transcript extraction" not in rendered
     assert "Runs through to the brief on its own" not in rendered
+
+
+# --- item_099: the account avatar gives way to the parent site link ------------------
+
+
+def signed_in(email: str = "reader@example.test") -> WebContext:
+    return WebContext(
+        user_id=7,
+        email=email,
+        csrf_token="csrf",
+        guest_token="guest",
+        session_token="session",
+    )
+
+
+def test_signed_in_bar_swaps_the_account_avatar_for_the_parent_link(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    rendered = render_process_page(database, csrf_token="csrf", context=signed_in())
+
+    # The initial pastille is gone, not merely hidden.
+    assert 'class="avatar"' not in rendered
+    assert ">R</span>" not in rendered
+    # Exactly one way out, at the corner the avatar used to hold.
+    assert rendered.count('class="parent-link"') == 1
+    assert f'href="{PARENT_SITE_URL}"' in rendered
+    assert f'src="{PARENT_EMBLEM_ASSET}?v={__version__}"' in rendered
+    # The session controls the avatar sat beside are untouched.
+    assert "reader@example.test" in rendered
+    assert 'name="action" value="logout"' in rendered
+
+
+def test_the_parent_link_opens_safely_and_announces_its_destination(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    rendered = render_process_page(database, csrf_token="csrf", context=signed_in())
+    link = re.search(r"<a class=\"parent-link\"[^>]*>", rendered).group(0)
+
+    assert 'target="_blank"' in link
+    assert 'rel="noopener noreferrer"' in link
+    # The name says the destination; the image is decorative beside it.
+    assert f'aria-label="{PARENT_SITE_LABEL}"' in link
+    assert 'alt=""' in rendered[rendered.index(link) :]
+    assert ".navuser .parent-link:focus-visible { outline:2px solid var(--accent);" in STYLES
+
+
+def test_the_parent_link_holds_a_stable_square_at_every_width():
+    # Reserved before the PNG decodes, so nothing in the bar shifts on load.
+    assert ".navuser .parent-link { display:grid; place-items:center; width:30px;" in STYLES
+    assert "height:30px;\n  flex:none;" in STYLES
+    # The emblem keeps its own proportions inside that square.
+    assert ".navuser .parent-link img { width:100%; height:100%; object-fit:contain;" in STYLES
+    # At phone width the e-mail is what gives way, so the link stays reachable.
+    assert ".navuser .who { display:none; }" in STYLES
+
+
+def test_guest_bar_keeps_login_and_offers_the_same_parent_link(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    rendered = render_process_page(database, csrf_token="csrf", guest_token="guest")
+
+    assert 'href="/login"' in rendered
+    assert 'class="avatar"' not in rendered
+    # A guest reaches the parent site from the same corner, on the same terms.
+    assert rendered.count('class="parent-link"') == 1
+    assert f'href="{PARENT_SITE_URL}"' in rendered
+    assert f'aria-label="{PARENT_SITE_LABEL}"' in rendered
+
+
+def test_the_parent_link_is_the_only_off_origin_destination_the_bar_offers(tmp_path):
+    database = tmp_path / "claimlens.sqlite3"
+
+    for rendered in (
+        render_process_page(database, csrf_token="csrf", context=signed_in()),
+        render_process_page(database, csrf_token="csrf", guest_token="guest"),
+    ):
+        bar = re.search(r"<nav class=\"app\">.*?</nav>", rendered, re.S).group(0)
+        off_origin = re.findall(r'href="((?:https?:)?//[^"]*)"', bar)
+        assert off_origin == [PARENT_SITE_URL]
+
+
+def test_the_parent_emblem_is_served_same_origin_with_its_transparency(tmp_path):
+    server, thread = serve(config_for(tmp_path))
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_port}{PARENT_EMBLEM_ASSET}") as response:
+            body = response.read()
+            assert response.headers["Content-Type"] == "image/png"
+            # An asset must not mint an identity of its own.
+            assert response.headers["Set-Cookie"] is None
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert body == parent_emblem_png()
+    assert body.startswith(b"\x89PNG\r\n\x1a\n")
+    # Colour type 6 is RGBA: the emblem still carries its alpha channel.
+    assert body[25] == 6
 
 
 def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):

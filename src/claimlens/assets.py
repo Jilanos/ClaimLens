@@ -11,6 +11,24 @@ of truth for what a poll may repaint.
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+
+#: Binary assets ship inside the package, so a deploy never reaches for a path outside it.
+STATIC_DIR = Path(__file__).with_name("static")
+
+#: Served at `/static/paulmondou-emblem.png`. A versioned copy of the approved emblem
+#: (`paulmondou-emblem-dark-transparent.png`), transparency and square ratio intact.
+PARENT_EMBLEM_FILE = STATIC_DIR / "paulmondou-emblem.png"
+
+
+@lru_cache(maxsize=1)
+def parent_emblem_png() -> bytes:
+    """The emblem bytes, read once: every navigation view asks for the same file."""
+
+    return PARENT_EMBLEM_FILE.read_bytes()
+
+
 #: Served at `/static/live-status.js`. No build step: this is the shipped asset.
 LIVE_STATUS_JS = """/* ClaimLens live analysis tracking. */
 (() => {
