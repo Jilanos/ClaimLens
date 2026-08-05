@@ -26,7 +26,12 @@ from claimlens.api_keys import (
     save_user_api_key,
     validate_provider_api_key,
 )
-from claimlens.assets import LIVE_STATUS_JS, parent_emblem_png
+from claimlens.assets import (
+    LIVE_STATUS_JS,
+    claimlens_emblem_svg,
+    claimlens_icon_svg,
+    parent_emblem_png,
+)
 from claimlens.auth import (
     guest_csrf_token,
     hash_password,
@@ -107,6 +112,10 @@ LIVE_ERROR_DELAY_MS = 5000
 #: One failed poll is noise; a second in a row is worth telling the reader about.
 LIVE_ERRORS_BEFORE_NOTICE = 2
 LIVE_STATUS_ASSET = "/static/live-status.js"
+#: Icones V3 ClaimLens browser tab icon, served same-origin from the package.
+CLAIMLENS_ICON_ASSET = "/static/claimlens-icon.svg"
+#: Icones V3 ClaimLens header emblem, served same-origin from the package.
+CLAIMLENS_EMBLEM_ASSET = "/static/claimlens-emblem.svg"
 #: The parent site ClaimLens is served behind, reached from the top bar by its emblem.
 PARENT_SITE_URL = "https://paulmondou.fr"
 PARENT_SITE_LABEL = "Visit paulmondou.fr"
@@ -122,32 +131,6 @@ STATUS_LABELS = {
     "interrupted": "Interrupted",
     "pending": "Waiting",
 }
-
-#: The ClaimLens mark: a lens over a play triangle, with the check that stands for the
-#: source review. Drawn on a 24 grid with `currentColor`, so the same body serves the
-#: gradient tile in the header and the favicon.
-MARK_ATTRS = (
-    'fill="none" stroke="currentColor" stroke-width="1.8" '
-    'stroke-linecap="round" stroke-linejoin="round"'
-)
-MARK_BODY = (
-    '<circle cx="9.8" cy="9.8" r="8.2"/>'
-    '<path d="m16 15.8 6.2 5.5"/>'
-    '<path d="m11 13.6 1.6 1.6 2.8-3.4"/>'
-    '<path d="M7 6.2 12 9.1 7 12Z" fill="#e5231b" stroke="#e5231b" stroke-width="1.5"/>'
-)
-LOGO_MARK = f'<svg viewBox="0 0 24 24" {MARK_ATTRS} aria-hidden="true">{MARK_BODY}</svg>'
-#: The same mark on its brand tile, inlined so the tab icon costs no extra request.
-FAVICON_SVG = (
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
-    '<defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1">'
-    '<stop offset="0" stop-color="#0b7d8c"/><stop offset="1" stop-color="#0a6270"/>'
-    "</linearGradient></defs>"
-    '<rect width="32" height="32" rx="7" fill="url(#m)"/>'
-    f'<g color="#ffffff" {MARK_ATTRS} transform="translate(3.2 3.2) scale(1.067)">'
-    f"{MARK_BODY}</g></svg>"
-)
-FAVICON_DATA_URI = "data:image/svg+xml," + quote(FAVICON_SVG, safe="")
 
 STYLES = """
 :root {
@@ -186,8 +169,8 @@ nav.app { display:flex; align-items:center; justify-content:space-between; gap:1
 /* The mark carries the brand, so it is 1.8x its first size (30px -> 54px). The bar grew
    with it and wraps on a phone, so nothing else in the top bar had to give way. */
 .brand .mark { width:54px; height:54px; border-radius:16px; display:grid; place-items:center;
-  background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; flex:none; }
-.brand .mark svg { width:40px; height:40px; }
+  background:var(--surface-2); flex:none; overflow:hidden; }
+.brand .mark img { width:100%; height:100%; object-fit:contain; display:block; }
 .navlinks { display:flex; align-items:center; gap:6px; }
 .navlinks a { color:var(--ink-2); text-decoration:none; font-weight:500; font-size:14px;
   padding:7px 12px; border-radius:8px; }
@@ -286,8 +269,8 @@ ul.out li:last-child { border-bottom:0; }
 .auth-card .card-body { padding:28px; display:grid; gap:16px; }
 .auth-logo { display:grid; place-items:center; gap:12px; text-align:center; margin-bottom:4px; }
 .auth-logo .mark { width:46px; height:46px; border-radius:13px; display:grid; place-items:center;
-  background:linear-gradient(150deg,var(--accent),var(--accent-2)); color:#fff; }
-.auth-logo .mark svg { width:25px; height:25px; }
+  background:var(--surface-2); overflow:hidden; }
+.auth-logo .mark img { width:100%; height:100%; object-fit:contain; display:block; }
 .auth-logo h1 { font-size:20px; }
 .divider { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; }
 .divider::before, .divider::after { content:""; height:1px; background:var(--line); flex:1; }
@@ -517,7 +500,7 @@ def _page_shell(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)}</title>
-  <link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}">
+  <link rel="icon" type="image/svg+xml" href="{CLAIMLENS_ICON_ASSET}?v={quote(__version__)}">
   <meta name="theme-color" content="#0b7d8c">
   <style>{STYLES}</style>
 </head>
@@ -566,6 +549,14 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
             if parsed.path == LIVE_STATUS_ASSET:
                 # Same-origin asset: the production CSP keeps script-src 'self'.
                 self._send_asset(LIVE_STATUS_JS, content_type="text/javascript; charset=utf-8")
+                return
+            if parsed.path == CLAIMLENS_ICON_ASSET:
+                # Same-origin asset: the browser tab icon ships with the package.
+                self._send_asset(claimlens_icon_svg(), content_type="image/svg+xml")
+                return
+            if parsed.path == CLAIMLENS_EMBLEM_ASSET:
+                # Same-origin asset: the header emblem ships with the package.
+                self._send_asset(claimlens_emblem_svg(), content_type="image/svg+xml")
                 return
             if parsed.path == PARENT_EMBLEM_ASSET:
                 # Same-origin too: the emblem must not depend on the parent site being up.
@@ -2680,7 +2671,9 @@ def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = No
     user += _parent_link()
     return (
         '<nav class="app">'
-        f'<a class="brand" href="/"><span class="mark">{LOGO_MARK}</span> ClaimLens'
+        f'<a class="brand" href="/"><span class="mark"><img src="{CLAIMLENS_EMBLEM_ASSET}'
+        f'?v={quote(__version__)}" alt="" width="1024" height="1024" decoding="async"></span> '
+        "ClaimLens"
         f'<span class="version">v{html.escape(__version__)}</span></a>'
         f'<div class="navlinks">{links}</div>'
         f'<div class="navuser">{user}</div>'
@@ -2696,7 +2689,8 @@ def render_login_page(*, context: WebContext, notice: str | None = None) -> str:
   <div class="card auth-card">
     <div class="card-body">
       <div class="auth-logo">
-        <span class="mark">{LOGO_MARK}</span>
+        <span class="mark"><img src="{CLAIMLENS_EMBLEM_ASSET}?v={quote(__version__)}" alt=""
+          width="1024" height="1024" decoding="async"></span>
         <div><h1>Login</h1>
           <p class="mono" style="color:var(--muted)">Sign in to your ClaimLens analyses</p></div>
       </div>

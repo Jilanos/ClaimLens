@@ -1,0 +1,338 @@
+{
+  "budgets": {
+    "max_docs": 16,
+    "max_docs_per_ref": 4
+  },
+  "changed_paths": [],
+  "command": "logics-manager sync context-pack req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3 item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3 task_025_orchestrer_l_integration_icones_v3_dans_claimlens --mode summary-only --profile normal --handoff",
+  "companion_docs": [
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+          "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ],
+        "task": [
+          "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_025_identite_claimlens_alignee_sur_icones_v3.md",
+      "ref": "prod_025_identite_claimlens_alignee_sur_icones_v3",
+      "status": "Proposed",
+      "title": "Identite ClaimLens alignee sur Icones V3"
+    },
+    {
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_099_remplacer_l_avatar_de_navigation_par_l_embleme_paul_mondou"
+        ],
+        "prod": [
+          "prod_024_navigation_claimlens_reliee_au_site_parent"
+        ],
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ],
+        "task": [
+          "task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_024_navigation_claimlens_reliee_au_site_parent.md",
+      "ref": "prod_024_navigation_claimlens_reliee_au_site_parent",
+      "status": "Settled",
+      "title": "Navigation ClaimLens reli\u00e9e au site parent"
+    }
+  ],
+  "docs": [
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, integrer les icones icones v3 et le lien parent paul mondou dans claimlens, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens",
+        "use when": "You need to implement or review the scaffolded workflow for Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+          "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou",
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ]
+      },
+      "path": "logics/request/req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens.md",
+      "ref": "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens",
+      "schema_version": "1.0",
+      "status": "Draft",
+      "title": "Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens"
+    },
+    {
+      "ai_context": {
+        "keywords": "request-chain-scaffold, remplacer l'avatar de compte par le lien paul mondou, development-ready",
+        "skip when": "The change is unrelated to this scaffolded request chain.",
+        "summary": "Remplacer l'avatar de compte par le lien Paul Mondou",
+        "use when": "You need to implement or review the scaffolded workflow for Remplacer l'avatar de compte par le lien Paul Mondou."
+      },
+      "kind": "request",
+      "linked_refs": {
+        "item": [
+          "item_099_remplacer_l_avatar_de_navigation_par_l_embleme_paul_mondou"
+        ],
+        "prod": [
+          "prod_024_navigation_claimlens_reliee_au_site_parent"
+        ],
+        "req": [
+          "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou"
+        ]
+      },
+      "path": "logics/request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md",
+      "ref": "req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou",
+      "schema_version": "1.0",
+      "status": "Done",
+      "title": "Remplacer l'avatar de compte par le lien Paul Mondou"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, remplacer favicon et embleme claimlens par icones v3, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Remplacer favicon et embleme ClaimLens par Icones V3",
+        "use when": "Implementing the scaffolded slice for Remplacer favicon et embleme ClaimLens par Icones V3."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ],
+        "task": [
+          "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3.md",
+      "ref": "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Remplacer favicon et embleme ClaimLens par Icones V3"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-backlog, finaliser le lien paul mondou avec l'identite icones v3, implementation-ready",
+        "skip when": "The change belongs to another backlog slice.",
+        "summary": "Finaliser le lien Paul Mondou avec l'identite Icones V3",
+        "use when": "Implementing the scaffolded slice for Finaliser le lien Paul Mondou avec l'identite Icones V3."
+      },
+      "kind": "backlog",
+      "linked_refs": {
+        "item": [
+          "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ],
+        "task": [
+          "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+        ]
+      },
+      "path": "logics/backlog/item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3.md",
+      "ref": "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Finaliser le lien Paul Mondou avec l'identite Icones V3"
+    },
+    {
+      "ai_context": {
+        "keywords": "scaffolded-task, request-chain-scaffold, orchestration",
+        "skip when": "Working on one isolated sibling slice.",
+        "summary": "Orchestrer l'integration Icones V3 dans ClaimLens",
+        "use when": "Coordinating implementation of a scaffolded request chain."
+      },
+      "kind": "task",
+      "linked_refs": {
+        "item": [
+          "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+          "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ],
+        "task": [
+          "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+        ]
+      },
+      "path": "logics/tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md",
+      "ref": "task_025_orchestrer_l_integration_icones_v3_dans_claimlens",
+      "schema_version": "1.0",
+      "status": "Ready",
+      "title": "Orchestrer l'integration Icones V3 dans ClaimLens"
+    },
+    {
+      "ai_context": {},
+      "kind": "product",
+      "linked_refs": {
+        "item": [
+          "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+          "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3"
+        ],
+        "prod": [
+          "prod_025_identite_claimlens_alignee_sur_icones_v3"
+        ],
+        "req": [
+          "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens"
+        ],
+        "task": [
+          "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+        ]
+      },
+      "path": "logics/product/prod_025_identite_claimlens_alignee_sur_icones_v3.md",
+      "ref": "prod_025_identite_claimlens_alignee_sur_icones_v3",
+      "schema_version": "1.0",
+      "status": "Proposed",
+      "title": "Identite ClaimLens alignee sur Icones V3"
+    }
+  ],
+  "estimates": {
+    "char_count": 6889,
+    "companion_doc_count": 2,
+    "doc_count": 6
+  },
+  "generated_at": "2026-08-05T14:47:39Z",
+  "handoff": {
+    "companion_doc_count": 2,
+    "enabled": true,
+    "source_refs": [
+      "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens",
+      "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+      "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3",
+      "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+    ],
+    "validation_summary_count": 1
+  },
+  "i18n": {
+    "actions": [
+      "Choose the source locale for app-owned user-facing copy.",
+      "Run logics-manager i18n init --source-locale <locale>.",
+      "Route new UI copy through stable semantic keys."
+    ],
+    "applicable": null,
+    "configured": false,
+    "contract_path": "logics/i18n/contract.json",
+    "findings": [],
+    "next_action": "Run logics-manager i18n init --source-locale <locale> for a project that owns user-facing copy.",
+    "ok": true,
+    "state": "absent"
+  },
+  "mode": "summary-only",
+  "profile": "normal",
+  "ref": "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens,item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3,item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3,task_025_orchestrer_l_integration_icones_v3_dans_claimlens",
+  "refs": [
+    "req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens",
+    "item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3",
+    "item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3",
+    "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+  ],
+  "release": {
+    "blocking_reasons": [
+      "version_metadata: missing required evidence",
+      "local_validation: missing required evidence",
+      "git_push: missing required evidence",
+      "ci: missing required evidence",
+      "release_tag: missing required evidence",
+      "github_release: missing required evidence"
+    ],
+    "configured": true,
+    "contract_path": "logics/release/contract.json",
+    "guidance": [
+      "Release readiness must come from project-owned evidence, not conversational memory.",
+      "Use release status or validate before preparing or claiming release readiness.",
+      "Publication-oriented actions are explicit operator actions and are separate from safe read/validate actions."
+    ],
+    "next_action": "version_metadata: missing required evidence",
+    "publication_actions": [
+      "GitHub release publication",
+      "external publication"
+    ],
+    "required_gates": [
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "version_metadata",
+        "required": true,
+        "state": "version_prepared",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "local_validation",
+        "required": true,
+        "state": "local_validation",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "git_push",
+        "required": true,
+        "state": "pushed",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "ci",
+        "required": true,
+        "state": "ci_verification",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "release_tag",
+        "required": true,
+        "state": "tagged",
+        "status": "pending"
+      },
+      {
+        "blocking_reason": "missing required evidence",
+        "id": "github_release",
+        "required": true,
+        "state": "github_release",
+        "status": "pending"
+      }
+    ],
+    "safe_actions": [
+      "logics-manager release status",
+      "logics-manager release plan <version>",
+      "logics-manager release validate <version>"
+    ],
+    "state": "version_prepared",
+    "target_version": "1.8.1"
+  },
+  "validation_summary": [
+    {
+      "items": [
+        "- (no validation recorded yet)"
+      ],
+      "path": "logics/tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md",
+      "ref": "task_025_orchestrer_l_integration_icones_v3_dans_claimlens"
+    }
+  ]
+}

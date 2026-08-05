@@ -1,0 +1,112 @@
+{
+  "title": "Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens",
+  "references": [
+    "Corpus externe Icones V3/claimlens/",
+    "Corpus externe Icones V3/paulmondou/",
+    "logics/request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md",
+    "logics/scaffold/parent-site-emblem-navigation.json"
+  ],
+  "request": {
+    "complexity": "Medium",
+    "theme": "Branding",
+    "needs": [
+      "Utiliser les assets ClaimLens du corpus Icones V3 pour l'icone d'onglet et l'embleme.",
+      "Utiliser les assets Paul Mondou du corpus Icones V3 pour le lien parent."
+    ],
+    "context": [
+      "Le dossier source est le corpus local Icones V3 fourni par l'operateur; les chemins references ici sont internes a ce corpus pour respecter les regles Logics.",
+      "Assets attendus: claimlens/claimlens-icon-light.svg, claimlens/claimlens-icon-dark.svg, claimlens/claimlens-emblem-light.svg, claimlens/claimlens-emblem-dark.svg, puis les assets paulmondou pour le lien parent.",
+      "ClaimLens a deja une demande liee au remplacement de l'avatar par un lien Paul Mondou; ce corpus precise la variante Icones V3 et les surfaces favicon/embleme."
+    ],
+    "acceptance_criteria": [
+      "AC1: L'icone d'onglet ClaimLens utilise l'asset ClaimLens Icones V3.",
+      "AC2: L'embleme ClaimLens visible dans l'interface utilise l'asset ClaimLens Icones V3.",
+      "AC3: Le lien vers Paul Mondou utilise l'identite Paul Mondou Icones V3 et conserve sa destination parent.",
+      "AC4: Les assets necessaires sont integres au repo ClaimLens et ne dependent pas du dossier local au runtime."
+    ]
+  },
+  "product": {
+    "title": "Identite ClaimLens alignee sur Icones V3",
+    "overview": "ClaimLens remplace ses icones visibles et son lien parent par les assets du corpus Icones V3.",
+    "goals": [
+      "Unifier favicon, embleme et lien parent avec le nouveau corpus d'icones.",
+      "Preserver les parcours d'analyse et l'etat de production existant.",
+      "Rendre le remplacement validable par build et verification d'assets."
+    ],
+    "non_goals": [
+      "Modifier les workflows de verification de sources ou d'analyse.",
+      "Refondre l'espace de lecture du brief au-dela des assets de marque."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Remplacer favicon et embleme ClaimLens par Icones V3",
+      "priority": "High - l'identite de l'outil doit etre coherente sur l'onglet et l'interface",
+      "complexity": "Medium",
+      "theme": "Branding",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC4"
+      ],
+      "problem": [
+        "ClaimLens doit consommer ses nouveaux assets de marque depuis des fichiers integres au repo."
+      ],
+      "scope_in": [
+        "Identifier favicon, metadata, manifest et embleme applicatif.",
+        "Copier les SVG ClaimLens Icones V3 dans l'arborescence d'assets du repo.",
+        "Mettre a jour les references en preservant les variantes light/dark si exposees."
+      ],
+      "scope_out": [
+        "Changer les composants d'analyse hors remplacement visuel.",
+        "Modifier l'ordre ou les contenus des resultats de verification."
+      ],
+      "acceptance_criteria": [
+        "AC1: Le favicon et les metadata d'onglet resolvent l'icone ClaimLens Icones V3.",
+        "AC2: L'embleme visible utilise le SVG ClaimLens Icones V3 adapte au theme.",
+        "AC3: La validation locale confirme que les assets references existent."
+      ]
+    },
+    {
+      "title": "Finaliser le lien Paul Mondou avec l'identite Icones V3",
+      "priority": "High - la navigation parent est deja identifiee comme besoin ouvert",
+      "complexity": "Low",
+      "theme": "Navigation",
+      "request_acs": [
+        "AC3",
+        "AC4"
+      ],
+      "problem": [
+        "Le lien parent doit remplacer l'ancienne representation de compte avec un visuel Paul Mondou coherent."
+      ],
+      "scope_in": [
+        "Reprendre la zone de navigation ou d'avatar ciblee par la demande existante.",
+        "Integrer l'asset Paul Mondou Icones V3 dans le repo.",
+        "Preserver cible, libelle accessible, et comportement clavier."
+      ],
+      "scope_out": [
+        "Ajouter un systeme de compte ou d'authentification.",
+        "Ajouter des liens vers les autres sites enfants depuis ClaimLens."
+      ],
+      "acceptance_criteria": [
+        "AC1: Le lien Paul Mondou utilise un visuel Paul Mondou Icones V3.",
+        "AC2: Le lien conserve la destination parent prevue et reste accessible.",
+        "AC3: Le remplacement ne regresse pas les etats mobile, desktop et theme."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Orchestrer l'integration Icones V3 dans ClaimLens",
+    "plan": [
+      "Inventorier les surfaces favicon, metadata, embleme et lien parent dans ClaimLens.",
+      "Copier les assets ClaimLens et Paul Mondou Icones V3 dans le repo.",
+      "Mettre a jour les references et verifier accessibilite, themes et responsive.",
+      "Executer la validation locale et preparer la preuve de livraison release."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/icon-v3-branding-and-parent-link.json",
+    "mode": "summary-only",
+    "profile": "normal"
+  }
+}

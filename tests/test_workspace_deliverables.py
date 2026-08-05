@@ -14,11 +14,18 @@ import pytest
 from support import Client, source_config, store_cleaned_fixture
 
 from claimlens import __version__, db
-from claimlens.assets import LIVE_STATUS_JS, parent_emblem_png
+from claimlens.assets import (
+    LIVE_STATUS_JS,
+    claimlens_emblem_svg,
+    claimlens_icon_svg,
+    parent_emblem_png,
+)
 from claimlens.briefs import generate_brief
 from claimlens.config import load_config
 from claimlens.pipeline import create_run
 from claimlens.web import (
+    CLAIMLENS_EMBLEM_ASSET,
+    CLAIMLENS_ICON_ASSET,
     LIVE_CONNECTION_REGION,
     LIVE_REGIONS,
     LIVE_STATUS_ASSET,
@@ -298,9 +305,9 @@ def test_the_client_itself_polls_paints_announces_and_recovers(tmp_path):
 
 
 def test_the_brand_mark_keeps_its_tile_and_enlarges_its_contents():
-    # The square remains 54px while the lens and its symbols grow inside it.
+    # The square remains 54px while the Icones V3 emblem fills the reserved tile.
     assert ".brand .mark { width:54px; height:54px;" in STYLES
-    assert ".brand .mark svg { width:40px; height:40px; }" in STYLES
+    assert ".brand .mark img { width:100%; height:100%; object-fit:contain;" in STYLES
     # The bar wraps rather than scrolls sideways at phone width.
     assert "nav.app { flex-wrap:wrap;" in STYLES
 
@@ -395,7 +402,29 @@ def test_the_parent_link_is_the_only_off_origin_destination_the_bar_offers(tmp_p
         assert off_origin == [PARENT_SITE_URL]
 
 
-def test_the_parent_emblem_is_served_same_origin_with_its_transparency(tmp_path):
+def test_the_claimlens_brand_assets_are_served_same_origin(tmp_path):
+    server, thread = serve(config_for(tmp_path))
+    try:
+        with urlopen(f"http://127.0.0.1:{server.server_port}{CLAIMLENS_ICON_ASSET}") as response:
+            icon_body = response.read()
+            assert response.headers["Content-Type"] == "image/svg+xml"
+            assert response.headers["Set-Cookie"] is None
+        with urlopen(f"http://127.0.0.1:{server.server_port}{CLAIMLENS_EMBLEM_ASSET}") as response:
+            emblem_body = response.read()
+            assert response.headers["Content-Type"] == "image/svg+xml"
+            assert response.headers["Set-Cookie"] is None
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert icon_body == claimlens_icon_svg()
+    assert emblem_body == claimlens_emblem_svg()
+    assert icon_body.startswith(b"<svg")
+    assert emblem_body.startswith(b"<svg")
+
+
+def test_the_parent_emblem_is_served_same_origin_from_icones_v3(tmp_path):
     server, thread = serve(config_for(tmp_path))
     try:
         with urlopen(f"http://127.0.0.1:{server.server_port}{PARENT_EMBLEM_ASSET}") as response:
@@ -410,8 +439,8 @@ def test_the_parent_emblem_is_served_same_origin_with_its_transparency(tmp_path)
 
     assert body == parent_emblem_png()
     assert body.startswith(b"\x89PNG\r\n\x1a\n")
-    # Colour type 6 is RGBA: the emblem still carries its alpha channel.
-    assert body[25] == 6
+    # The Icones V3 source is square and RGB; the CSS keeps it contained in the reserved slot.
+    assert body[25] == 2
 
 
 def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):

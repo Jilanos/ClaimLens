@@ -17,9 +17,29 @@ from pathlib import Path
 #: Binary assets ship inside the package, so a deploy never reaches for a path outside it.
 STATIC_DIR = Path(__file__).with_name("static")
 
-#: Served at `/static/paulmondou-emblem.png`. A versioned copy of the approved emblem
-#: (`paulmondou-emblem-dark-transparent.png`), transparency and square ratio intact.
+#: Served at `/static/claimlens-icon.svg`. A versioned copy of the approved Icones V3 tab icon.
+CLAIMLENS_ICON_FILE = STATIC_DIR / "claimlens-icon.svg"
+
+#: Served at `/static/claimlens-emblem.svg`. A versioned copy of the approved Icones V3 emblem.
+CLAIMLENS_EMBLEM_FILE = STATIC_DIR / "claimlens-emblem.svg"
+
+#: Served at `/static/paulmondou-emblem.png`. A versioned copy of the approved Paul Mondou
+#: Icones V3 emblem, square ratio intact.
 PARENT_EMBLEM_FILE = STATIC_DIR / "paulmondou-emblem.png"
+
+
+@lru_cache(maxsize=1)
+def claimlens_icon_svg() -> bytes:
+    """The ClaimLens tab icon bytes, read once and served same-origin."""
+
+    return CLAIMLENS_ICON_FILE.read_bytes()
+
+
+@lru_cache(maxsize=1)
+def claimlens_emblem_svg() -> bytes:
+    """The ClaimLens header emblem bytes, read once and served same-origin."""
+
+    return CLAIMLENS_EMBLEM_FILE.read_bytes()
 
 
 @lru_cache(maxsize=1)
