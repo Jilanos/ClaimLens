@@ -1,10 +1,10 @@
 ## item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3 - Finaliser le lien Paul Mondou avec l'identite Icones V3
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: In progress
+> Status: Done
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 10%
+> Progress: 100%
 > Complexity: Low
 > Theme: Navigation
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
@@ -49,3 +49,9 @@
 # Priority
 - Priority: High - la navigation parent est deja identifiee comme besoin ouvert
 - Rationale: Set by scaffold input or defaulted for grooming.
+
+# Tasks
+- `task_025_orchestrer_l_integration_icones_v3_dans_claimlens`
+
+# Notes
+- Task `task_025_orchestrer_l_integration_icones_v3_dans_claimlens` was finished via `logics-manager flow finish task` on 2026-08-05.

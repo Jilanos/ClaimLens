@@ -1,8 +1,8 @@
 ## prod_025_identite_claimlens_alignee_sur_icones_v3 - Identite ClaimLens alignee sur Icones V3
 > Date: 2026-08-05
-> Status: Proposed
+> Status: Settled
 > Related request: `req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens`
-> Related backlog: `item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3`, `item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3`
+> Related backlog: `item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3`
 > Related task: `task_025_orchestrer_l_integration_icones_v3_dans_claimlens`
 > Related architecture: (none yet)
 > Reminder: Update status, linked refs, scope, decisions, success signals, and open questions when you edit this doc.
@@ -44,5 +44,5 @@ flowchart LR
 - Context-pack output can be handed to an implementation agent directly.
 
 # References
-- Product back-reference: `req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens`
+- Product back-reference: `item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3`
 - Task back-reference: `task_025_orchestrer_l_integration_icones_v3_dans_claimlens`
