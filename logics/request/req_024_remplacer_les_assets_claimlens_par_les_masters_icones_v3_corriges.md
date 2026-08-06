@@ -17,12 +17,13 @@
 - Le lot Icones V3 precedemment integre reposait sur de mauvaises images: ce corpus corrige la source, pas la demarche.
 - Certaines marques n'ont qu'un ou deux masters (Gnosis, Paul Mondou, Kapsule, F1 Datas). Consigne operateur: reutiliser ce master unique pour l'embleme comme pour l'icone.
 - Les quatorze masters sont a fond transparent: coins a alpha=0 et 28% a 87% de pixels transparents selon l'asset. Consigne operateur: ne rien ajouter derriere, ni en favicon ni en embleme.
+- Politique de taille arretee avec l'operateur: tuiles et icones de service en 256 px, emblemes en 512 px, favicons en 128 px, icones PWA en 192 et 512 px, ICO multi-tailles 16/32/48/64/128/256. Les masters 1024 px restent la source, jamais l'asset servi.
 - ClaimLens sert une UI claire et une UI sombre via `@media (prefers-color-scheme: dark)` dans `web.py`.
 - Les quatre masters ClaimLens permettent enfin de servir la bonne variante par theme, ce que le SVG unique actuel ne fait pas.
 - `assets.py` expose des accesseurs typés SVG (`claimlens_icon_svg`, `claimlens_emblem_svg`): le passage au PNG impose de renommer ces fonctions, d'ajuster les types MIME et les routes de `web.py`.
 
 # Acceptance criteria
-- AC1: Chaque fichier d'icone livre est octet pour octet le master correspondant de Icones V3.
+- AC1: Chaque fichier livre est un derive fidele du master Icones V3 correspondant, reduit par moyenne d'aire ponderee par l'alpha a la taille d'usage declaree, sans perte de transparence.
 - AC2: Aucune reference d'asset n'est cassee apres remplacement, extensions et types MIME inclus.
 - AC3: Le rendu est verifie visuellement sur le theme reellement servi par l'application.
 - AC4: La transparence des masters est preservee: aucun fond, plaque ou cartouche n'est ajoute derriere l'asset, favicon et embleme compris.

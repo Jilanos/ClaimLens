@@ -28,8 +28,8 @@ from claimlens.api_keys import (
 )
 from claimlens.assets import (
     LIVE_STATUS_JS,
-    claimlens_emblem_svg,
-    claimlens_icon_svg,
+    claimlens_emblem_png,
+    claimlens_icon_png,
     parent_emblem_png,
 )
 from claimlens.auth import (
@@ -112,10 +112,16 @@ LIVE_ERROR_DELAY_MS = 5000
 #: One failed poll is noise; a second in a row is worth telling the reader about.
 LIVE_ERRORS_BEFORE_NOTICE = 2
 LIVE_STATUS_ASSET = "/static/live-status.js"
-#: Icones V3 ClaimLens browser tab icon, served same-origin from the package.
-CLAIMLENS_ICON_ASSET = "/static/claimlens-icon.svg"
-#: Icones V3 ClaimLens header emblem, served same-origin from the package.
-CLAIMLENS_EMBLEM_ASSET = "/static/claimlens-emblem.svg"
+#: Icones V3 ClaimLens browser tab icon, one file per theme, served same-origin.
+CLAIMLENS_ICON_ASSETS = {
+    "light": "/static/claimlens-icon-light.png",
+    "dark": "/static/claimlens-icon-dark.png",
+}
+#: Icones V3 ClaimLens header emblem, one file per theme, served same-origin.
+CLAIMLENS_EMBLEM_ASSETS = {
+    "light": "/static/claimlens-emblem-light.png",
+    "dark": "/static/claimlens-emblem-dark.png",
+}
 #: The parent site ClaimLens is served behind, reached from the top bar by its emblem.
 PARENT_SITE_URL = "https://paulmondou.fr"
 PARENT_SITE_LABEL = "Visit paulmondou.fr"
@@ -500,7 +506,9 @@ def _page_shell(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)}</title>
-  <link rel="icon" type="image/svg+xml" href="{CLAIMLENS_ICON_ASSET}?v={quote(__version__)}">
+  <link rel="icon" type="image/png" href="{CLAIMLENS_ICON_ASSETS["light"]}?v={quote(__version__)}">
+  <link rel="icon" type="image/png" media="(prefers-color-scheme: dark)"
+        href="{CLAIMLENS_ICON_ASSETS["dark"]}?v={quote(__version__)}">
   <meta name="theme-color" content="#0b7d8c">
   <style>{STYLES}</style>
 </head>
@@ -550,13 +558,19 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 # Same-origin asset: the production CSP keeps script-src 'self'.
                 self._send_asset(LIVE_STATUS_JS, content_type="text/javascript; charset=utf-8")
                 return
-            if parsed.path == CLAIMLENS_ICON_ASSET:
+            icon_variant = next(
+                (v for v, path in CLAIMLENS_ICON_ASSETS.items() if parsed.path == path), None
+            )
+            if icon_variant is not None:
                 # Same-origin asset: the browser tab icon ships with the package.
-                self._send_asset(claimlens_icon_svg(), content_type="image/svg+xml")
+                self._send_asset(claimlens_icon_png(icon_variant), content_type="image/png")
                 return
-            if parsed.path == CLAIMLENS_EMBLEM_ASSET:
+            emblem_variant = next(
+                (v for v, path in CLAIMLENS_EMBLEM_ASSETS.items() if parsed.path == path), None
+            )
+            if emblem_variant is not None:
                 # Same-origin asset: the header emblem ships with the package.
-                self._send_asset(claimlens_emblem_svg(), content_type="image/svg+xml")
+                self._send_asset(claimlens_emblem_png(emblem_variant), content_type="image/png")
                 return
             if parsed.path == PARENT_EMBLEM_ASSET:
                 # Same-origin too: the emblem must not depend on the parent site being up.
@@ -2629,6 +2643,25 @@ def _outputs(database_path: Path | str, video_id: str, *, run_id: int) -> str:
     )
 
 
+def _emblem_picture() -> str:
+    """The header emblem as a `<picture>`, so the browser picks the theme variant itself.
+
+    A plain `<img>` would need JavaScript to follow `prefers-color-scheme`, and the emblem
+    renders before any script runs. The light variant stays the `<img>` fallback, which is
+    also what browsers without `prefers-color-scheme` support get.
+    """
+
+    version = quote(__version__)
+    return (
+        "<picture>"
+        f'<source srcset="{CLAIMLENS_EMBLEM_ASSETS["dark"]}?v={version}"'
+        ' media="(prefers-color-scheme: dark)">'
+        f'<img src="{CLAIMLENS_EMBLEM_ASSETS["light"]}?v={version}" alt=""'
+        ' width="256" height="256" decoding="async">'
+        "</picture>"
+    )
+
+
 def _parent_link() -> str:
     """The way out to the site ClaimLens is served behind, shown to guests and users alike.
 
@@ -2671,8 +2704,7 @@ def _nav(context: WebContext | None, csrf_token: str, *, active: str | None = No
     user += _parent_link()
     return (
         '<nav class="app">'
-        f'<a class="brand" href="/"><span class="mark"><img src="{CLAIMLENS_EMBLEM_ASSET}'
-        f'?v={quote(__version__)}" alt="" width="1024" height="1024" decoding="async"></span> '
+        f'<a class="brand" href="/"><span class="mark">{_emblem_picture()}</span> '
         "ClaimLens"
         f'<span class="version">v{html.escape(__version__)}</span></a>'
         f'<div class="navlinks">{links}</div>'
@@ -2689,8 +2721,7 @@ def render_login_page(*, context: WebContext, notice: str | None = None) -> str:
   <div class="card auth-card">
     <div class="card-body">
       <div class="auth-logo">
-        <span class="mark"><img src="{CLAIMLENS_EMBLEM_ASSET}?v={quote(__version__)}" alt=""
-          width="1024" height="1024" decoding="async"></span>
+        <span class="mark">{_emblem_picture()}</span>
         <div><h1>Login</h1>
           <p class="mono" style="color:var(--muted)">Sign in to your ClaimLens analyses</p></div>
       </div>

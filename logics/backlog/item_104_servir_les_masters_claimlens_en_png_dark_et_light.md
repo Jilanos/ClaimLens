@@ -1,10 +1,10 @@
 ## item_104_servir_les_masters_claimlens_en_png_dark_et_light - Servir les masters ClaimLens en PNG dark et light
 > From version: 1.0.0
 > Schema version: 1.0
-> Status: Ready
+> Status: In progress
 > Understanding: 90%
 > Confidence: 85%
-> Progress: 0%
+> Progress: 60%
 > Complexity: High
 > Theme: Brand asset integration
 > Reminder: Update status/understanding/confidence/progress and linked request/task references when you edit this doc.
