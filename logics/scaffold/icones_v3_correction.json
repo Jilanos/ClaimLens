@@ -1,0 +1,121 @@
+{
+  "title": "Remplacer les assets ClaimLens par les masters Icones V3 corriges",
+  "references": [
+    "WORK/perso/Icones V3/"
+  ],
+  "request": {
+    "complexity": "High",
+    "theme": "Brand asset integration",
+    "needs": [
+      "Remplacer l'icone et l'embleme SVG par les masters PNG dark et light, et exploiter la bascule de theme deja presente."
+    ],
+    "context": [
+      "Les masters approuves sont dans `WORK/perso/Icones V3`, tous en PNG RGBA 1024x1024.",
+      "Le suffixe de variante designe le contour: `-dark` porte un lisere pale et se pose sur fond sombre, `-light` porte un contour navy et se pose sur fond clair.",
+      "Le lot Icones V3 precedemment integre reposait sur de mauvaises images: ce corpus corrige la source, pas la demarche.",
+      "Certaines marques n'ont qu'un ou deux masters (Gnosis, Paul Mondou, Kapsule, F1 Datas). Consigne operateur: reutiliser ce master unique pour l'embleme comme pour l'icone.",
+      "Les quatorze masters sont a fond transparent: coins a alpha=0 et 28% a 87% de pixels transparents selon l'asset. Consigne operateur: ne rien ajouter derriere, ni en favicon ni en embleme.",
+      "ClaimLens sert une UI claire et une UI sombre via `@media (prefers-color-scheme: dark)` dans `web.py`.",
+      "Les quatre masters ClaimLens permettent enfin de servir la bonne variante par theme, ce que le SVG unique actuel ne fait pas.",
+      "`assets.py` expose des accesseurs typés SVG (`claimlens_icon_svg`, `claimlens_emblem_svg`): le passage au PNG impose de renommer ces fonctions, d'ajuster les types MIME et les routes de `web.py`."
+    ],
+    "acceptance_criteria": [
+      "AC1: Chaque fichier d'icone livre est octet pour octet le master correspondant de Icones V3.",
+      "AC2: Aucune reference d'asset n'est cassee apres remplacement, extensions et types MIME inclus.",
+      "AC3: Le rendu est verifie visuellement sur le theme reellement servi par l'application.",
+      "AC4: La transparence des masters est preservee: aucun fond, plaque ou cartouche n'est ajoute derriere l'asset, favicon et embleme compris.",
+      "AC5: La livraison se termine par un commit de version X.Y.Z+1, un push, puis un tag annote vX.Y.Z+1 dont le workflow release est vert."
+    ]
+  },
+  "product": {
+    "title": "Identite ClaimLens alignee sur Icones V3 corrige",
+    "overview": "Servir les masters approuves en PNG, avec la variante adaptee au theme du visiteur.",
+    "goals": [
+      "Une variante d'icone et d'embleme par theme.",
+      "Des accesseurs et des types MIME coherents avec le format reellement servi."
+    ],
+    "non_goals": [
+      "Introduire un selecteur de theme manuel."
+    ]
+  },
+  "backlog_items": [
+    {
+      "title": "Servir les masters ClaimLens en PNG dark et light",
+      "priority": "High",
+      "complexity": "High",
+      "theme": "Brand asset integration",
+      "request_acs": [
+        "AC1",
+        "AC2",
+        "AC3",
+        "AC4"
+      ],
+      "problem": [
+        "L'icone et l'embleme sont des SVG issus d'un lot errone et ne s'adaptent pas au theme."
+      ],
+      "scope_in": [
+        "`static/claimlens-icon-{light,dark}.png` depuis `claimlens/claimlens-icon-{light,dark}.png`",
+        "`static/claimlens-emblem-{light,dark}.png` depuis `claimlens/claimlens-emblem-{light,dark}.png`",
+        "`static/paulmondou-emblem.png` depuis `paulmondou/paulmondou-emblem.png`",
+        "Mise a jour de `assets.py`: accesseurs par variante et type MIME `image/png`",
+        "Mise a jour de `web.py`: routes statiques, `<link rel=icon>` avec media query et bascule de l'embleme"
+      ],
+      "scope_out": [
+        "Retirer les deux SVG avant d'avoir bascule toutes les references.",
+        "Modifier la palette de couleurs de l'application.",
+        "Ajouter un fond, une plaque de couleur ou un cartouche derriere un asset transparent."
+      ],
+      "acceptance_criteria": [
+        "AC1: Les cinq PNG correspondent aux masters attendus.",
+        "AC2: Plus aucune route ni accesseur ne declare `image/svg+xml` pour ces assets.",
+        "AC3: La bonne variante s'affiche en theme clair comme en theme sombre."
+      ]
+    },
+    {
+      "title": "Publier la version 1.8.4 apres remplacement des assets",
+      "priority": "High",
+      "complexity": "Low",
+      "theme": "Release delivery",
+      "request_acs": [
+        "AC5"
+      ],
+      "problem": [
+        "Sans commit de version ni tag, les nouveaux assets restent non deployes: le tag `v1.8.4` est le seul declencheur du deploiement."
+      ],
+      "scope_in": [
+        "Incrementer `pyproject.toml` et `src/claimlens/__init__.py` de `1.8.3` vers `1.8.4`",
+        "Commit `Prepare ... v1.8.4` puis push sur `main`",
+        "Attente du CI vert sur ce commit exact avant tout tag",
+        "Tag annote `v1.8.4` pousse, puis verification des jobs validate, publish, deploy et release"
+      ],
+      "scope_out": [
+        "Taguer avant que le CI requis ne soit vert.",
+        "Retaguer une release existante ou forcer un push sur la branche de release."
+      ],
+      "acceptance_criteria": [
+        "AC1: Toutes les surfaces canoniques declarent `1.8.4`.",
+        "AC2: Le tag annote `v1.8.4` pointe sur le commit de version pousse sur `main`.",
+        "AC3: Le workflow release est vert sur validate, publish, deploy et release.",
+        "AC4: Le SHA, le tag et l'URL du run sont consignes dans le closeout de la tache."
+      ]
+    }
+  ],
+  "orchestration_task": {
+    "title": "Remplacer les assets ClaimLens par les masters Icones V3 corriges",
+    "plan": [
+      "Copier les cinq masters dans `src/claimlens/static/`.",
+      "Refondre `assets.py` en accesseurs PNG par variante.",
+      "Adapter les routes et le HTML de `web.py` pour la bascule par media query.",
+      "Retirer les SVG orphelins puis verifier le rendu dans les deux themes.",
+      "Preparer la version `1.8.3` -> `1.8.4` dans `pyproject.toml` et `src/claimlens/__init__.py`.",
+      "Committer `Prepare ... v1.8.4`, pousser sur `main` et attendre le CI vert sur ce commit.",
+      "Creer et pousser le tag annote `v1.8.4`, puis verifier les quatre jobs du workflow release.",
+      "Consigner SHA, tag et URL du run dans le closeout."
+    ]
+  },
+  "context_pack": {
+    "out": "logics/context-packs/icones_v3_correction.md",
+    "mode": "diff-first",
+    "profile": "normal"
+  }
+}

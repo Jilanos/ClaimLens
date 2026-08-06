@@ -37,6 +37,7 @@
 | [prod_024_navigation_claimlens_reliee_au_site_parent](product/prod_024_navigation_claimlens_reliee_au_site_parent.md) | Navigation ClaimLens reliée au site parent | Settled |  |  | product/prod_024_navigation_claimlens_reliee_au_site_parent.md |
 | [prod_025_identite_claimlens_alignee_sur_icones_v3](product/prod_025_identite_claimlens_alignee_sur_icones_v3.md) | Identite ClaimLens alignee sur Icones V3 | Settled |  |  | product/prod_025_identite_claimlens_alignee_sur_icones_v3.md |
 | [prod_026_publier_les_derniers_assets_icones_v3_claimlens](product/prod_026_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Proposed |  |  | product/prod_026_publier_les_derniers_assets_icones_v3_claimlens.md |
+| [prod_027_identite_claimlens_alignee_sur_icones_v3_corrige](product/prod_027_identite_claimlens_alignee_sur_icones_v3_corrige.md) | Identite ClaimLens alignee sur Icones V3 corrige | Proposed |  |  | product/prod_027_identite_claimlens_alignee_sur_icones_v3_corrige.md |
 
 ## Roadmaps
 
@@ -70,6 +71,7 @@ _None_
 | [req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens](request/req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens.md) | Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens | Done |  |  | request/req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens.md |
 | [req_022_publier_les_derniers_assets_icones_v3_claimlens](request/req_022_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done |  |  | request/req_022_publier_les_derniers_assets_icones_v3_claimlens.md |
 | [req_023_publier_la_release_patch_v1_8_3_de_claimlens](request/req_023_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done |  |  | request/req_023_publier_la_release_patch_v1_8_3_de_claimlens.md |
+| [req_024_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges](request/req_024_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges.md) | Remplacer les assets ClaimLens par les masters Icones V3 corriges | Draft |  |  | request/req_024_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges.md |
 
 ## Backlog
 
@@ -178,6 +180,8 @@ _None_
 | [item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3](backlog/item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3.md) | Finaliser le lien Paul Mondou avec l'identite Icones V3 | Done |  | 100% | backlog/item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3.md |
 | [item_102_publier_les_derniers_assets_icones_v3_claimlens](backlog/item_102_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done |  | 100% | backlog/item_102_publier_les_derniers_assets_icones_v3_claimlens.md |
 | [item_103_publier_la_release_patch_v1_8_3_de_claimlens](backlog/item_103_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done |  | 100% | backlog/item_103_publier_la_release_patch_v1_8_3_de_claimlens.md |
+| [item_104_servir_les_masters_claimlens_en_png_dark_et_light](backlog/item_104_servir_les_masters_claimlens_en_png_dark_et_light.md) | Servir les masters ClaimLens en PNG dark et light | Ready |  | 0% | backlog/item_104_servir_les_masters_claimlens_en_png_dark_et_light.md |
+| [item_105_publier_la_version_1_8_4_apres_remplacement_des_assets](backlog/item_105_publier_la_version_1_8_4_apres_remplacement_des_assets.md) | Publier la version 1.8.4 apres remplacement des assets | Ready |  | 0% | backlog/item_105_publier_la_version_1_8_4_apres_remplacement_des_assets.md |
 
 ## Tasks
 
@@ -210,3 +214,4 @@ _None_
 | [task_025_orchestrer_l_integration_icones_v3_dans_claimlens](tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md) | Orchestrer l'integration Icones V3 dans ClaimLens | Done | Codex | 100% | tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md |
 | [task_026_publier_les_derniers_assets_icones_v3_claimlens](tasks/task_026_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done | codex | 100% | tasks/task_026_publier_les_derniers_assets_icones_v3_claimlens.md |
 | [task_027_publier_la_release_patch_v1_8_3_de_claimlens](tasks/task_027_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done | Claude | 100% | tasks/task_027_publier_la_release_patch_v1_8_3_de_claimlens.md |
+| [task_028_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges](tasks/task_028_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges.md) | Remplacer les assets ClaimLens par les masters Icones V3 corriges | Ready |  | 0% | tasks/task_028_remplacer_les_assets_claimlens_par_les_masters_icones_v3_corriges.md |
