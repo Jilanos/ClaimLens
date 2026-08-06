@@ -36,6 +36,7 @@
 | [prod_023_brief_first_claimlens_reading_and_adoption_documentation](product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md) | Brief-first ClaimLens reading and adoption documentation | Settled |  |  | product/prod_023_brief_first_claimlens_reading_and_adoption_documentation.md |
 | [prod_024_navigation_claimlens_reliee_au_site_parent](product/prod_024_navigation_claimlens_reliee_au_site_parent.md) | Navigation ClaimLens reliée au site parent | Settled |  |  | product/prod_024_navigation_claimlens_reliee_au_site_parent.md |
 | [prod_025_identite_claimlens_alignee_sur_icones_v3](product/prod_025_identite_claimlens_alignee_sur_icones_v3.md) | Identite ClaimLens alignee sur Icones V3 | Settled |  |  | product/prod_025_identite_claimlens_alignee_sur_icones_v3.md |
+| [prod_026_publier_les_derniers_assets_icones_v3_claimlens](product/prod_026_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Proposed |  |  | product/prod_026_publier_les_derniers_assets_icones_v3_claimlens.md |
 
 ## Roadmaps
 
@@ -67,6 +68,8 @@ _None_
 | [req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation](request/req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation.md) | Correct the completed brief reading surface and promote ClaimLens documentation | Done |  |  | request/req_019_correct_the_completed_brief_reading_surface_and_promote_claimlens_documentation.md |
 | [req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou](request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md) | Remplacer l'avatar de compte par le lien Paul Mondou | Done |  |  | request/req_020_remplacer_l_avatar_de_compte_par_le_lien_paul_mondou.md |
 | [req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens](request/req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens.md) | Integrer les icones Icones V3 et le lien parent Paul Mondou dans ClaimLens | Done |  |  | request/req_021_integrer_les_icones_icones_v3_et_le_lien_parent_paul_mondou_dans_claimlens.md |
+| [req_022_publier_les_derniers_assets_icones_v3_claimlens](request/req_022_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done |  |  | request/req_022_publier_les_derniers_assets_icones_v3_claimlens.md |
+| [req_023_publier_la_release_patch_v1_8_3_de_claimlens](request/req_023_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done |  |  | request/req_023_publier_la_release_patch_v1_8_3_de_claimlens.md |
 
 ## Backlog
 
@@ -173,6 +176,8 @@ _None_
 | [item_099_remplacer_l_avatar_de_navigation_par_l_embleme_paul_mondou](backlog/item_099_remplacer_l_avatar_de_navigation_par_l_embleme_paul_mondou.md) | Remplacer l'avatar de navigation par l'emblème Paul Mondou | Done |  | 100% | backlog/item_099_remplacer_l_avatar_de_navigation_par_l_embleme_paul_mondou.md |
 | [item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3](backlog/item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3.md) | Remplacer favicon et embleme ClaimLens par Icones V3 | Done |  | 100% | backlog/item_100_remplacer_favicon_et_embleme_claimlens_par_icones_v3.md |
 | [item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3](backlog/item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3.md) | Finaliser le lien Paul Mondou avec l'identite Icones V3 | Done |  | 100% | backlog/item_101_finaliser_le_lien_paul_mondou_avec_l_identite_icones_v3.md |
+| [item_102_publier_les_derniers_assets_icones_v3_claimlens](backlog/item_102_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done |  | 100% | backlog/item_102_publier_les_derniers_assets_icones_v3_claimlens.md |
+| [item_103_publier_la_release_patch_v1_8_3_de_claimlens](backlog/item_103_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done |  | 100% | backlog/item_103_publier_la_release_patch_v1_8_3_de_claimlens.md |
 
 ## Tasks
 
@@ -203,3 +208,5 @@ _None_
 | [task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion](tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md) | Orchestrate completed brief full-page correction, history title emphasis, and README promotion | Done | codex | 100% | tasks/task_023_orchestrate_completed_brief_full_page_correction_history_title_emphasis_and_readme_promotion.md |
 | [task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens](tasks/task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens.md) | Livrer le lien parent Paul Mondou dans la navigation ClaimLens | Done |  | 100% | tasks/task_024_livrer_le_lien_parent_paul_mondou_dans_la_navigation_claimlens.md |
 | [task_025_orchestrer_l_integration_icones_v3_dans_claimlens](tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md) | Orchestrer l'integration Icones V3 dans ClaimLens | Done | Codex | 100% | tasks/task_025_orchestrer_l_integration_icones_v3_dans_claimlens.md |
+| [task_026_publier_les_derniers_assets_icones_v3_claimlens](tasks/task_026_publier_les_derniers_assets_icones_v3_claimlens.md) | Publier les derniers assets Icones V3 ClaimLens | Done | codex | 100% | tasks/task_026_publier_les_derniers_assets_icones_v3_claimlens.md |
+| [task_027_publier_la_release_patch_v1_8_3_de_claimlens](tasks/task_027_publier_la_release_patch_v1_8_3_de_claimlens.md) | Publier la release patch v1.8.3 de ClaimLens | Done | Claude | 100% | tasks/task_027_publier_la_release_patch_v1_8_3_de_claimlens.md |
