@@ -12,8 +12,8 @@ from claimlens.briefs import generate_brief, render_markdown_brief
 from claimlens.config import load_config
 from claimlens.pipeline import create_run, next_eligible_step
 from claimlens.web import (
-    CLAIMLENS_EMBLEM_ASSETS,
-    CLAIMLENS_ICON_ASSETS,
+    CLAIMLENS_EMBLEM_ASSET,
+    CLAIMLENS_ICON_ASSET,
     HISTORY_VISIBLE_ROWS,
     LIVE_STATUS_ASSET,
     WebContext,
@@ -1004,17 +1004,14 @@ def test_every_page_carries_the_static_tab_icon(tmp_path):
         render_login_page(context=context),
     ):
         assert (
-            f'<link rel="icon" type="image/png"'
-            f' href="{CLAIMLENS_ICON_ASSETS["light"]}?v={__version__}">'
+            f'<link rel="icon" type="image/svg+xml"'
+            f' href="{CLAIMLENS_ICON_ASSET}?v={__version__}">'
             in rendered
         )
-        # The dark declaration carries the media query, so each theme keeps a visible outline.
-        assert 'media="(prefers-color-scheme: dark)"' in rendered
-        assert f'{CLAIMLENS_ICON_ASSETS["dark"]}?v={__version__}' in rendered
+        assert CLAIMLENS_ICON_ASSET.startswith("/static/")
 
     # Served same-origin, so the tab icon cannot depend on a local Icones V3 checkout or a proxy.
-    for path in CLAIMLENS_ICON_ASSETS.values():
-        assert path.startswith("/static/")
+    assert CLAIMLENS_ICON_ASSET.startswith("/static/")
 
 
 def test_the_mark_uses_the_claimlens_icones_v3_emblem(tmp_path):
@@ -1023,7 +1020,5 @@ def test_the_mark_uses_the_claimlens_icones_v3_emblem(tmp_path):
 
     rendered = render_process_page(database, csrf_token="csrf")
 
-    # A <picture> lets the browser pick the variant before any script runs.
-    assert f'<source srcset="{CLAIMLENS_EMBLEM_ASSETS["dark"]}?v={__version__}"' in rendered
-    assert f'<img src="{CLAIMLENS_EMBLEM_ASSETS["light"]}?v={__version__}" alt=""' in rendered
-    assert "claimlens-emblem-light.png" in CLAIMLENS_EMBLEM_ASSETS["light"]
+    assert f'<img src="{CLAIMLENS_EMBLEM_ASSET}?v={__version__}" alt=""' in rendered
+    assert CLAIMLENS_EMBLEM_ASSET.endswith("claimlens-emblem-dark.svg")

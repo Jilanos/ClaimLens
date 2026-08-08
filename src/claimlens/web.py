@@ -28,9 +28,8 @@ from claimlens.api_keys import (
 )
 from claimlens.assets import (
     LIVE_STATUS_JS,
-    claimlens_emblem_png,
-    claimlens_icon_png,
-    parent_emblem_png,
+    claimlens_emblem_svg,
+    parent_emblem_svg,
 )
 from claimlens.auth import (
     guest_csrf_token,
@@ -112,20 +111,13 @@ LIVE_ERROR_DELAY_MS = 5000
 #: One failed poll is noise; a second in a row is worth telling the reader about.
 LIVE_ERRORS_BEFORE_NOTICE = 2
 LIVE_STATUS_ASSET = "/static/live-status.js"
-#: Icones V3 ClaimLens browser tab icon, one file per theme, served same-origin.
-CLAIMLENS_ICON_ASSETS = {
-    "light": "/static/claimlens-icon-light.png",
-    "dark": "/static/claimlens-icon-dark.png",
-}
-#: Icones V3 ClaimLens header emblem, one file per theme, served same-origin.
-CLAIMLENS_EMBLEM_ASSETS = {
-    "light": "/static/claimlens-emblem-light.png",
-    "dark": "/static/claimlens-emblem-dark.png",
-}
+#: The upgraded SVG masters, served same-origin and used at their transparent canvas.
+CLAIMLENS_EMBLEM_ASSET = "/static/claimlens-emblem-dark.svg"
+CLAIMLENS_ICON_ASSET = CLAIMLENS_EMBLEM_ASSET
 #: The parent site ClaimLens is served behind, reached from the top bar by its emblem.
 PARENT_SITE_URL = "https://paulmondou.fr"
 PARENT_SITE_LABEL = "Visit paulmondou.fr"
-PARENT_EMBLEM_ASSET = "/static/paulmondou-emblem.png"
+PARENT_EMBLEM_ASSET = "/static/paulmondou-emblem.svg"
 #: Job states that still have work in flight.
 LIVE_JOB_STATUSES = frozenset({"queued", "running"})
 STATUS_LABELS = {
@@ -506,9 +498,7 @@ def _page_shell(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)}</title>
-  <link rel="icon" type="image/png" href="{CLAIMLENS_ICON_ASSETS["light"]}?v={quote(__version__)}">
-  <link rel="icon" type="image/png" media="(prefers-color-scheme: dark)"
-        href="{CLAIMLENS_ICON_ASSETS["dark"]}?v={quote(__version__)}">
+  <link rel="icon" type="image/svg+xml" href="{CLAIMLENS_ICON_ASSET}?v={quote(__version__)}">
   <meta name="theme-color" content="#0b7d8c">
   <style>{STYLES}</style>
 </head>
@@ -558,23 +548,13 @@ def build_web_server(config: AppConfig, *, host: str, port: int) -> ThreadingHTT
                 # Same-origin asset: the production CSP keeps script-src 'self'.
                 self._send_asset(LIVE_STATUS_JS, content_type="text/javascript; charset=utf-8")
                 return
-            icon_variant = next(
-                (v for v, path in CLAIMLENS_ICON_ASSETS.items() if parsed.path == path), None
-            )
-            if icon_variant is not None:
+            if parsed.path == CLAIMLENS_ICON_ASSET:
                 # Same-origin asset: the browser tab icon ships with the package.
-                self._send_asset(claimlens_icon_png(icon_variant), content_type="image/png")
-                return
-            emblem_variant = next(
-                (v for v, path in CLAIMLENS_EMBLEM_ASSETS.items() if parsed.path == path), None
-            )
-            if emblem_variant is not None:
-                # Same-origin asset: the header emblem ships with the package.
-                self._send_asset(claimlens_emblem_png(emblem_variant), content_type="image/png")
+                self._send_asset(claimlens_emblem_svg(), content_type="image/svg+xml")
                 return
             if parsed.path == PARENT_EMBLEM_ASSET:
                 # Same-origin too: the emblem must not depend on the parent site being up.
-                self._send_asset(parent_emblem_png(), content_type="image/png")
+                self._send_asset(parent_emblem_svg(), content_type="image/svg+xml")
                 return
             if parsed.path == "/health/jobs":
                 self._send_json(db.job_metrics(database_path))
@@ -2644,21 +2624,11 @@ def _outputs(database_path: Path | str, video_id: str, *, run_id: int) -> str:
 
 
 def _emblem_picture() -> str:
-    """The header emblem as a `<picture>`, so the browser picks the theme variant itself.
+    """The transparent upgraded ClaimLens SVG rendered directly in the header."""
 
-    A plain `<img>` would need JavaScript to follow `prefers-color-scheme`, and the emblem
-    renders before any script runs. The light variant stays the `<img>` fallback, which is
-    also what browsers without `prefers-color-scheme` support get.
-    """
-
-    version = quote(__version__)
     return (
-        "<picture>"
-        f'<source srcset="{CLAIMLENS_EMBLEM_ASSETS["dark"]}?v={version}"'
-        ' media="(prefers-color-scheme: dark)">'
-        f'<img src="{CLAIMLENS_EMBLEM_ASSETS["light"]}?v={version}" alt=""'
+        f'<img src="{CLAIMLENS_EMBLEM_ASSET}?v={quote(__version__)}" alt=""'
         ' width="256" height="256" decoding="async">'
-        "</picture>"
     )
 
 

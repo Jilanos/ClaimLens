@@ -16,16 +16,15 @@ from support import Client, source_config, store_cleaned_fixture
 from claimlens import __version__, db
 from claimlens.assets import (
     LIVE_STATUS_JS,
-    claimlens_emblem_png,
-    claimlens_icon_png,
-    parent_emblem_png,
+    claimlens_emblem_svg,
+    parent_emblem_svg,
 )
 from claimlens.briefs import generate_brief
 from claimlens.config import load_config
 from claimlens.pipeline import create_run
 from claimlens.web import (
-    CLAIMLENS_EMBLEM_ASSETS,
-    CLAIMLENS_ICON_ASSETS,
+    CLAIMLENS_EMBLEM_ASSET,
+    CLAIMLENS_ICON_ASSET,
     LIVE_CONNECTION_REGION,
     LIVE_REGIONS,
     LIVE_STATUS_ASSET,
@@ -405,32 +404,18 @@ def test_the_parent_link_is_the_only_off_origin_destination_the_bar_offers(tmp_p
 def test_the_claimlens_brand_assets_are_served_same_origin(tmp_path):
     server, thread = serve(config_for(tmp_path))
     try:
-        icon_bodies, emblem_bodies = {}, {}
-        for variant in ("light", "dark"):
-            url = f"http://127.0.0.1:{server.server_port}{CLAIMLENS_ICON_ASSETS[variant]}"
+        for asset in (CLAIMLENS_ICON_ASSET, CLAIMLENS_EMBLEM_ASSET):
+            url = f"http://127.0.0.1:{server.server_port}{asset}"
             with urlopen(url) as response:
-                icon_bodies[variant] = response.read()
-                assert response.headers["Content-Type"] == "image/png"
-                assert response.headers["Set-Cookie"] is None
-            url = f"http://127.0.0.1:{server.server_port}{CLAIMLENS_EMBLEM_ASSETS[variant]}"
-            with urlopen(url) as response:
-                emblem_bodies[variant] = response.read()
-                assert response.headers["Content-Type"] == "image/png"
+                assert response.read() == claimlens_emblem_svg()
+                assert response.headers["Content-Type"] == "image/svg+xml"
                 assert response.headers["Set-Cookie"] is None
     finally:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2)
 
-    png_magic = b"\x89PNG\r\n\x1a\n"
-    for variant in ("light", "dark"):
-        assert icon_bodies[variant] == claimlens_icon_png(variant)
-        assert emblem_bodies[variant] == claimlens_emblem_png(variant)
-        assert icon_bodies[variant].startswith(png_magic)
-        assert emblem_bodies[variant].startswith(png_magic)
-    # Distinct files per theme: a single shared master would leave one outline invisible.
-    assert icon_bodies["light"] != icon_bodies["dark"]
-    assert emblem_bodies["light"] != emblem_bodies["dark"]
+    assert claimlens_emblem_svg().startswith(b"<svg")
 
 
 def test_the_parent_emblem_is_served_same_origin_from_icones_v3(tmp_path):
@@ -438,7 +423,7 @@ def test_the_parent_emblem_is_served_same_origin_from_icones_v3(tmp_path):
     try:
         with urlopen(f"http://127.0.0.1:{server.server_port}{PARENT_EMBLEM_ASSET}") as response:
             body = response.read()
-            assert response.headers["Content-Type"] == "image/png"
+            assert response.headers["Content-Type"] == "image/svg+xml"
             # An asset must not mint an identity of its own.
             assert response.headers["Set-Cookie"] is None
     finally:
@@ -446,11 +431,9 @@ def test_the_parent_emblem_is_served_same_origin_from_icones_v3(tmp_path):
         server.server_close()
         thread.join(timeout=2)
 
-    assert body == parent_emblem_png()
-    assert body.startswith(b"\x89PNG\r\n\x1a\n")
-    # The corrected Icones V3 masters are RGBA with a transparent background: colour type 6,
-    # not the opaque 2 the earlier batch shipped. Nothing must be composited behind them.
-    assert body[25] == 6
+    assert body == parent_emblem_svg()
+    assert body.startswith(b"<svg")
+    assert b'viewBox="0 0 1024 1024"' in body
 
 
 def test_recent_analyses_shows_the_video_title_after_its_identifier(tmp_path):

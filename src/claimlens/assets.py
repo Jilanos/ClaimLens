@@ -17,41 +17,23 @@ from pathlib import Path
 #: Binary assets ship inside the package, so a deploy never reaches for a path outside it.
 STATIC_DIR = Path(__file__).with_name("static")
 
-#: Two variants per asset, because the page follows `prefers-color-scheme`: the `-light`
-#: master carries a navy outline for light backgrounds, the `-dark` master a pale one for
-#: dark backgrounds. Serving a single file would leave one theme with an invisible outline.
-CLAIMLENS_ICON_FILES = {
-    "light": STATIC_DIR / "claimlens-icon-light.png",
-    "dark": STATIC_DIR / "claimlens-icon-dark.png",
-}
+#: The upgraded SVG is the canonical ClaimLens mark. Its transparent canvas is preserved
+#: for both the header emblem and the browser favicon.
+CLAIMLENS_EMBLEM_FILE = STATIC_DIR / "claimlens-emblem-dark.svg"
 
-#: Served at `/static/claimlens-emblem-<variant>.png`, the approved Icones V3 emblem.
-CLAIMLENS_EMBLEM_FILES = {
-    "light": STATIC_DIR / "claimlens-emblem-light.png",
-    "dark": STATIC_DIR / "claimlens-emblem-dark.png",
-}
-
-#: Served at `/static/paulmondou-emblem.png`. A versioned copy of the approved Paul Mondou
-#: Icones V3 emblem, square ratio intact.
-PARENT_EMBLEM_FILE = STATIC_DIR / "paulmondou-emblem.png"
-
-
-@lru_cache(maxsize=2)
-def claimlens_icon_png(variant: str) -> bytes:
-    """The ClaimLens tab icon bytes for one theme, read once and served same-origin."""
-
-    return CLAIMLENS_ICON_FILES[variant].read_bytes()
-
-
-@lru_cache(maxsize=2)
-def claimlens_emblem_png(variant: str) -> bytes:
-    """The ClaimLens header emblem bytes for one theme, read once and served same-origin."""
-
-    return CLAIMLENS_EMBLEM_FILES[variant].read_bytes()
+#: The versioned Paul Mondou SVG shown in the navigation link.
+PARENT_EMBLEM_FILE = STATIC_DIR / "paulmondou-emblem.svg"
 
 
 @lru_cache(maxsize=1)
-def parent_emblem_png() -> bytes:
+def claimlens_emblem_svg() -> bytes:
+    """The approved ClaimLens SVG bytes, read once and served same-origin."""
+
+    return CLAIMLENS_EMBLEM_FILE.read_bytes()
+
+
+@lru_cache(maxsize=1)
+def parent_emblem_svg() -> bytes:
     """The emblem bytes, read once: every navigation view asks for the same file."""
 
     return PARENT_EMBLEM_FILE.read_bytes()

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="ClaimLens emblem">
+  <title>ClaimLens</title>
+  <defs>
+    <!-- ring body: lit from the upper left, falling away to the lower right -->
+    <radialGradient id="cl-body" cx="288" cy="238" r="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FEDEA"/>
+      <stop offset=".38" stop-color="#57D3D7"/>
+      <stop offset=".72" stop-color="#25B0BB"/>
+      <stop offset="1" stop-color="#0B8894"/>
+    </radialGradient>
+    <linearGradient id="cl-rim" x1="180" y1="160" x2="700" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D2F8F5"/>
+      <stop offset=".5" stop-color="#8BE9EC"/>
+      <stop offset="1" stop-color="#3FB6C2"/>
+    </linearGradient>
+
+    <!-- torus bevel: four fading arcs -->
+    <linearGradient id="cl-spec" x1="135" y1="319" x2="622" y2="189" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E4FCF8" stop-opacity="0"/>
+      <stop offset=".3" stop-color="#E4FCF8" stop-opacity=".9"/>
+      <stop offset=".62" stop-color="#FFFFFF" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#E4FCF8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cl-inshadow" x1="169" y1="331" x2="599" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#075A68" stop-opacity="0"/>
+      <stop offset=".35" stop-color="#075A68" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#075A68" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cl-outshadow" x1="714" y1="530" x2="226" y2="660" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06626F" stop-opacity="0"/>
+      <stop offset=".4" stop-color="#06626F" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#06626F" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cl-bounce" x1="680" y1="517" x2="250" y2="633" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A6F0EE" stop-opacity="0"/>
+      <stop offset=".42" stop-color="#A6F0EE" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#A6F0EE" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- glass: recessed, deepening away from the light -->
+    <radialGradient id="cl-lens" cx="322" cy="306" r="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E6273"/>
+      <stop offset=".45" stop-color="#084956"/>
+      <stop offset=".78" stop-color="#063846"/>
+      <stop offset="1" stop-color="#032029"/>
+    </radialGradient>
+    <linearGradient id="cl-glassshadow" x1="185" y1="360" x2="664" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#02141C" stop-opacity="0"/>
+      <stop offset=".3" stop-color="#02141C" stop-opacity=".36"/>
+      <stop offset=".72" stop-color="#02141C" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#02141C" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cl-cres" x1="230" y1="200" x2="300" y2="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#DEFCF7"/>
+      <stop offset=".45" stop-color="#A9ECE9"/>
+      <stop offset="1" stop-color="#63C6CE"/>
+    </linearGradient>
+
+    <!-- handle: cross-section shading makes the tube read as round -->
+    <linearGradient id="cl-handle" x1="782.4" y1="711.6" x2="711.6" y2="782.4" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B808D"/>
+      <stop offset=".2" stop-color="#159BA6"/>
+      <stop offset=".46" stop-color="#3FC2CA"/>
+      <stop offset=".58" stop-color="#6FDADD"/>
+      <stop offset=".76" stop-color="#189FAB"/>
+      <stop offset="1" stop-color="#0A7A87"/>
+    </linearGradient>
+    <linearGradient id="cl-handlerim" x1="795" y1="699" x2="699" y2="795" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FBFC9"/>
+      <stop offset=".45" stop-color="#A5F0F1"/>
+      <stop offset="1" stop-color="#3FAEBB"/>
+    </linearGradient>
+    <linearGradient id="cl-cast" x1="648" y1="648" x2="790" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#01323C" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#01323C" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="cl-red" x1="345" y1="275" x2="600" y2="580" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF8163"/>
+      <stop offset=".4" stop-color="#FC4F3E"/>
+      <stop offset=".75" stop-color="#E8291B"/>
+      <stop offset="1" stop-color="#BF1408"/>
+    </linearGradient>
+    <linearGradient id="cl-playsheen" x1="0" y1="255" x2="0" y2="470" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".28"/>
+      <stop offset=".55" stop-color="#FFFFFF" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cl-check" x1="300" y1="320" x2="480" y2="530" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFC"/>
+      <stop offset="1" stop-color="#E6E0CE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== handle, behind the lens ===== -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M640 640L854 854" stroke="url(#cl-handlerim)" stroke-width="129"/>
+    <path d="M640 640L854 854" stroke="url(#cl-handle)" stroke-width="100"/>
+    <path d="M712 712L828 828" stroke="#93E8E8" stroke-width="9" opacity=".55"/>
+    <!-- shadow the ring casts down the handle -->
+    <path d="M648 648L790 790" stroke="url(#cl-cast)" stroke-width="129"/>
+  </g>
+
+  <!-- ===== ring ===== -->
+  <circle cx="424.5" cy="424.5" r="326" fill="url(#cl-body)" stroke="url(#cl-rim)" stroke-width="6"/>
+
+  <!-- bevel -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M713.9 529.8A308 308 0 0 1 226.5 660.4" stroke="url(#cl-outshadow)" stroke-width="30"/>
+    <path d="M135.1 319.2A308 308 0 0 1 622.5 188.6" stroke="url(#cl-spec)" stroke-width="26"/>
+    <path d="M680.1 517.5A272 272 0 0 1 249.7 632.9" stroke="url(#cl-bounce)" stroke-width="20"/>
+    <path d="M168.9 331.5A272 272 0 0 1 599.3 216.1" stroke="url(#cl-inshadow)" stroke-width="20"/>
+  </g>
+
+  <!-- ===== glass ===== -->
+  <circle cx="424.5" cy="424.5" r="263.5" fill="url(#cl-lens)"/>
+  <circle cx="424.5" cy="424.5" r="252" fill="none" stroke="#84E2E5" stroke-width="8" opacity=".9"/>
+  <!-- inner wall shadow falling onto the glass -->
+  <path d="M185 360.3A248 248 0 0 1 664 360.3" fill="none" stroke="url(#cl-glassshadow)" stroke-width="30" stroke-linecap="round"/>
+
+  <!-- reflections -->
+  <path d="M344.3 202.6A236 236 0 0 0 344.3 646.4A268 268 0 0 1 344.3 202.6Z" fill="url(#cl-cres)"/>
+  <path d="M338.4 239.5A204 204 0 0 0 338.4 609.5A242 242 0 0 1 338.4 239.5Z" fill="#2E8B92" opacity=".6"/>
+  <ellipse cx="358" cy="236" rx="48" ry="19" transform="rotate(-40 358 236)" fill="#F4FFFC" opacity=".45"/>
+
+  <!-- ===== play (primary) ===== -->
+  <path d="M331 273L611 435L331 597Z" fill="#01222C" opacity=".32" stroke="#01222C" stroke-opacity=".32" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M331 262.5L611 424.5L331 586.5Z" fill="url(#cl-red)" stroke="url(#cl-red)" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M331 262.5L611 424.5L331 586.5Z" fill="url(#cl-playsheen)" stroke="url(#cl-playsheen)" stroke-width="22" stroke-linejoin="round"/>
+
+  <!-- ===== check badge (secondary, lower right) ===== -->
+  <circle cx="552" cy="553" r="70" fill="#01222C" opacity=".4"/>
+  <circle cx="548" cy="548" r="70" fill="#06303B"/>
+  <circle cx="548" cy="548" r="61" fill="url(#cl-check)"/>
+  <path d="M548 487a61 61 0 0 1 55 34 61 61 0 0 0-110 0 61 61 0 0 1 55-34Z" fill="#FFFFFF" opacity=".55"/>
+  <path d="M518 550L540 572L580 522" fill="none" stroke="#0A4553" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
