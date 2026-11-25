@@ -1,139 +1,91 @@
 # ClaimLens
 
-ClaimLens turns a YouTube video into a readable analysis brief: subtitles are collected, cleaned,
-sent through a structured OpenAI analysis, and converted into a report you can inspect, download,
-archive, and optionally check against scientific literature.
+Turn a YouTube video into a readable, sourced analysis brief.
 
-The tool is built for the moment where a video sounds convincing but you need something more useful
-than a transcript and less fragile than a gut feeling. Paste one URL, let the run finish, then read a
-brief that separates the video's core points, notable claims, caveats, and evidence status. For
-science and health topics, ClaimLens can extend the run with PubMed and Semantic Scholar retrieval so
-the reader sees which claims have supporting, contradicting, or merely contextual sources.
+Live at [claimlens.paulmondou.fr](https://claimlens.paulmondou.fr).
 
-## Why it is useful
+## What problem it solves
 
-Video is a poor review format. Important claims are scattered across minutes of speech, timestamps are
-hard to compare, and a polished speaker can make unsupported details feel established. ClaimLens
-changes the unit of review from "watch this again" to "read the brief, inspect the claims, open the
-sources that matter."
+A video can sound convincing while its claims are scattered across minutes of speech. A transcript
+does not help much, and a gut feeling is fragile. ClaimLens is for anyone who wants to review a
+video by reading instead of re-watching: paste one URL, let the run finish, read a brief that
+separates core points, notable claims, caveats and evidence status. For science and health topics it
+can also look the claims up on PubMed and Semantic Scholar.
 
-The practical payoff is speed and traceability:
+## Key features
 
-- A single URL becomes a persisted run with transcript, analysis, brief, and optional verification.
-- The finished brief is the default reading surface, not a hidden export.
-- Recent analyses stay reopenable, so old work is not lost after closing the active workspace.
-- Saved API keys are encrypted per user, while guests can still bring keys for one run.
-- Provider failures are reported as limits, not silently converted into fake confidence.
+- One URL becomes a persisted run: subtitles, cleaned transcript, structured OpenAI analysis,
+  Markdown brief and a browser-readable HTML view, chained without extra clicks.
+- The finished brief is the default reading surface. Transcript and brief can be downloaded
+  (plain text, Markdown, self-contained HTML).
+- Optional source verification per analysis: PubMed and Semantic Scholar retrieval, then each
+  abstract is graded `supports`, `contradicts` or `context`. Claim verdicts are `supported`,
+  `contradicted`, `mixed` or `unclear`.
+- Conservative by design: provider limits, timeouts and missing abstracts are reported as warnings,
+  never as a verified report. No grading key means every verdict stays `unclear`.
+- If captions are unavailable, the run stops with a clear message and a pasted-transcript fallback.
+- Recent analyses can be closed and reopened. Live status updates without a page reload.
+- Accounts are optional: saved API keys are encrypted per user, guests bring keys for one run.
+- Web UI (`claimlens serve`) and CLI.
 
-## Screenshots
+## Screenshot
 
-This release is specifically correcting the completed-brief layout shown below. The previous result
-card was narrow and left aligned, leaving most of the page unused even after the run had finished.
-The completed workspace now gives the saved brief a full-width report card by default while keeping
-run details behind an accessible disclosure.
+![Completed brief](docs/screenshots/completed-brief-before-fix.png)
 
-![Completed brief before the full-page correction](docs/screenshots/completed-brief-before-fix.png)
+This capture predates the full-width layout fix of the completed-brief page. It shows the content
+and flow, not the current page width.
 
-Recommended screenshots to refresh after starting the local server:
+## Quick start
 
-| Surface | What the screenshot should prove |
-| --- | --- |
-| `docs/screenshots/analysis-launcher.png` | One URL launches the whole chain from the Analyses page. |
-| `docs/screenshots/completed-brief.png` | A finished brief owns the page width by default. |
-| `docs/screenshots/recent-analyses.png` | Old analyses scan by `video_id : video title`, with the title emphasized. |
-| `docs/screenshots/options-api-keys.png` | A signed-in user can save and test encrypted provider keys. |
-
-## Product Tour
-
-1. Paste one YouTube URL.
-2. ClaimLens extracts existing captions from YouTube or the configured Supadata native-caption path.
-3. If captions are unavailable, the run stops honestly and offers a pasted transcript fallback.
-4. The transcript is cleaned into readable paragraphs and bounded for LLM input.
-5. OpenAI returns structured analysis: summary, key points, notable claims, caveats, and editorial
-   notes.
-6. ClaimLens generates a Markdown brief and a browser-readable HTML view.
-7. If source verification was requested and enabled, ClaimLens searches PubMed and Semantic Scholar,
-   grades retrieved abstracts, and writes a source-verification section into the report.
-8. The Analyses page live-updates without a reload, then switches into a brief-first reading
-   workspace when the report exists.
-9. The run can be closed from the workspace and reopened later from Recent analyses.
-
-## What You Get
-
-Each completed run keeps the artifacts a reviewer actually needs:
-
-- Cleaned transcript: readable text, viewable in the app and downloadable as plain text.
-- Analysis brief: Markdown artifact plus browser view and self-contained HTML download.
-- Evidence summary: claim counts, evidence counts, source-verification status, and provider limits.
-- Run details: terminal status, source video link, outputs, and warnings recoverable from the
-  completed workspace disclosure.
-- History row: video code and title on the same primary line so old work can be recognized quickly.
-
-## Trust Model
-
-ClaimLens is deliberately conservative. It does not claim a video is true or false because a search
-result shares keywords with a claim. Retrieval finds candidate papers; grading decides whether each
-abstract supports, contradicts, or only contextualizes the claim. When grading is unavailable, source
-links remain useful, but verdicts stay unclear.
-
-Provider limits are also visible. A rate limit, timeout, missing abstract, or source-verification
-warning is recorded as a warning instead of being presented as a fully verified report. That matters
-for health and science content, where overclaiming certainty is worse than saying "not enough
-evidence was retrieved."
-
-## Local-First Shape
-
-The refined MVP is local-first:
-
-1. Enter one YouTube video URL.
-2. Extract existing YouTube subtitles.
-3. Stop with a clear failure if subtitles are unavailable.
-4. Clean the transcript for LLM input.
-5. Use OpenAI to generate a structured analysis.
-6. Generate a Markdown brief.
-7. Optionally verify notable claims against PubMed and Semantic Scholar, grading each retrieved
-   abstract as supporting, contradicting, or contextual.
-8. Inspect progress on a local HTML process page with guarded POST actions, live async job status,
-   and report viewing/download.
-9. Optionally log in to reuse encrypted per-user API keys and manage them from Options.
-
-Steps 2 to 6 run as one chain: submitting a URL launches the analysis and it advances through to the
-brief without further clicks. The chain stops at the first failure and leaves that step retryable, so
-the page always offers the next useful action. It also pauses before a step whose input is genuinely
-missing: with no resolvable OpenAI key the run is marked as waiting and the page asks for the key
-instead of burning the step. Nothing needs a page reload: the process page patches itself from a
-run-scoped JSON endpoint.
-
-Channel monitoring and candidate scoring are no longer base MVP requirements. Advanced source
-verification is optional, disabled by default at deployment level, and opted into per analysis with
-the checkbox on the launcher before the pipeline starts. When requested it runs after the brief,
-checks stored notable claims against PubMed and Semantic Scholar candidates, and renders a
-source-verified brief.
-
-## Local Development
-
-Create a virtual environment and install the project:
+Requires Python 3.11+ and an OpenAI API key for the analysis step.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-```
 
-Run the CLI:
-
-```bash
-claimlens --help
+export OPENAI_API_KEY=...
 claimlens init-db
-claimlens run-video https://www.youtube.com/watch?v=W7DVR9TlpOs --database data/claimlens.sqlite3
+claimlens run-video "https://www.youtube.com/watch?v=W7DVR9TlpOs" --database data/claimlens.sqlite3
+claimlens serve        # http://127.0.0.1:8765
 ```
 
-Run quality checks:
+Checks:
 
 ```bash
 ruff check .
 pytest
 ```
+
+## Tech stack
+
+Python 3.11+ (standard library HTTP server, SQLite in WAL mode), `youtube-transcript-api`,
+`cryptography` (AES-GCM key envelopes), OpenAI for analysis and grading, PubMed and Semantic Scholar
+for sources, optional Supadata captions. Tested with pytest, linted with ruff, shipped as a Docker
+image behind a reverse proxy.
+
+## Status
+
+Version 1.8.5, deployed. 219 tests pass. The base scope is one video per run; channel monitoring is
+not part of it. Roadmap: `ROADMAP.md`. Deployment: `docs/deployment-paulmondou-infra.md`.
+
+## How a run works
+
+1. Validate one YouTube URL and extract existing captions (YouTube, or Supadata native captions).
+2. Stop honestly if none exist, and offer the pasted transcript fallback.
+3. Clean the transcript into paragraphs and bound it for LLM input.
+4. OpenAI returns summary, key points, notable claims, caveats and editorial notes.
+5. Generate the Markdown brief and the HTML view.
+6. If requested and enabled, verify claims against PubMed and Semantic Scholar and add a
+   source-verification section.
+
+Steps 2 to 5 run as one chain that stops at the first failure and leaves that step retryable. With no
+resolvable OpenAI key the run waits and asks for it instead of burning the step.
+
+Retrieval finds candidate papers and grading decides whether each abstract supports, contradicts or
+only contextualizes a claim. Where certainty would be overclaimed, the verdict stays `unclear`.
+
+## Reference
 
 ## Configuration
 
@@ -238,7 +190,7 @@ backs a claim about tendons. Verification therefore runs in two stages.
    sharing a topic is not support, a quantified claim needs a comparable figure, and anything
    uncertain falls back to `context`. Over-claiming support is the worst error for health content.
 
-The claim verdict follows from the grades — `supported`, `contradicted`, `mixed`, or `unclear` when
+The claim verdict follows from the grades: `supported`, `contradicted`, `mixed`, or `unclear` when
 sources were found but none settled the question. Grading needs an OpenAI key. Without one, sources
 are still retrieved and linked, and every verdict stays `unclear`.
 
@@ -273,8 +225,8 @@ enable_web_search = false
 for a language.
 
 The Process page polls a run-scoped JSON endpoint every two seconds while a job is active and backs
-off to fifteen seconds when idle, so a run that becomes active again — from the chain, a retry, or
-another tab — is picked up without a reload. It also stays on the fast rhythm for as long as the
+off to fifteen seconds when idle, so a run that becomes active again (from the chain, a retry, or
+another tab) is picked up without a reload. It also stays on the fast rhythm for as long as the
 state keeps changing, so a chain that is briefly between two jobs is not mistaken for an idle run.
 Polling pauses on a hidden tab and resumes when the tab becomes visible. After repeated failed polls
 the page says that live updates are unavailable, and takes the notice back down on the first success.
@@ -301,8 +253,8 @@ answers 404.
 
 A finished analysis can be closed from the workspace once its whole chain is terminal. Closing is a
 visibility change only: nothing is deleted, the run stays in Recent analyses, and reopening it brings
-the result and the brief back to the workspace. A run that is still working — including one paused
-for a key — cannot be closed.
+the result and the brief back to the workspace. A run that is still working (including one paused
+for a key) cannot be closed.
 
 The in-process queue is bounded by `CLAIMLENS_MAX_QUEUED_JOBS` (16 by default). A worker owns a run
 for the whole chain, so `CLAIMLENS_JOB_WORKERS` (4 by default, capped at 16) is the number of
